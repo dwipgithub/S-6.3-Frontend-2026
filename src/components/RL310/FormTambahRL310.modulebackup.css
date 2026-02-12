@@ -1,0 +1,128 @@
+/* Container Utama */
+.table-container {
+  max-height: 600px;
+  overflow: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e6ed;
+  background-color: #ffffff;
+}
+
+/* Base Table */
+.table {
+  width: 100%; /* Ubah ke 100% jika kolom tidak terlalu banyak, atau min-width jika ingin scroll horizontal */
+  min-width: 1500px;
+  border-collapse: separate; /* Penting untuk rounded corner pada sticky header */
+  border-spacing: 0;
+  font-size: 14px;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  color: #334155;
+}
+
+/* Header Styling */
+.table thead th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 12px 8px;
+  border-bottom: 2px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  font-size: 12px;
+}
+
+/* Layering Sticky Header untuk baris bertingkat */
+.table .subheader-row th {
+  top: 45px; /* Sesuaikan dengan tinggi baris pertama */
+  z-index: 9;
+}
+
+.table .subsubheader-row th {
+  top: 85px; /* Sesuaikan dengan tinggi baris kedua */
+  z-index: 9;
+  font-size: 11px;
+}
+
+/* Sticky Column (Kolom No, Pilih, Jenis Spesialis) */
+.sticky-column {
+  position: sticky;
+  left: 0;
+  background-color: #ffffff !important;
+  z-index: 5;
+  border-right: 2px solid #e2e8f0 !important;
+}
+
+/* Offset untuk kolom sticky berikutnya */
+/* Misal kolom ke-2 (Pilih) */
+.table td.sticky-column:nth-child(2),
+.table th.sticky-column:nth-child(2) {
+  left: 50px; /* Sesuaikan lebar kolom pertama */
+}
+
+/* Misal kolom ke-3 (Jenis Spesialis) */
+.table td.sticky-column:nth-child(3),
+.table th.sticky-column:nth-child(3) {
+  left: 100px; /* Sesuaikan total lebar kolom 1 + 2 */
+}
+
+/* Body Styling */
+.table tbody td {
+  padding: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f1f5f9;
+  background-color: #fff;
+  transition: background-color 0.2s;
+}
+
+.table tbody tr:hover td {
+  background-color: #f1f5f9 !important; /* Efek hover baris */
+}
+
+/* Input Styling agar menyatu dengan tabel */
+.table :global(.form-control) {
+  border: 1px solid transparent;
+  background-color: #f8fafc;
+  padding: 4px 8px;
+  font-size: 13px;
+  text-align: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.table :global(.form-control:focus) {
+  background-color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.table :global(.form-control:disabled) {
+  background-color: transparent;
+  color: #94a3b8;
+  font-weight: 600;
+  border: none;
+}
+
+/* Label total rujukan (Read-only) */
+.table .bg-light {
+  background-color: #f1f5f9 !important;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+/* Checkbox styling */
+.table :global(.form-check-input) {
+  cursor: pointer;
+  width: 1.1em;
+  height: 1.1em;
+}

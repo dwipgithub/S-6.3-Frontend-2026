@@ -1,0 +1,55 @@
+{
+  "name": "SIRS",
+  "version": "0.2.9",
+  "private": true,
+  "homepage": "/v3",
+  "dependencies": {
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.2.2",
+    "bootstrap": "^5.2.3",
+    "dotenv": "^16.0.3",
+    "jwt-decode": "^3.1.2",
+    "react": "^18.2.0",
+    "react-bootstrap": "^2.7.0",
+    "react-bootstrap-icons": "^1.10.2",
+    "react-bootstrap-typeahead": "^6.0.0",
+    "react-confirm-alert": "^3.0.6",
+    "react-datepicker": "^4.23.0",
+    "react-dom": "^18.2.0",
+    "react-export-table-to-excel": "^1.0.6",
+    "react-google-recaptcha": "^3.1.0",
+    "react-icons": "^4.7.1",
+    "react-router-dom": "^6.6.1",
+    "react-scripts": "^5.0.1",
+    "react-toastify": "^9.1.1",
+    "validator": "^13.9.0",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "GENERATE_SOURCEMAP=false react-scripts build",
+    "winBuild": "set \"GENERATE_SOURCEMAP=false\" && react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

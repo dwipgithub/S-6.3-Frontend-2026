@@ -1,0 +1,17 @@
+.rlTable {
+    border-collapse: collapse;
+    width: 100%;
+}
+.rlTable td, .rlTable th {
+    border: 1px solid #ddd;
+    padding: 4px;
+}
+.rlTable tr:nth-child(even){background-color: #f2f2f2;}
+.rlTable tr:hover {background-color: #fcfee4;}
+.rlTable th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: center !important;
+    background-color: #779D9E;
+    color: white;
+} 

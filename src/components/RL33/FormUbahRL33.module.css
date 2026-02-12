@@ -1,0 +1,71 @@
+.table-container {
+  max-height: 500px;
+  /* Adjust the height as needed */
+  overflow-y: auto;
+}
+
+.table {
+  width: 200%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 15px;
+  font-family: "Times New Roman", Times, serif; /* Set font family */
+  /* Ensures column widths are consistent */
+}
+
+.table th,
+.table td {
+  padding: 8px;
+  border: 1px solid #ddd;
+}
+
+.table thead th {
+  background-color: #fbfefe;
+  color: grey;
+  position: -webkit-sticky;
+  /* For Safari */
+  position: sticky;
+  top: 0;
+  /* Keeps the main header at the top */
+  z-index: 2;
+  /* Ensures the main header is above other content */
+  text-align: center;
+  vertical-align: middle;
+}
+
+.table .subheader-row th {
+  background-color: #fbfefe;
+  position: -webkit-sticky;
+  /* For Safari */
+  position: sticky;
+  top: 40px;
+  /* Adjust this to the height of the main header row */
+  z-index: 1;
+  /* Ensures the subheader is below the main header */
+}
+
+.table thead th.sticky-header:nth-child(1),
+.table thead th.sticky-header:nth-child(2),
+.table thead th.sticky-header:nth-child(4),
+.table thead th.sticky-header:nth-child(3) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  z-index: 3; /* Above both header and body content */
+}
+
+.table .sticky-header {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  top: 0; /* Sticky header */
+  background-color: white;
+  z-index: 2; /* Above table content */
+}
+
+.table .sticky-column {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  background-color: white;
+  z-index: 1; /* Ensures sticky column is above other content */
+}
