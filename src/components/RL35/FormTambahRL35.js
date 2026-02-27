@@ -527,7 +527,8 @@ const FormTambahRL35 = () => {
                             {spinner && <Spinner animation="grow" variant="success"></Spinner>}
                         </div> */}
             <div className={style["table-container"]}>
-              <table responsive className={style["table"]}>
+              <div className="table-responsive">
+              <table className={style["table"]}>
                 <thead className={style["thead"]}>
                   <tr>
                     <th
@@ -696,6 +697,7 @@ const FormTambahRL35 = () => {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </div>

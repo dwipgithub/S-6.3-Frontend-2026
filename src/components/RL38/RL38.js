@@ -7,7 +7,7 @@ import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { confirmAlert } from "react-confirm-alert";
-import { Modal, Table } from "react-bootstrap";
+import { Modal, Table, Spinner } from "react-bootstrap";
 import { DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
@@ -36,6 +36,11 @@ const RL38 = () => {
   const [user, setUser] = useState({});
   const tableRef = useRef(null);
   const [namafile, setNamaFile] = useState("");
+  const [activeTab, setActiveTab] = useState("tab1");
+  const [statusValidasi, setStatusValidasi] = useState(0);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [validasiId, setValidasiId] = useState(null);
+  const [dataValidasi, setDataValidasi] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -48,6 +53,12 @@ const RL38 = () => {
     // };
     // getLastYear().then((results) => {});
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== "" && tahun) {
+      getValidasi();
+    }
+  }, [bulan, tahun, rumahSakit, activeTab]);
 
   const refreshToken = async () => {
     try {
@@ -209,6 +220,10 @@ const RL38 = () => {
     filter.push("nama: ".concat(rumahSakit.nama));
     filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
     setFilterLabel(filter);
+    setValidasiId(null);
+    setStatusValidasi(0);
+    setKeteranganValidasi("");
+    setDataValidasi(null);
     try {
       const customConfig = {
         headers: {
@@ -329,12 +344,143 @@ const RL38 = () => {
           rumahSakit.id +
           "_".concat(String(tahun).concat("-").concat(bulan).concat("-01"))
       );
-      setRumahSakit(null);
       handleClose();
       setSpinner(false);
+
+      try {
+        const validasiConfig = {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            rsId: rumahSakit.id,
+            periode: String(tahun).concat("-").concat(bulan),
+          },
+        };
+        const validasiResponse = await axiosJWT.get(
+          "/apisirs6v2/rltigatitikdelapanvalidasi",
+          validasiConfig
+        );
+
+        if (validasiResponse.data.data && validasiResponse.data.data.length > 0) {
+          const validasi = validasiResponse.data.data[0];
+          setValidasiId(validasi.id);
+          setStatusValidasi(validasi.statusValidasiId);
+          setKeteranganValidasi(validasi.catatan || "");
+          setDataValidasi(validasi);
+        }
+      } catch (error) {
+        console.log(error);
+      }
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const getValidasi = async () => {
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(bulan),
+        },
+      };
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rltigatitikdelapanvalidasi",
+        customConfig
+      );
+
+      if (response.data.data && response.data.data.length > 0) {
+        const validasi = response.data.data[0];
+        setValidasiId(validasi.id);
+        setStatusValidasi(validasi.statusValidasiId);
+        setKeteranganValidasi(validasi.catatan || "");
+        setDataValidasi(validasi);
+      } else {
+        setValidasiId(null);
+        setStatusValidasi(0);
+        setKeteranganValidasi("");
+        setDataValidasi(null);
+      }
+    } catch (error) {
+      console.log(error);
+      setValidasiId(null);
+      setStatusValidasi(0);
+      setKeteranganValidasi("");
+      setDataValidasi(null);
+    }
+  };
+
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    e.preventDefault();
+    if (!rumahSakit || !rumahSakit.id) {
+      toast("Rumah sakit harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+    if (parseInt(statusValidasi) === 0) {
+      toast("Status harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+      const payload = {
+        statusValidasiId: parseInt(statusValidasi),
+        catatan: keteranganValidasi,
+      };
+      if (validasiId) {
+        await axiosJWT.patch(
+          `/apisirs6v2/rltigatitikdelapanvalidasi/${validasiId}`,
+          payload,
+          customConfig
+        );
+        toast("Data Validasi Berhasil Diperbarui", { position: toast.POSITION.TOP_RIGHT });
+      } else {
+        const createPayload = {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(bulan),
+          jenisPeriode: 1,
+          ...payload,
+        };
+        const response = await axiosJWT.post(
+          "/apisirs6v2/rltigatitikdelapanvalidasi",
+          createPayload,
+          customConfig
+        );
+        setValidasiId(response.data.data.id);
+        toast("Data Validasi Berhasil Disimpan", { position: toast.POSITION.TOP_RIGHT });
+      }
+      setTimeout(() => getValidasi(), 1500);
+    } catch (error) {
+      console.log(error);
+      toast(`Data tidak bisa disimpan karena: ${error.response?.data?.message || error.message}`, { position: toast.POSITION.TOP_RIGHT });
+    }
+  };
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
   };
 
   const handleClose = () => setShow(false);
@@ -454,10 +600,11 @@ const RL38 = () => {
       ],
     });
   };
+
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "100px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
@@ -683,9 +830,9 @@ const RL38 = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <span style={{ color: "gray" }}>
-            <h4>RL 3.8 - Laboratorium</h4>
-          </span>
+          <h4>
+            <span style={{ color: "gray" }}>RL 3.8 - Laboratorium</span>
+          </h4>
           <div style={{ marginBottom: "10px" }}>
             {user.jenisUserId === 4 ? (
               <Link
@@ -744,157 +891,243 @@ const RL38 = () => {
               .join(", ")}
           </h5>
         </div>
-        <div className={style["table-container"]}>
-          <table className={style["table"]} ref={tableRef}>
-            <thead className={style["thead"]}>
-              <tr className="main-header-row">
-                <th
-                  rowSpan={2}
-                  style={{ width: "4%", verticalAlign: "middle" }}
+
+          <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button
+                  type="button"
+                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                  onClick={() => handleTabClick("tab1")}
                 >
-                  No.
-                </th>
-                <th
-                  rowSpan={2}
-                  style={{ width: "14%", verticalAlign: "middle" }}
+                  Data
+                </button>
+              </li>
+              <li className={`nav-item ${style.navItem}`}>
+                <button
+                  type="button"
+                  className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                  onClick={() => handleTabClick("tab2")}
                 >
-                  Aksi
-                </th>
-                <th
-                  rowSpan={2}
-                  style={{
-                    width: "30%",
-                    textAlign: "center",
-                    verticalAlign: "middle",
-                  }}
-                >
-                  Jenis Pemeriksaan
-                </th>
-                <th colSpan={2} style={{ textAlign: "center" }}>
-                  Jumlah Pemeriksaan
-                </th>
-                <th colSpan={2} style={{ textAlign: "center" }}>
-                  Rata-Rata Pemeriksaan
-                </th>
-              </tr>
-              <tr className={style["subheader-row"]}>
-                <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                <th style={{ textAlign: "center" }}>Perempuan</th>
-                <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                <th style={{ textAlign: "center" }}>Perempuan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dataRL.map((value, index) => {
-                return (
-                  <React.Fragment key={index}>
-                    <tr
-                      key={index}
-                      style={{
-                        textAlign: "center",
-                        backgroundColor: "#C4DFAA",
-                        fontWeight: "bold",
-                        // color:"#354259"
-                      }}
-                    >
-                      <td>{value.groupId}</td>
-                      <td></td>
-                      <td>{value.groupNama}</td>
-                      <td>{value.groupJumlahLaki}</td>
-                      <td>{value.groupJumlahPerempuan}</td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                    {value.details.map((value2, index2) => {
-                      return (
-                        <React.Fragment key={index2}>
-                          <tr
-                            key={index}
-                            style={{
-                              textAlign: "center",
-                              backgroundColor: "#90C8AC",
-                              fontWeight: "bold",
-                              // color:"#354259"
-                            }}
-                          >
-                            <td>{value2.subGroupNo}</td>
-                            <td></td>
-                            <td>{value2.subGroupNama}</td>
-                            <td>{value2.subGroupJumlahLaki}</td>
-                            <td>{value2.subGroupJumlahPerempuan}</td>
-                            <td></td>
-                            <td></td>
-                          </tr>
-                          {value2.kegiatan.map((value3, index3) => {
-                            return (
-                              <tr
-                                key={index3}
-                                style={{
-                                  textAlign: "center",
-                                  fontWeight: "bold",
-                                }}
-                              >
-                                <td>{value3.jenisKegiatanNo}</td>
-                                <td>
-                                  <ToastContainer />
-                                  {user.jenisUserId === 4 ? (
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        width: "100%",
-                                      }}
-                                    >
-                                      <button
-                                        className="btn btn-danger"
+                  Validasi
+                </button>
+              </li>
+            </ul>
+
+            <div className={`tab-content ${style.tabContent}`}>
+              <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
+                <div className={style["table-container"]}>
+                  <table className={style["table"]} ref={tableRef}>
+                    <thead className={style["thead"]}>
+                      <tr className="main-header-row">
+                        <th
+                          rowSpan={2}
+                          style={{ width: "4%", verticalAlign: "middle" }}
+                        >
+                          No.
+                        </th>
+                        <th
+                          rowSpan={2}
+                          style={{ width: "14%", verticalAlign: "middle" }}
+                        >
+                          Aksi
+                        </th>
+                        <th
+                          rowSpan={2}
+                          style={{
+                            width: "30%",
+                            textAlign: "center",
+                            verticalAlign: "middle",
+                          }}
+                        >
+                          Jenis Pemeriksaan
+                        </th>
+                        <th colSpan={2} style={{ textAlign: "center" }}>
+                          Jumlah Pemeriksaan
+                        </th>
+                        <th colSpan={2} style={{ textAlign: "center" }}>
+                          Rata-Rata Pemeriksaan
+                        </th>
+                      </tr>
+                      <tr className={style["subheader-row"]}>
+                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                        <th style={{ textAlign: "center" }}>Perempuan</th>
+                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                        <th style={{ textAlign: "center" }}>Perempuan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dataRL.map((value, index) => {
+                        return (
+                          <React.Fragment key={index}>
+                            <tr
+                              key={index}
+                              style={{
+                                textAlign: "center",
+                                backgroundColor: "#C4DFAA",
+                                fontWeight: "bold",
+                                // color:"#354259"
+                              }}
+                            >
+                              <td>{value.groupId}</td>
+                              <td></td>
+                              <td>{value.groupNama}</td>
+                              <td>{value.groupJumlahLaki}</td>
+                              <td>{value.groupJumlahPerempuan}</td>
+                              <td></td>
+                              <td></td>
+                            </tr>
+                            {value.details.map((value2, index2) => {
+                              return (
+                                <React.Fragment key={index2}>
+                                  <tr
+                                    key={index}
+                                    style={{
+                                      textAlign: "center",
+                                      backgroundColor: "#90C8AC",
+                                      fontWeight: "bold",
+                                      // color:"#354259"
+                                    }}
+                                  >
+                                    <td>{value2.subGroupNo}</td>
+                                    <td></td>
+                                    <td>{value2.subGroupNama}</td>
+                                    <td>{value2.subGroupJumlahLaki}</td>
+                                    <td>{value2.subGroupJumlahPerempuan}</td>
+                                    <td></td>
+                                    <td></td>
+                                  </tr>
+                                  {value2.kegiatan.map((value3, index3) => {
+                                    return (
+                                      <tr
+                                        key={index3}
                                         style={{
-                                          margin: "0 5px 0 0",
-                                          backgroundColor: "#FF6663",
-                                          border: "1px solid #FF6663",
-                                          flex: "1",
-                                        }}
-                                        type="button"
-                                        onClick={(e) =>
-                                          confirmationDelete(value3.id)
-                                        }
-                                      >
-                                        Hapus
-                                      </button>
-                                      <Link
-                                        to={`/rl38/ubah/${value3.id}`}
-                                        className="btn btn-warning"
-                                        style={{
-                                          margin: "0 5px 0 0",
-                                          backgroundColor: "#CFD35E",
-                                          border: "1px solid #CFD35E",
-                                          color: "#FFFFFF",
-                                          flex: "1",
+                                          textAlign: "center",
+                                          fontWeight: "bold",
                                         }}
                                       >
-                                        Ubah
-                                      </Link>
-                                    </div>
-                                  ) : (
-                                    <></>
-                                  )}
-                                </td>
-                                <td>{value3.jenisKegiatanNama}</td>
-                                <td>{value3.jumlahLaki}</td>
-                                <td>{value3.jumlahPerempuan}</td>
-                                <td>{value3.rataLaki}</td>
-                                <td>{value3.rataPerempuan}</td>
-                              </tr>
-                            );
-                          })}
-                        </React.Fragment>
-                      );
-                    })}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                                        <td>{value3.jenisKegiatanNo}</td>
+                                        <td>
+                                          <ToastContainer />
+                                          {user.jenisUserId === 4 ? (
+                                            <div
+                                              style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                width: "100%",
+                                              }}
+                                            >
+                                              <button
+                                                className="btn btn-danger"
+                                                style={{
+                                                  margin: "0 5px 0 0",
+                                                  backgroundColor: "#FF6663",
+                                                  border: "1px solid #FF6663",
+                                                  flex: "1",
+                                                }}
+                                                type="button"
+                                                onClick={(e) =>
+                                                  confirmationDelete(value3.id)
+                                                }
+                                              >
+                                                Hapus
+                                              </button>
+                                              <Link
+                                                to={`/rl38/ubah/${value3.id}`}
+                                                className="btn btn-warning"
+                                                style={{
+                                                  margin: "0 5px 0 0",
+                                                  backgroundColor: "#CFD35E",
+                                                  border: "1px solid #CFD35E",
+                                                  color: "#FFFFFF",
+                                                  flex: "1",
+                                                }}
+                                              >
+                                                Ubah
+                                              </Link>
+                                            </div>
+                                          ) : (
+                                            <></>
+                                          )}
+                                        </td>
+                                        <td>{value3.jenisKegiatanNama}</td>
+                                        <td>{value3.jumlahLaki}</td>
+                                        <td>{value3.jumlahPerempuan}</td>
+                                        <td>{value3.rataLaki}</td>
+                                        <td>{value3.rataPerempuan}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </React.Fragment>
+                              );
+                            })}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
+                <div className={style.validasiCard}>
+                  <h3 className={style.validasiCardTitle}>Form Validasi RL 3.8</h3>
+                  
+                  {dataRL.length === 0 ? (
+                    <div style={{
+                      backgroundColor: "#fff3cd",
+                      border: "1px solid #ffc107",
+                      color: "#856404",
+                      padding: "15px",
+                      borderRadius: "4px",
+                      textAlign: "center"
+                    }}>
+                      <strong>Data belum tersedia untuk proses validasi.</strong>
+                    </div>
+                  ) : (
+                    <>
+                      {dataValidasi && (
+                        <div style={{
+                          backgroundColor: "#f0f0f0",
+                          padding: "10px",
+                          borderRadius: "4px",
+                          marginBottom: "15px",
+                        }}>
+                          <p style={{ margin: "5px 0" }}>
+                            <strong>Status:</strong> {dataValidasi.statusValidasiId === 1 ? "Perlu Perbaikan" : dataValidasi.statusValidasiId === 2 ? "Selesai Diperbaiki" : dataValidasi.statusValidasiId === 3 ? "Disetujui" : ""}
+                          </p>
+                          <p style={{ margin: "5px 0" }}>
+                            <strong>Dibuat:</strong> {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                          </p>
+                        </div>
+                      )}
+
+                      {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                        <div style={{ color: "#28a745", fontWeight: "bold" }}>
+                          Validasi telah disetujui dan tidak dapat diubah.
+                        </div>
+                      ) : (
+                        <form onSubmit={simpanValidasi}>
+                          <ToastContainer />
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="statusValidasi">Status</label>
+                            <select id="statusValidasi" name="statusValidasi" value={statusValidasi} onChange={statusValidasiChangeHadler}>
+                              <option value={0}>Pilih</option>
+                              {user.jenisUserId === 4 ? <option value="2">Selesai Diperbaiki</option> : <><option value="1">Perlu Perbaikan</option><option value="3">Disetujui</option></>}
+                            </select>
+                          </div>
+
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="keteranganValidasi">Catatan</label>
+                            <textarea id="keteranganValidasi" name="keteranganValidasi" value={keteranganValidasi} onChange={keteranganValidasiChangeHadler} placeholder="Tambahkan catatan (opsional)" rows={4} disabled={user.jenisUserId === 4} />
+                          </div>
+
+                          <button type="submit" className={style.btnPrimary}><HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}</button>
+                        </form>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
       </div>
     </div>
   );
