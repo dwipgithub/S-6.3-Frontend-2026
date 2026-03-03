@@ -37,7 +37,11 @@ const NavigationBar = () => {
           { name: "RL 3.4 Pengunjung", path: "/brandarl34", icon: "👥" },
           { name: "RL 3.5 Kunjungan", path: "/rl35", icon: "📅" },
           { name: "RL 3.6 Kebidanan", path: "/rl36", icon: "🤰" },
-          { name: "RL 3.7 Neonatal, Bayi, dan Balita", path: "/rl37", icon: "👶" },
+          {
+            name: "RL 3.7 Neonatal, Bayi, dan Balita",
+            path: "/rl37",
+            icon: "👶",
+          },
           { name: "RL 3.8 Laboratorium", path: "/rl38", icon: "🧪" },
           { name: "RL 3.9 Radiologi", path: "/rl39", icon: "🩻" },
           { name: "RL 3.10 Rujukan", path: "/rl310", icon: "↔️" },
@@ -47,7 +51,11 @@ const NavigationBar = () => {
           { name: "RL 3.14 Pelayanan Khusus", path: "/rl314", icon: "⭐" },
           { name: "RL 3.15 Kesehatan Jiwa", path: "/rl315", icon: "🧠" },
           { name: "RL 3.16 Keluarga Berencana", path: "/rl316", icon: "👨‍👩‍👧" },
-          { name: "RL 3.17 Farmasi Pengadaan Obat", path: "/rl317", icon: "💊" },
+          {
+            name: "RL 3.17 Farmasi Pengadaan Obat",
+            path: "/rl317",
+            icon: "💊",
+          },
           { name: "RL 3.18 Farmasi Resep", path: "/rl318", icon: "📝" },
           { name: "RL 3.19 Cara Bayar", path: "/rl319", icon: "💳" },
         ],
@@ -56,23 +64,47 @@ const NavigationBar = () => {
         name: "RL.4",
         icon: "📄",
         subMenus: [
-          { name: "RL 4.1 Morbiditas Pasien Rawat Inap", path: "/rl41", icon: "📈" },
-          { name: "RL 4.2 10 Besar Penyakit Rawat Inap", path: "/rl42", icon: "🔟" },
-          { name: "RL 4.3 10 Besar Kematian Penyakit", path: "/rl43", icon: "📉" },
+          {
+            name: "RL 4.1 Morbiditas Pasien Rawat Inap",
+            path: "/rl41",
+            icon: "📈",
+          },
+          {
+            name: "RL 4.2 10 Besar Penyakit Rawat Inap",
+            path: "/rl42",
+            icon: "🔟",
+          },
+          {
+            name: "RL 4.3 10 Besar Kematian Penyakit",
+            path: "/rl43",
+            icon: "📉",
+          },
         ],
       },
       {
         name: "RL.5",
         icon: "📑",
         subMenus: [
-          { name: "RL 5.1 Morbiditas Pasien Rawat Jalan", path: "/MENURL51", icon: "📊" },
-          { name: "RL 5.2 10 Besar Kasus Baru Penyakit Rawat Jalan", path: "/rl52", icon: "🔟" },
-          { name: "RL 5.3 10 Besar Kunjungan Penyakit Rawat Jalan", path: "/rl53", icon: "📋" },
+          {
+            name: "RL 5.1 Morbiditas Pasien Rawat Jalan",
+            path: "/MENURL51",
+            icon: "📊",
+          },
+          {
+            name: "RL 5.2 10 Besar Kasus Baru Penyakit Rawat Jalan",
+            path: "/rl52",
+            icon: "🔟",
+          },
+          {
+            name: "RL 5.3 10 Besar Kunjungan Penyakit Rawat Jalan",
+            path: "/rl53",
+            icon: "📋",
+          },
         ],
       },
       { name: "Absensi", path: "/absensi", icon: "📌" },
     ],
-    []
+    [],
   );
 
   const toggleSubMenu = (index) => {
@@ -82,7 +114,10 @@ const NavigationBar = () => {
   const toggleNested = (parentIndex, subIndex) => {
     setOpenSubMenus((prev) => {
       const parent = prev[parentIndex] || {};
-      return { ...prev, [parentIndex]: { ...parent, [subIndex]: !parent[subIndex] } };
+      return {
+        ...prev,
+        [parentIndex]: { ...parent, [subIndex]: !parent[subIndex] },
+      };
     });
   };
 
@@ -94,7 +129,7 @@ const NavigationBar = () => {
       if (!path) return false;
       return pathname === path || pathname.startsWith(path + "/");
     },
-    [pathname]
+    [pathname],
   );
 
   const isMenuActive = (menu) => {
@@ -128,12 +163,16 @@ const NavigationBar = () => {
       if (menu.subMenus) {
         const activeSubIndex = menu.subMenus.findIndex((sub) => {
           if (sub.path && isPathActive(sub.path)) return true;
-          if (sub.subMenus) return sub.subMenus.some((ss) => ss.path && isPathActive(ss.path));
+          if (sub.subMenus)
+            return sub.subMenus.some((ss) => ss.path && isPathActive(ss.path));
           return false;
         });
         if (activeSubIndex !== -1) {
           defaultOpenMenus[mIdx] = true;
-          defaultOpenSubMenus[mIdx] = { ...(defaultOpenSubMenus[mIdx] || {}), [activeSubIndex]: true };
+          defaultOpenSubMenus[mIdx] = {
+            ...(defaultOpenSubMenus[mIdx] || {}),
+            [activeSubIndex]: true,
+          };
         }
       }
     });
@@ -178,7 +217,7 @@ const NavigationBar = () => {
       }
       return config;
     },
-    (error) => Promise.reject(error)
+    (error) => Promise.reject(error),
   );
 
   const Logout = async () => {
@@ -195,18 +234,29 @@ const NavigationBar = () => {
   return (
     <>
       {/* Top bar */}
-        <Navbar
-          fixed="top"
-          className="navbar-expand-lg fixed-top"
-          style={{
-            height: TOPBAR_HEIGHT,
-            backgroundColor: "#fff",
-            borderBottom: "1px solid #e2e8f0",
-          }}
+      <Navbar
+        fixed="top"
+        className="navbar-expand-lg fixed-top"
+        style={{
+          height: TOPBAR_HEIGHT,
+          backgroundColor: "#fff",
+          borderBottom: "1px solid #e2e8f0",
+        }}
+      >
+        <Navbar.Brand
+          as={Link}
+          to="/beranda"
+          className="d-flex align-items-center"
+          style={{ color: "#333", paddingLeft: "50px" }}
         >
-        <Navbar.Brand as={Link} to="/beranda" className="d-flex align-items-center" style={{ color: "#333",paddingLeft: "50px" }}>
           {/* <img src={logoImage} width="30" height="30" className="d-inline-block align-top me-2" alt="SIRS" /> */}
-          <span style={{ fontSize: "1.2rem", fontWeight: 600, fontFamily: "'Times New Roman', Times, serif" }}>
+          <span
+            style={{
+              fontSize: "1.2rem",
+              fontWeight: 600,
+              // fontFamily: "'Times New Roman', Times, serif"
+            }}
+          >
             <span style={{ color: "#00B9AD" }}>SIRS</span>{" "}
             <span style={{ color: "#CDDC29" }}>ONLINE</span>
           </span>
@@ -216,7 +266,9 @@ const NavigationBar = () => {
             title={
               <span style={{ fontWeight: 500 }}>
                 <span style={{ color: "#00B9AD" }}>Login as</span>{" "}
-                <span style={{ color: "#CDDC29" }}>{user.nama ? user.nama : "User"}</span>
+                <span style={{ color: "#CDDC29" }}>
+                  {user.nama ? user.nama : "User"}
+                </span>
               </span>
             }
             id="user-dropdown"
@@ -241,7 +293,7 @@ const NavigationBar = () => {
           WebkitOverflowScrolling: "touch",
           backgroundColor: "#f8f9fa",
           borderRight: "1px solid #e2e8f0",
-          fontFamily: "'Times New Roman', Times, serif",
+          // fontFamily: "'Times New Roman', Times, serif",
         }}
       >
         <style>{`
@@ -255,7 +307,11 @@ const NavigationBar = () => {
         `}</style>
         <ul className="nav flex-column mb-auto" style={{ lineHeight: "1.2" }}>
           {menus.map((menu, index) => (
-            <li key={index} className="nav-item" style={{ marginBottom: "2px" }}>
+            <li
+              key={index}
+              className="nav-item"
+              style={{ marginBottom: "2px" }}
+            >
               {menu.subMenus ? (
                 <>
                   <button
@@ -271,7 +327,10 @@ const NavigationBar = () => {
                       margin: "0",
                       background: "linear-gradient(90deg,#CDDC29,#b8c924)",
                       borderRadius: "8px",
-                      border: "none",
+                      borderTop: "none",
+                      borderRight: "none",
+                      borderBottom: "none",
+                      borderLeft: "none",
                       display: "flex",
                       alignItems: "center",
                       ...(isMenuActive(menu) && {
@@ -285,7 +344,10 @@ const NavigationBar = () => {
                     {menu.name}
                   </button>
                   <ul
-                    className={"nav flex-column ms-3 submenu-collapse " + (openMenus[index] ? "open" : "")}
+                    className={
+                      "nav flex-column ms-3 submenu-collapse " +
+                      (openMenus[index] ? "open" : "")
+                    }
                     style={{
                       marginTop: "4px",
                       borderLeft: "2px dotted #CDDC29",
@@ -321,20 +383,38 @@ const NavigationBar = () => {
                           }}
                         >
                           <span style={{ marginRight: 8 }}>{sub.icon}</span>
-                          <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
-                            {
-                              (() => {
-                                const parts = String(sub.name).split(" ");
-                                const first = parts.slice(0, 2).join(" ");
-                                const second = parts.slice(2).join(" ");
-                                return (
-                                  <>
-                                    <span style={{ fontSize: "0.95rem", fontWeight: 700 }}>{first}</span>
-                                    <span style={{ fontSize: "0.82rem", color: "#374151" }}>{second}</span>
-                                  </>
-                                );
-                              })()
-                            }
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              lineHeight: 1,
+                            }}
+                          >
+                            {(() => {
+                              const parts = String(sub.name).split(" ");
+                              const first = parts.slice(0, 2).join(" ");
+                              const second = parts.slice(2).join(" ");
+                              return (
+                                <>
+                                  <span
+                                    style={{
+                                      fontSize: "0.95rem",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {first}
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: "0.82rem",
+                                      color: "#374151",
+                                    }}
+                                  >
+                                    {second}
+                                  </span>
+                                </>
+                              );
+                            })()}
                           </div>
                         </Link>
                       </li>

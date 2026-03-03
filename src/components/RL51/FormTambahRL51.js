@@ -477,7 +477,7 @@ const FormTambahRL51 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <div className="row">
         <div className="col-md-6">
@@ -545,7 +545,7 @@ const FormTambahRL51 = () => {
         <div className="col-md-6">
           <div className="pb-2">
             <Link
-              to={`/rl51/`}
+              to={`/MENURL51/`}
               className="btn btn-info"
               style={{
                 fontSize: "18px",

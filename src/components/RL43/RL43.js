@@ -12,6 +12,7 @@ import Table from "react-bootstrap/Table";
 import { Modal } from "react-bootstrap";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import Spinner from "react-bootstrap/Spinner";
 
 const RL43 = () => {
   // const [namaRS, setNamaRS] = useState("");
@@ -35,6 +36,13 @@ const RL43 = () => {
   const [daftarKabKota, setDaftarKabKota] = useState([]);
   const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
+
+  const [idValidasi, setidValidasi] = useState("");
+  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [tglValidasi, setTglValidasi] = useState("");
+  const [isValidated, setIsValidated] = useState(false);
+  const [loadingRS, setLoadingRS] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
@@ -91,8 +99,9 @@ const RL43 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
+
   const getBulan = async () => {
     const results = [];
     results.push({
@@ -171,6 +180,8 @@ const RL43 = () => {
   };
 
   const getRumahSakit = async (kabKotaId) => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
         headers: {
@@ -182,6 +193,7 @@ const RL43 = () => {
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -196,7 +208,45 @@ const RL43 = () => {
     } catch (error) {}
   };
 
+  const getValidasi = async () => {
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(bulan),
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rlempattitiktigavalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setStatusValidasi(results.data.data[0].statusValidasiId);
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
   const getRL = async (e) => {
+    setSpinner(true);
     e.preventDefault();
     if (rumahSakit == null) {
       toast(`rumah sakit harus dipilih`, {
@@ -221,21 +271,20 @@ const RL43 = () => {
       };
       const results = await axiosJWT.get(
         "/apisirs6v2/rlempattitiktiga",
-        customConfig
+        customConfig,
       );
 
       const rlEmpatDetails = results.data.data.map((value) => {
         return value;
       });
-
-      console.log(rlEmpatDetails);
       setDataRL(rlEmpatDetails);
-      setRumahSakit(null);
       handleClose();
-      setSpinner(false);
+      setActiveTab("tab1");
+      await getValidasi();
     } catch (error) {
       console.log(error);
     }
+    setSpinner(false);
   };
 
   const handleClose = () => setShow(false);
@@ -363,15 +412,43 @@ const RL43 = () => {
     });
   }
 
+  const [activeTab, setActiveTab] = useState("tab1");
+
+  const handleTabClick = (tab) => {
+    if (tab === "tab2") {
+      getValidasi();
+    }
+    setActiveTab(tab);
+  };
+
   return (
-    <div className="container" style={{ marginTop: "70px" }}>
+    <div
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
+    >
+      {spinner && (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            zIndex: 9999,
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+          }}
+        >
+          <Spinner animation="border" variant="primary" />
+        </div>
+      )}
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>
         </Modal.Header>
         <form onSubmit={getRL}>
           <Modal.Body>
-            {user.jenisUserId === 1 ? (
+            {user.jenisUserId === 1 || user.jenisUserId === 99 ? (
               <>
                 <div
                   className="form-floating"
@@ -588,125 +665,253 @@ const RL43 = () => {
       </Modal>
       <div className="row">
         <div className="col-md-12">
-          <span style={{ color: "gray" }}>
-            {" "}
-            <h4> RL 4.3 - 10 Besar Kematian Penyakit Pasien Rawat Inap</h4>
-          </span>
-          <div style={{ marginBottom: "10px" }}>
-            <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-              onClick={handleShow}
-            >
+          <div className="d-flex justify-content-between align-items-center">
+            <h4 className={style.pageHeader}>
+              RL 4.3 - 10 Besar Kematian Penyakit Pasien Rawat Inap
+            </h4>
+          </div>
+          <div className={style.toolbar}>
+            <button className={style.btnPrimary} onClick={handleShow}>
               Filter
             </button>
-            <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                marginLeft: "5px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-              onClick={handleDownloadExcel}
-            >
+            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
               Download
             </button>
           </div>
+
+          <div className={style.filterLabel}>
+            {filterLabel.length > 0 ? (
+              <div>
+                <h5 style={{ fontSize: "14px" }}>
+                  Filtered By{" "}
+                  {filterLabel
+                    .map((value) => {
+                      return value;
+                    })
+                    .join(", ")}
+                </h5>
+              </div>
+            ) : (
+              <></>
+            )}
+          </div>
+
+          <div>
+            <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button
+                  type="button"
+                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                  onClick={() => handleTabClick("tab1")}
+                >
+                  Data
+                </button>
+              </li>
+              {(user.jenisUserId === 1 ||
+                user.jenisUserId === 2 ||
+                user.jenisUserId === 3 ||
+                user.jenisUserId === 4) &&
+              dataRL.length > 0 &&
+              rumahSakit != null ? (
+                <li className={`nav-item ${style.navItem}`}>
+                  <button
+                    type="button"
+                    className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                    onClick={() => handleTabClick("tab2")}
+                  >
+                    Validasi
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+
+            <div className={`tab-content ${style.tabContent}`}>
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab1" ? "show active" : ""
+                }`}
+              >
+                <div className={style["table-container"]}>
+                  <table className={style["table"]}>
+                    <thead>
+                      <tr>
+                        <th rowSpan={3} style={{ verticalAlign: "middle" }}>
+                          No.
+                        </th>
+                        <th
+                          rowSpan={3}
+                          style={{
+                            width: "5%",
+                            textAlign: "center",
+                            verticalAlign: "middle",
+                          }}
+                        >
+                          Kelompok ICD-10
+                        </th>
+                        <th
+                          rowSpan={3}
+                          style={{ textAlign: "left", verticalAlign: "middle" }}
+                        >
+                          Kelompok Diagnosa Penyakit
+                        </th>
+                        <th
+                          colSpan={3}
+                          // rowSpan={2}
+                          style={{
+                            width: "30%",
+                            textAlign: "center",
+                            verticalAlign: "middle",
+                          }}
+                        >
+                          Jumlah Pasien Hidup dan Mati Menurut Jenis Kelamin
+                        </th>
+                        <th
+                          colSpan={3}
+                          // rowSpan={2}
+                          style={{
+                            textAlign: "center",
+                            verticalAlign: "middle",
+                          }}
+                        >
+                          Jumlah Pasien Keluar Mati
+                        </th>
+                      </tr>
+                      <tr>
+                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                        <th style={{ textAlign: "center" }}>Perempuan</th>
+                        <th style={{ textAlign: "center" }}>Total</th>
+                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                        <th style={{ textAlign: "center" }}>Perempuan</th>
+                        <th style={{ textAlign: "center" }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dataRL.map((value, index) => {
+                        return (
+                          <tr style={{ verticalAlign: "center" }} key={index}>
+                            <td>
+                              <label>{index + 1}</label>
+                            </td>
+                            <td style={{ textAlign: "center " }}>
+                              <label>{value.icd_code_group}</label>
+                            </td>
+                            <td style={{ textAlign: "left" }}>
+                              <label>{value.description_code_group}</label>
+                            </td>
+                            <td>{value.jmlh_pas_hidup_mati_laki}</td>
+                            <td>{value.jmlh_pas_hidup_mati_perempuan}</td>
+                            <td>
+                              {value.total_pas_hidup_mati_group_by_icd_code}
+                            </td>
+                            <td>{value.jmlh_pas_keluar_mati_gen_laki}</td>
+                            <td>{value.jmlh_pas_keluar_mati_gen_perempuan}</td>
+                            <td>
+                              {value.total_pas_keluar_mati_group_by_icd_code}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <div
+                  className={`tab-pane fade ${
+                    activeTab === "tab2" ? "show active" : ""
+                  }`}
+                >
+                  <div className={style.validasiCard}>
+                    <h3 className={style.validasiCardTitle}>Validasi RL 4.3</h3>
+                    <div
+                      style={{
+                        backgroundColor: "#d1ecf1",
+                        color: "#0c5460",
+                        padding: "15px",
+                        borderRadius: "5px",
+                        marginBottom: "20px",
+                        border: "1px solid #bee5eb",
+                      }}
+                    >
+                      <p style={{ margin: "0" }}>
+                        Info : Validasi RL 4.3 ini berdasarkan validasi RL 4.1
+                      </p>
+                    </div>
+                    {idValidasi ? (
+                      <div
+                        style={{
+                          backgroundColor: "#E9ECEF",
+                          padding: "15px",
+                          borderRadius: "5px",
+                          marginBottom: "20px",
+                        }}
+                      >
+                        <p style={{ margin: "0" }}>
+                          <strong
+                            style={{ width: "100px", display: "inline-block" }}
+                          >
+                            Status
+                          </strong>
+                          :{" "}
+                          {statusValidasi == 1
+                            ? "Perlu Perbaikan"
+                            : statusValidasi == 2
+                              ? "Selesai Diperbaiki"
+                              : "Disetujui"}
+                        </p>
+                        <p style={{ margin: "0" }}>
+                          <strong
+                            style={{ width: "100px", display: "inline-block" }}
+                          >
+                            Catatan
+                          </strong>
+                          : {keteranganValidasi || "-"}
+                        </p>
+                        <p style={{ margin: "0" }}>
+                          <strong
+                            style={{ width: "100px", display: "inline-block" }}
+                          >
+                            Tanggal
+                          </strong>
+                          :{" "}
+                          {tglValidasi
+                            ? new Date(tglValidasi).toLocaleString("id-ID", {
+                                day: "2-digit",
+                                month: "long",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </p>
+                      </div>
+                    ) : (
+                      user.jenisUserId !== 3 && (
+                        <div
+                          style={{
+                            backgroundColor: "#fff3cd",
+                            padding: "15px",
+                            borderRadius: "5px",
+                            marginBottom: "20px",
+                          }}
+                        >
+                          <h5 style={{ margin: "0", color: "#856404" }}>
+                            Data Belum di Validasi
+                          </h5>
+                        </div>
+                      )
+                    )}
+                    {isValidated ? (
+                      <h2 className="text-center" style={{ color: "green" }}>
+                        Data telah di validasi
+                      </h2>
+                    ) : (
+                      <></>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <h5 style={{ fontSize: "14px" }}>
-            {filterLabel
-              .map((value) => {
-                return "filtered by" + value;
-              })
-              .join(", ")}
-          </h5>
-        </div>
-        <Table
-          className={style.rlTable}
-          striped
-          bordered
-          responsive
-          style={{ width: "100%" }}
-        >
-          <thead>
-            <tr>
-              <th rowSpan={3} style={{ verticalAlign: "middle" }}>
-                No.
-              </th>
-              <th
-                rowSpan={3}
-                style={{
-                  width: "5%",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                }}
-              >
-                Kelompok ICD-10
-              </th>
-              <th
-                rowSpan={3}
-                style={{ textAlign: "left", verticalAlign: "middle" }}
-              >
-                Kelompok Diagnosa Penyakit
-              </th>
-              <th
-                colSpan={3}
-                // rowSpan={2}
-                style={{
-                  width: "30%",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                }}
-              >
-                Jumlah Pasien Hidup dan Mati Menurut Jenis Kelamin
-              </th>
-              <th
-                colSpan={3}
-                // rowSpan={2}
-                style={{ textAlign: "center", verticalAlign: "middle" }}
-              >
-                Jumlah Pasien Keluar Mati
-              </th>
-            </tr>
-            <tr>
-              <th style={{ textAlign: "center" }}>Laki-Laki</th>
-              <th style={{ textAlign: "center" }}>Perempuan</th>
-              <th style={{ textAlign: "center" }}>Total</th>
-              <th style={{ textAlign: "center" }}>Laki-Laki</th>
-              <th style={{ textAlign: "center" }}>Perempuan</th>
-              <th style={{ textAlign: "center" }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dataRL.map((value, index) => {
-              return (
-                <tr style={{ verticalAlign: "center" }} key={index}>
-                  <td>
-                    <label>{index + 1}</label>
-                  </td>
-                  <td style={{ textAlign: "center " }}>
-                    <label>{value.icd_code_group}</label>
-                  </td>
-                  <td style={{ textAlign: "left" }}>
-                    <label>{value.description_code_group}</label>
-                  </td>
-                  <td>{value.jmlh_pas_hidup_mati_laki}</td>
-                  <td>{value.jmlh_pas_hidup_mati_perempuan}</td>
-                  <td>{value.total_pas_hidup_mati_group_by_icd_code}</td>
-                  <td>{value.jmlh_pas_keluar_mati_gen_laki}</td>
-                  <td>{value.jmlh_pas_keluar_mati_gen_perempuan}</td>
-                  <td>{value.total_pas_keluar_mati_group_by_icd_code}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </Table>
       </div>
     </div>
   );

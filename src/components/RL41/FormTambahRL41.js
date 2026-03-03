@@ -464,7 +464,7 @@ const FormTambahRL41 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "100px" }}
+      style={{ marginTop: "20px", marginBottom: "100px" }}
     >
       <div className="row">
         <div className="col-md-6">
@@ -593,11 +593,7 @@ const FormTambahRL41 = () => {
                 )}
               </div>
               <div className={style["table-container"]}>
-                <table
-                  responsive
-                  className={style["table"]}
-                  style={{ width: "100%" }}
-                >
+                <table className={style["table"]} style={{ width: "100%" }}>
                   <thead className={style["thead"]}>
                     <tr className="main-header-row">
                       <th style={{ width: "5%" }}>No.</th>
@@ -737,7 +733,6 @@ const FormTambahRL41 = () => {
                     </div>
                     <div className={style["table-container"]}>
                       <table
-                        responsive
                         className={style["table"]}
                         style={{ width: "100%" }}
                       >
