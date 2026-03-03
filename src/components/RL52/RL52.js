@@ -11,6 +11,7 @@ import Table from "react-bootstrap/Table";
 import { Modal } from "react-bootstrap";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import Spinner from "react-bootstrap/Spinner";
 
 const RL52 = () => {
   const [tahun, setTahun] = useState("2025");
@@ -31,6 +32,13 @@ const RL52 = () => {
   const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
   const { CSRFToken } = useCSRFTokenContext();
+
+  const [idValidasi, setidValidasi] = useState("");
+  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [tglValidasi, setTglValidasi] = useState("");
+  const [isValidated, setIsValidated] = useState(false);
+  const [loadingRS, setLoadingRS] = useState(false);
 
   useEffect(() => {
     refreshToken();
@@ -87,7 +95,7 @@ const RL52 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
   const getBulan = async () => {
     const results = [];
@@ -167,6 +175,8 @@ const RL52 = () => {
   };
 
   const getRumahSakit = async (kabKotaId) => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
         headers: {
@@ -178,6 +188,7 @@ const RL52 = () => {
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -192,7 +203,45 @@ const RL52 = () => {
     } catch (error) {}
   };
 
+  const getValidasi = async () => {
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(bulan),
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rllimatitikduavalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setStatusValidasi(results.data.data[0].statusValidasiId);
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
   const getRL = async (e) => {
+    setSpinner(true);
     e.preventDefault();
     if (rumahSakit == null) {
       toast(`rumah sakit harus dipilih`, {
@@ -217,21 +266,21 @@ const RL52 = () => {
       };
       const results = await axiosJWT.get(
         "/apisirs6v2/rllimatitikdua",
-        customConfig
+        customConfig,
       );
 
       const rlLimaTitikDuaDetails = results.data.data.map((value) => {
         return value;
       });
 
-      console.log(rlLimaTitikDuaDetails);
       setDataRL(rlLimaTitikDuaDetails);
-      setRumahSakit(null);
       handleClose();
-      setSpinner(false);
+      // setActiveTab("tab1");
+      await getValidasi();
     } catch (error) {
       console.log(error);
     }
+    setSpinner(false);
   };
 
   const handleClose = () => setShow(false);

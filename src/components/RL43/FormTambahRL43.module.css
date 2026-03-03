@@ -1,21 +1,223 @@
 .rlTable {
-    border-collapse: collapse;
-    width: 100%;
+  border-collapse: collapse;
+  width: 100%;
 }
-.rlTable td, .rlTable th {
-    border: 1px dotted #779D9E;
-    font-size: 14px;
-    font-family: Arial, Helvetica, sans-serif;
-    padding: 4px;
-    vertical-align : middle ;
-    text-align: center;
-}
-.rlTable tr:nth-child(even){background-color: #f2f2f2;}
-.rlTable tr:hover {background-color: #ddd;}
+.rlTable td,
 .rlTable th {
-    padding-top: 12px;
-    padding-bottom: 12px;
-    text-align: center !important;
-    background-color: #fbfefe;
-    color: black;
+  border: 1px dotted #779d9e;
+  font-size: 14px;
+  font-family: Arial, Helvetica, sans-serif;
+  padding: 4px;
+  vertical-align: middle;
+  text-align: center;
+}
+.rlTable tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+.rlTable tr:hover {
+  background-color: #ddd;
+}
+.rlTable th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: center !important;
+  background-color: #fbfefe;
+  color: black;
+}
+
+/* ========== Page layout ========== */
+.pageHeader {
+  color: #2c3e50;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.btnPrimary {
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #00b9ad;
+  /* background: linear-gradient(180deg, #5a8a8c 0%, #4a7a7c 100%); */
+  color: #fff;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+}
+
+.btnPrimary:hover {
+  background: linear-gradient(180deg, #00968f 0%, #007a75 100%);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btnPrimary:active {
+  transform: translateY(0);
+}
+
+.filterLabel {
+  font-size: 0.875rem;
+  color: #5a6c7d;
+  margin-bottom: 1rem;
+}
+
+.navTabs {
+  border-bottom: 2px solid #e2e8f0;
+  gap: 0;
+}
+
+.navTabs .navItem {
+  margin-bottom: -2px;
+}
+
+.navTabs .navLink {
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: #64748b;
+  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.navTabs .navLink:hover {
+  color: #475569;
+}
+
+.navTabs .navLink.active,
+.navLink.active {
+  color: #4472c4;
+  border-bottom-color: #00b9ad;
+}
+
+.table-container {
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid #d4d4d4;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: #fff;
+}
+
+.table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+  background: #fff;
+}
+
+.table th,
+.table td {
+  padding: 6px 8px;
+  border: 1px solid #d4d4d4;
+  box-sizing: border-box;
+}
+
+.table thead th {
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
+  color: #333;
+  font-weight: 600;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.3;
+}
+
+.table .subheader-row th {
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
+  color: #333;
+  font-weight: 600;
+  font-size: 13px;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 29px;
+  z-index: 1;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.3;
+}
+
+/* ========== Form Validasi (tab Validasi) ========== */
+.validasiCard {
+  max-width: 520px;
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  /* font-family: "Times New Roman", Times, serif; */
+  font-size: 0.95rem;
+}
+
+.validasiCardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #00b9ad;
+}
+
+.validasiFormGroup {
+  margin-bottom: 0.6rem;
+}
+
+.validasiFormGroup label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.25rem;
+}
+
+.validasiFormGroup select,
+.validasiFormGroup textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.95rem;
+  /* font-family: "Times New Roman", Times, serif; */
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.validasiFormGroup select:focus,
+.validasiFormGroup textarea:focus {
+  outline: none;
+  border-color: #00b9ad;
+  box-shadow: 0 0 0 3px rgba(0, 185, 173, 0.15);
+}
+
+.validasiFormGroup textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Tab content area */
+.tabContent {
+  margin-top: 1rem;
 }

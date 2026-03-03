@@ -86,7 +86,7 @@ const RL51 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getBulan = async () => {
@@ -217,7 +217,7 @@ const RL51 = () => {
       };
       const results = await axiosJWT.get(
         "/apisirs6v2/rllimatitiksatu",
-        customConfig
+        customConfig,
       );
 
       const rlLimaTitikSatuDetails = results.data.data.map((value) => {
@@ -227,7 +227,7 @@ const RL51 = () => {
       setNamaFile(
         "RL51_" +
           rumahSakit.id +
-          "_".concat(String(tahun).concat("-").concat(bulan).concat("-01"))
+          "_".concat(String(tahun).concat("-").concat(bulan).concat("-01")),
       );
       setDataRL(rlLimaTitikSatuDetails);
       setRumahSakit(null);
@@ -353,7 +353,7 @@ const RL51 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
