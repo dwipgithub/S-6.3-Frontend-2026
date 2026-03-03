@@ -14,7 +14,7 @@ import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL32 = () => {
-  const [bulan, setBulan] = useState(1);
+  const [bulan, setBulan] = useState(0);
   const [tahun, setTahun] = useState("");
   const [filterLabel, setFilterLabel] = useState([]);
   const [daftarBulan, setDaftarBulan] = useState([]);
@@ -26,9 +26,12 @@ const RL32 = () => {
   const [token, setToken] = useState("");
   const [expire, setExpire] = useState("");
   const [show, setShow] = useState(false);
-  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [statusValidasi, setStatusValidasi] = useState(0);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [user, setUser] = useState({});
+  const [validasiId, setValidasiId] = useState(null);
+  const [dataValidasi, setDataValidasi] = useState(null);
+  const [activeTab, setActiveTab] = useState("tab1");
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -43,6 +46,13 @@ const RL32 = () => {
     getLastYear().then((results) => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load validasi data secara realtime saat bulan/tahun/rumahSakit berubah
+  useEffect(() => {
+    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
+      getValidasi();
+    }
+  }, [bulan, tahun, rumahSakit, activeTab]);
 
   const refreshToken = async () => {
     try {
@@ -197,6 +207,44 @@ const RL32 = () => {
     setKeteranganValidasi(e.target.value);
   };
 
+  const getValidasi = async () => {
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+        },
+      };
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rltigatitikduavalidasi",
+        customConfig
+      );
+
+      if (response.data.data && response.data.data.length > 0) {
+        const validasi = response.data.data[0];
+        setValidasiId(validasi.id);
+        setStatusValidasi(validasi.statusValidasiId);
+        setKeteranganValidasi(validasi.catatan || "");
+        setDataValidasi(validasi);
+      } else {
+        setValidasiId(null);
+        setStatusValidasi(0);
+        setKeteranganValidasi("");
+        setDataValidasi(null);
+      }
+    } catch (error) {
+      console.log(error);
+      setValidasiId(null);
+      setStatusValidasi(0);
+      setKeteranganValidasi("");
+      setDataValidasi(null);
+    }
+  };
+
   const getRumahSakit = async (kabKotaId) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
@@ -256,8 +304,39 @@ const RL32 = () => {
       });
 
       setDataRL(rlTigaTitikDuaDetails);
-      // setRumahSakit(null)
+      setValidasiId(null);
+      setStatusValidasi(0);
+      setKeteranganValidasi("");
+      setDataValidasi(null);
       handleClose();
+      
+      // Load validasi data setelah filter diterapkan
+      try {
+        const validasiConfig = {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            rsId: rumahSakit.id,
+            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          },
+        };
+        const validasiResponse = await axiosJWT.get(
+          "/apisirs6v2/rltigatitikduavalidasi",
+          validasiConfig
+        );
+
+        if (validasiResponse.data.data && validasiResponse.data.data.length > 0) {
+          const validasi = validasiResponse.data.data[0];
+          setValidasiId(validasi.id);
+          setStatusValidasi(validasi.statusValidasiId);
+          setKeteranganValidasi(validasi.catatan || "");
+          setDataValidasi(validasi);
+        }
+      } catch (error) {
+        console.log(error);
+      }
     } catch (error) {
       console.log(error);
     }
@@ -305,43 +384,87 @@ const RL32 = () => {
 
   const simpanValidasi = async (e) => {
     e.preventDefault();
+    
+    if (!rumahSakit || !rumahSakit.id) {
+      toast("Rumah sakit harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (parseInt(statusValidasi) === 0) {
+      toast("Status harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
     try {
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
         },
       };
 
-      await axiosJWT.post(
-        "/apisirs6v2/validasi",
-        {
+      const payload = {
+        statusValidasiId: parseInt(statusValidasi),
+        catatan: keteranganValidasi,
+      };
+
+      console.log("Payload yang dikirim:", payload);
+      console.log("ValidasiId:", validasiId);
+
+      if (validasiId) {
+        // Update existing validation
+        const response = await axiosJWT.patch(
+          `/apisirs6v2/rltigatitikduavalidasi/${validasiId}`,
+          payload,
+          customConfig
+        );
+        console.log("Response PATCH:", response.data);
+        toast("Data Validasi Berhasil Diperbarui", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        // Refresh validasi data tanpa reload halaman
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      } else {
+        // Create new validation
+        const createPayload = {
           rsId: rumahSakit.id,
-          rlId: "rl.3.2",
-          periodeBulan: bulan,
-          periodeTahun: tahun,
-          statusId: statusValidasi,
-          keterangan: keteranganValidasi,
-        },
-        customConfig
-      );
-
-      toast("Data Berhasil Disimpan", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-
-      // Form tetap di tab Validasi setelah simpan
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          jenisPeriode: 1,
+          statusValidasiId: parseInt(statusValidasi),
+          catatan: keteranganValidasi,
+        };
+        const response = await axiosJWT.post(
+          "/apisirs6v2/rltigatitikduavalidasi",
+          createPayload,
+          customConfig
+        );
+        setValidasiId(response.data.data.id);
+        toast("Data Validasi Berhasil Disimpan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        // Refresh validasi data tanpa reload halaman
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      }
     } catch (error) {
-      toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
+      console.log(error);
+      toast(
+        `Data tidak bisa disimpan karena: ${
+          error.response?.data?.message || error.message
+        }`,
+        {
+          position: toast.POSITION.TOP_RIGHT,
+        }
+      );
     }
-
-    // console.log(rumahSakit.id)
-    // console.log(bulan)
-    // console.log(tahun)
-    // console.log(statusValidasi)
-    // console.log(keteranganValidasi)
   };
 
   const handleClose = () => setShow(false);
@@ -482,8 +605,6 @@ const RL32 = () => {
       },
     });
   }
-
-  const [activeTab, setActiveTab] = useState("tab1");
 
   const handleTabClick = (tab) => {
     setActiveTab(tab);
@@ -834,8 +955,10 @@ const RL32 = () => {
               <select
                 typeof="select"
                 className="form-control"
+                value={bulan}
                 onChange={bulanChangeHandler}
               >
+                <option value={0}>Pilih</option>
                 {daftarBulan.map((bulan) => {
                   return (
                     <option
@@ -925,7 +1048,7 @@ const RL32 = () => {
                   Data
                 </button>
               </li>
-              {user.jenisUserId === 3 ? (
+              {[3, 4].includes(user.jenisUserId) ? (
                 <li className={`nav-item ${style.navItem}`}>
                   <button
                     type="button"
@@ -1478,36 +1601,97 @@ const RL32 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Form Validasi RL 3.2</h3>
-                  <form onSubmit={simpanValidasi}>
-                    <ToastContainer />
-                    <div className={style.validasiFormGroup}>
-                      <label htmlFor="statusValidasi">Status</label>
-                      <select
-                        id="statusValidasi"
-                        name="statusValidasi"
-                        value={statusValidasi}
-                        onChange={(e) => statusValidasiChangeHadler(e)}
-                      >
-                        <option value="1">Disetujui</option>
-                        <option value="2">Diperbaiki</option>
-                      </select>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.2</h3>
+                  
+                  {dataRL.length === 0 ? (
+                    <div style={{
+                      backgroundColor: "#fff3cd",
+                      border: "1px solid #ffc107",
+                      color: "#856404",
+                      padding: "15px",
+                      borderRadius: "4px",
+                      textAlign: "center"
+                    }}>
+                      <strong>Data belum tersedia untuk proses validasi. </strong>
                     </div>
-                    <div className={style.validasiFormGroup}>
-                      <label htmlFor="keteranganValidasi">Catatan</label>
-                      <textarea
-                        id="keteranganValidasi"
-                        name="keteranganValidasi"
-                        value={keteranganValidasi}
-                        onChange={(e) => keteranganValidasiChangeHadler(e)}
-                        placeholder="Tambahkan catatan (opsional)"
-                        rows={4}
-                      />
-                    </div>
-                    <button type="submit" className={style.btnPrimary}>
-                      <HiSaveAs size={20} /> Simpan
-                    </button>
-                  </form>
+                  ) : (
+                    <>
+                      {dataValidasi && (
+                        <div
+                          style={{
+                            backgroundColor: "#f0f0f0",
+                            padding: "10px",
+                            borderRadius: "4px",
+                            marginBottom: "15px",
+                          }}
+                        >
+                          <p style={{ margin: "5px 0" }}>
+                            <strong>Status:</strong>{" "}
+                            {dataValidasi.statusValidasiId === 1
+                              ? "Perlu Perbaikan"
+                              : dataValidasi.statusValidasiId === 2
+                              ? "Selesai Diperbaiki"
+                              : dataValidasi.statusValidasiId === 3
+                              ? "Disetujui"
+                              : ""}
+                          </p>
+                          <p style={{ margin: "5px 0" }}>
+                            <strong>Dibuat:</strong>{" "}
+                            {new Date(dataValidasi.createdAt).toLocaleDateString(
+                              "id-ID"
+                            )}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Jika validasi sudah disetujui, hanya tampilkan status dan dibuat */}
+                      {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                        <div style={{ color: "#28a745", fontWeight: "bold" }}>
+                          {/* Valida */}
+                        </div>
+                      ) : (
+                        <form onSubmit={simpanValidasi}>
+                          <ToastContainer />
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="statusValidasi">Status</label>
+                            <select
+                              id="statusValidasi"
+                              name="statusValidasi"
+                              value={statusValidasi}
+                              onChange={(e) => statusValidasiChangeHadler(e)}
+                            >
+                              <option value={0}>Pilih</option>
+                              {user.jenisUserId === 4 ? (
+                                <option value="2">Selesai Diperbaiki</option>
+                              ) : (
+                                <>
+                                  <option value="1">Perlu Perbaikan</option>
+                                  <option value="3">Disetujui</option>
+                                </>
+                              )}
+                            </select>
+                          </div>
+
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="keteranganValidasi">Catatan</label>
+                            <textarea
+                              id="keteranganValidasi"
+                              name="keteranganValidasi"
+                              value={keteranganValidasi}
+                              onChange={(e) => keteranganValidasiChangeHadler(e)}
+                              placeholder="Tambahkan catatan (opsional)"
+                              rows={4}
+                              disabled={user.jenisUserId === 4}
+                            />
+                          </div>
+
+                          <button type="submit" className={style.btnPrimary}>
+                            <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                          </button>
+                        </form>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

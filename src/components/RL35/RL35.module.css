@@ -66,3 +66,117 @@
     left: 0;
     z-index: 1; /* Ensures sticky column is above other content */
 }
+
+/* ========== Navigation Tabs ========== */
+.navTabs {
+  border-bottom: 2px solid #e2e8f0;
+  gap: 0;
+}
+
+.navTabs .navItem {
+  margin-bottom: -2px;
+}
+
+.navTabs .navLink {
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: #64748b;
+  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.navTabs .navLink:hover {
+  color: #475569;
+}
+
+.navTabs .navLink.active,
+.navLink.active {
+  color: #475569;
+  border-bottom-color: #00B9AD;
+}
+
+/* Tab content area */
+.tabContent {
+  margin-top: 1rem;
+}
+
+/* ========== Form Validasi (tab Validasi) ========== */
+.validasiCard {
+  max-width: 520px;
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 0.95rem;
+}
+
+.validasiCardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #00B9AD;
+}
+
+.validasiFormGroup {
+  margin-bottom: 0.6rem;
+}
+
+.validasiFormGroup label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.25rem;
+}
+
+.validasiFormGroup select,
+.validasiFormGroup textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.95rem;
+  font-family: 'Times New Roman', Times, serif;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.validasiFormGroup select:focus,
+.validasiFormGroup textarea:focus {
+  outline: none;
+  border-color: #00B9AD;
+  box-shadow: 0 0 0 3px rgba(0, 185, 173, 0.15);
+}
+
+.validasiFormGroup textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.btnPrimary {
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #5a8a8c 0%, #4a7a7c 100%);
+  color: #fff;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btnPrimary:hover {
+  background: linear-gradient(180deg, #4a7a7c 0%, #3d6a6c 100%);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btnPrimary:active {
+  transform: translateY(0);
+}

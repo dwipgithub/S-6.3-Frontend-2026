@@ -104,8 +104,12 @@ const RL31 = () => {
 
   const refreshToken = async () => {
     try {
-      const config = { headers: { "XSRF-TOKEN": CSRFToken } };
-      const resp = await axios.get("/apisirs6v2/token", config);
+      const customConfig = {
+        headers: {
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+      const resp = await axios.get("/apisirs6v2/token", customConfig);
       setToken(resp.data.accessToken);
       const decoded = jwt_decode(resp.data.accessToken);
       setUser(decoded);
@@ -121,8 +125,9 @@ const RL31 = () => {
         showRumahSakit(decoded.satKerId);
       }
     } catch (err) {
-      console.error(err);
-      navigate("/");
+      if (err.response) {
+        navigate("/");
+      }
     }
   };
 
@@ -272,7 +277,6 @@ const getRL = async (e) => {
       params.periode = `${tahun}-${bulan}`;
     }
   }
-
   setFilterLabel(filter);
 
   try {
@@ -342,7 +346,7 @@ const getRL = async (e) => {
 
   return (
     <div className="container" style={{ marginTop: "70px" }}>
-      <h2>RL 3.1 Indikator Pelayanan</h2>
+      <h4 className={style.pageHeader}>RL 3.1 Indikator Pelayanan</h4>
 
       <Modal show={show} onHide={() => setShow(false)} style={{ position: "fixed" }}>
         <Modal.Header closeButton>

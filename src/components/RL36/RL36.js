@@ -30,7 +30,20 @@ const RL36 = () => {
   const [user, setUser] = useState({});
   const navigate = useNavigate();
   const [spinner, setSpinner] = useState(false);
+  const [statusValidasi, setStatusValidasi] = useState(0);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [validasiId, setValidasiId] = useState(null);
+  const [dataValidasi, setDataValidasi] = useState(null);
+  const [activeTab, setActiveTab] = useState("tab1");
   const { CSRFToken } = useCSRFTokenContext();
+
+  // Load validasi data when user opens Validasi tab or when filters change
+  useEffect(() => {
+    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
+      getValidasi();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bulan, tahun, rumahSakit, activeTab]);
 
   useEffect(() => {
     refreshToken();
@@ -880,10 +893,131 @@ const RL36 = () => {
     });
   }
 
+  const getValidasi = async () => {
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+        },
+      };
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rltigatitikeenamvalidasi",
+        customConfig
+      );
+
+      if (response.data.data && response.data.data.length > 0) {
+        const validasi = response.data.data[0];
+        setValidasiId(validasi.id);
+        setStatusValidasi(validasi.statusValidasiId);
+        setKeteranganValidasi(validasi.catatan || "");
+        setDataValidasi(validasi);
+      } else {
+        setValidasiId(null);
+        setStatusValidasi(0);
+        setKeteranganValidasi("");
+        setDataValidasi(null);
+      }
+    } catch (error) {
+      console.log(error);
+      setValidasiId(null);
+      setStatusValidasi(0);
+      setKeteranganValidasi("");
+      setDataValidasi(null);
+    }
+  };
+
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    e.preventDefault();
+
+    if (!rumahSakit || !rumahSakit.id) {
+      toast("Rumah sakit harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (parseInt(statusValidasi) === 0) {
+      toast("Status harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+
+      const payload = {
+        statusValidasiId: parseInt(statusValidasi),
+        catatan: keteranganValidasi,
+      };
+
+      if (validasiId) {
+        await axiosJWT.patch(
+          `/apisirs6v2/rltigatitikeenamvalidasi/${validasiId}`,
+          payload,
+          customConfig
+        );
+        toast("Data Validasi Berhasil Diperbarui", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+      } else {
+        const response = await axiosJWT.post(
+          "/apisirs6v2/rltigatitikeenamvalidasi",
+          {
+            rsId: rumahSakit.id,
+            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+            ...payload,
+          },
+          customConfig
+        );
+        setValidasiId(response.data.data.id);
+        toast("Data Validasi Berhasil Disimpan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      }
+    } catch (error) {
+      console.log(error);
+      toast(
+        `Data tidak bisa disimpan karena: ${
+          error.response?.data?.message || error.message
+        }`,
+        {
+          position: toast.POSITION.TOP_RIGHT,
+        }
+      );
+    }
+  };
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
+
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
@@ -1169,9 +1303,21 @@ const RL36 = () => {
             <></>
           )}
 
-          <div className={style["table-container"]}>
-            <table responsive className={style.table}>
-              <thead className={style.thead}>
+          <div>
+            <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button type="button" className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`} onClick={() => handleTabClick("tab1")}>Data</button>
+              </li>
+              <li className={`nav-item ${style.navItem}`}>
+                <button type="button" className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`} onClick={() => handleTabClick("tab2")}>Validasi</button>
+              </li>
+            </ul>
+            <div className={`tab-content ${style.tabContent}`}>
+              <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
+                <div className={style["table-container"]}>
+                  <div className="table-responsive">
+                    <table className={style.table} style={{ width: "200%" }}>
+                      <thead className={style.thead}>
                 <tr>
                   <th
                     style={{ width: "2" }}
@@ -1629,7 +1775,58 @@ const RL36 = () => {
                   })
                 }
               </tbody>
-            </table>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
+                <div className={style.validasiCard}>
+                  <h3 className={style.validasiCardTitle}>Form Validasi RL 3.6</h3>
+
+                  {dataRL.length === 0 ? (
+                    <div style={{ backgroundColor: "#fff3cd", border: "1px solid #ffc107", color: "#856404", padding: "15px", borderRadius: "4px", textAlign: "center" }}>
+                      <strong>Data belum tersedia untuk proses validasi.</strong>
+                    </div>
+                  ) : (
+                    <>
+                      {dataValidasi && (
+                        <div style={{ backgroundColor: "#f0f0f0", padding: "10px", borderRadius: "4px", marginBottom: "15px" }}>
+                          <p style={{ margin: "5px 0" }}><strong>Status:</strong> {dataValidasi.statusValidasiId === 1 ? "Perlu Perbaikan" : dataValidasi.statusValidasiId === 2 ? "Selesai Diperbaiki" : dataValidasi.statusValidasiId === 3 ? "Disetujui" : ""}</p>
+                          <p style={{ margin: "5px 0" }}><strong>Dibuat:</strong> {new Date(dataValidasi.createdAt).toLocaleString()}</p>
+                        </div>
+                      )}
+
+                      <form onSubmit={simpanValidasi}>
+                        <div className={style.validasiFormGroup}>
+                          <label>Status Validasi</label>
+                          <select className="form-select" value={statusValidasi} onChange={statusValidasiChangeHadler}>
+                            <option value={0}>Pilih</option>
+                            {user.jenisUserId === 4 ? (
+                              <option value={2}>Selesai Diperbaiki</option>
+                            ) : (
+                              <>
+                                <option value={1}>Perlu Perbaikan</option>
+                                <option value={3}>Disetujui</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+
+                        <div className={style.validasiFormGroup}>
+                          <label>Keterangan / Catatan</label>
+                          <textarea className="form-control" value={keteranganValidasi} onChange={keteranganValidasiChangeHadler} disabled={parseInt(statusValidasi) === 3} />
+                        </div>
+
+                        <div style={{ textAlign: "right" }}>
+                          <button type="submit" className={style.btnPrimary}>Simpan Validasi</button>
+                        </div>
+                      </form>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
