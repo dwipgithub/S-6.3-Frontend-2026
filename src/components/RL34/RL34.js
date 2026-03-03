@@ -874,20 +874,20 @@ const RL34 = () => {
               <div style={{ color: "#d63031", fontWeight: 600, marginBottom: "6px" }}>
                 Debug: jenisUserId = {user && user.jenisUserId ? user.jenisUserId : "(undefined)"} | activeTab = {activeTab}
               </div>
-            <ul className={`nav nav-tabs ${style.navTabs}`}>
-              <li className={`nav-item ${style.navItem}`}>
+            <ul className="nav nav-tabs mb-3">
+              <li className="nav-item">
                 <button
                   type="button"
-                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                  className={`nav-link ${activeTab === "tab1" ? "active" : ""}`}
                   onClick={() => handleTabClick("tab1")}
                 >
                   Data
                 </button>
               </li>
-              <li className={`nav-item ${style.navItem}`}>
+              <li className="nav-item">
                 <button
                   type="button"
-                  className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                  className={`nav-link ${activeTab === "tab2" ? "active" : ""}`}
                   onClick={() => handleTabClick("tab2")}
                 >
                   Validasi
