@@ -3,6 +3,7 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
+import { downloadExcel } from "react-export-table-to-excel";
 
 import style from "./FormTambahRL51.module.css";
 import { HiSaveAs } from "react-icons/hi";
@@ -173,6 +174,9 @@ function TabOne() {
   const navigate = useNavigate();
   const tableRef = useRef(null);
   const [namafile, setNamaFile] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
 
   const [idValidasi, setidValidasi] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
@@ -181,6 +185,7 @@ function TabOne() {
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
   const [spinner, setSpinner] = useState(false);
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
 
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -199,7 +204,9 @@ function TabOne() {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
+      if (decoded.jenisUserId == 4) {
+        showRumahSakit(decoded.satKerId);
+      }
       setExpire(decoded.exp);
       setUser(decoded);
     } catch (error) {
@@ -309,17 +316,38 @@ function TabOne() {
     showRumahSakit(rsId);
   };
 
-  const getRumahSakit = async (kabKotaId) => {
+  // const getRumahSakit = async (kabKotaId) => {
+  //   setLoadingRS(true);
+  //   setDaftarRumahSakit([]);
+  //   try {
+  //     const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       params: {
+  //         kabKotaId: kabKotaId,
+  //       },
+  //     });
+  //     setDaftarRumahSakit(response.data.data);
+  //   } catch (error) {}
+  //   setLoadingRS(false);
+  // };
+
+  const getRumahSakit = async (id, type = "kabkota") => {
     setLoadingRS(true);
     setDaftarRumahSakit([]);
     try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+      let params = {};
+      if (type === "provinsi") {
+        params.provinsiId = id;
+      } else {
+        params.kabKotaId = id;
+      }
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params: {
-          kabKotaId: kabKotaId,
-        },
+        params: params,
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
@@ -387,18 +415,7 @@ function TabOne() {
     setSpinner(false);
   };
 
-  const getRL = async (e) => {
-    e.preventDefault();
-    if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-    const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
-    setFilterLabel(filter);
+  const fetchRL = async (pageNumber = 1) => {
     setSpinner(true);
     try {
       const customConfig = {
@@ -408,33 +425,50 @@ function TabOne() {
         },
         params: {
           rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(bulan),
+          periode: `${tahun}-${bulan}`,
+          page: pageNumber,
+          limit: limit,
         },
       };
+
       const results = await axiosJWT.get(
-        "/apisirs6v2/rllimatitiksatu",
+        "/apisirs6v2/rllimatitiksatupaging",
         customConfig,
       );
 
-      const rlLimaTitikSatuDetails = results.data.data.map((value) => {
-        return value;
-      });
+      setDataRL(results.data.data);
 
-      setNamaFile(
-        "RL51_" +
-          rumahSakit.id +
-          "_".concat(String(tahun).concat("-").concat(bulan).concat("-01")),
-      );
-      setDataRL(rlLimaTitikSatuDetails);
-      // setRumahSakit(null);
-      handleClose();
-      setActiveTab("tab1");
-      await getValidasi();
+      setTotalPages(results.data.pagination.totalPages);
+      setPage(results.data.pagination.page);
     } catch (error) {
       console.log(error);
     }
-
     setSpinner(false);
+  };
+
+  const getRL = async (e) => {
+    e.preventDefault();
+
+    if (!rumahSakit) {
+      toast("rumah sakit harus dipilih", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    const filter = [];
+    filter.push("Nama Rumah Sakit: " + rumahSakit.nama);
+    filter.push("Periode: " + `${tahun}-${bulan}`);
+    setFilterLabel(filter);
+
+    setNamaFile(`rl51_${rumahSakit.id}_${tahun}-${bulan}-01`);
+
+    handleClose();
+    setActiveTab("tab1");
+    setIsFilterApplied(true);
+
+    await fetchRL(1); // ⬅️ mulai dari halaman 1
+    await getValidasi();
   };
 
   const deleteRL = async (id) => {
@@ -615,6 +649,162 @@ function TabOne() {
     }
   };
 
+  const handleDownloadExcel = async () => {
+    try {
+      setSpinner(true);
+
+      const res = await axiosJWT.get("/apisirs6v2/rllimatitiksatu", {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: `${tahun}-${bulan}`,
+        },
+      });
+
+      const allData = res.data.data; // sesuaikan struktur response
+
+      const header = [
+        "No",
+        "Kode ICD-10",
+        "Diagnosis Penyakit",
+        "< 1 Jam L",
+        "< 1 Jam P",
+        "1 - 23 Jam L",
+        "1 - 23 Jam P",
+        "1 - 7 Hari L",
+        "1 - 7 Hari P",
+        "8 - 28 Hari L",
+        "8 - 28 Hari P",
+        "29 Hari - <3 Bulan L",
+        "29 Hari - <3 Bulan P",
+        "3 - <6 Bulan L",
+        "3 - <6 Bulan P",
+        "6 - 11 Bulan L",
+        "6 - 11 Bulan P",
+        "1 - 4 Tahun L",
+        "1 - 4 Tahun P",
+        "5 - 9 Tahun L",
+        "5 - 9 Tahun P",
+        "10 - 14 Tahun L",
+        "10 - 14 Tahun P",
+        "15 - 19 Tahun L",
+        "15 - 19 Tahun P",
+        "20 - 24 Tahun L",
+        "20 - 24 Tahun P",
+        "25 - 29 Tahun L",
+        "25 - 29 Tahun P",
+        "30 - 34 Tahun L",
+        "30 - 34 Tahun P",
+        "35 - 39 Tahun L",
+        "35 - 39 Tahun P",
+        "40 - 44 Tahun L",
+        "40 - 44 Tahun P",
+        "45 - 49 Tahun L",
+        "45 - 49 Tahun P",
+        "50 - 54 Tahun L",
+        "50 - 54 Tahun P",
+        "55 - 59 Tahun L",
+        "55 - 59 Tahun P",
+        "60 - 64 Tahun L",
+        "60 - 64 Tahun P",
+        "65 - 69 Tahun L",
+        "65 - 69 Tahun P",
+        "70 - 74 Tahun L",
+        "70 - 74 Tahun P",
+        "75 - 79 Tahun L",
+        "75 - 79 Tahun P",
+        "80 - 84 Tahun L",
+        "80 - 84 Tahun P",
+        "≥ 85 Tahun L",
+        "≥ 85 Tahun P",
+        "Jumlah Kasus Baru L",
+        "Jumlah Kasus Baru P",
+        "Total Jumlah Kasus Baru",
+        "Jumlah Kunjungan L",
+        "Jumlah Kunjungan P",
+        "Total Jumlah Kunjungan",
+      ];
+
+      const body = allData.map((value, index) => [
+        index + 1,
+        value.icd.icd_code,
+        value.icd.description_code,
+        value.jumlah_L_dibawah_1_jam,
+        value.jumlah_P_dibawah_1_jam,
+        value.jumlah_L_1_sampai_23_jam,
+        value.jumlah_P_1_sampai_23_jam,
+        value.jumlah_L_1_sampai_7_hari,
+        value.jumlah_P_1_sampai_7_hari,
+        value.jumlah_L_8_sampai_28_hari,
+        value.jumlah_P_8_sampai_28_hari,
+        value.jumlah_L_29_hari_sampai_dibawah_3_bulan,
+        value.jumlah_P_29_hari_sampai_dibawah_3_bulan,
+        value.jumlah_L_3_bulan_sampai_dibawah_6_bulan,
+        value.jumlah_P_3_bulan_sampai_dibawah_6_bulan,
+        value.jumlah_L_6_bulan_sampai_11_bulan,
+        value.jumlah_P_6_bulan_sampai_11_bulan,
+        value.jumlah_L_1_sampai_4_tahun,
+        value.jumlah_P_1_sampai_4_tahun,
+        value.jumlah_L_5_sampai_9_tahun,
+        value.jumlah_P_5_sampai_9_tahun,
+        value.jumlah_L_10_sampai_14_tahun,
+        value.jumlah_P_10_sampai_14_tahun,
+        value.jumlah_L_15_sampai_19_tahun,
+        value.jumlah_P_15_sampai_19_tahun,
+        value.jumlah_L_20_sampai_24_tahun,
+        value.jumlah_P_20_sampai_24_tahun,
+        value.jumlah_L_25_sampai_29_tahun,
+        value.jumlah_P_25_sampai_29_tahun,
+        value.jumlah_L_30_sampai_34_tahun,
+        value.jumlah_P_30_sampai_34_tahun,
+        value.jumlah_L_35_sampai_39_tahun,
+        value.jumlah_P_35_sampai_39_tahun,
+        value.jumlah_L_40_sampai_44_tahun,
+        value.jumlah_P_40_sampai_44_tahun,
+        value.jumlah_L_45_sampai_49_tahun,
+        value.jumlah_P_45_sampai_49_tahun,
+        value.jumlah_L_50_sampai_54_tahun,
+        value.jumlah_P_50_sampai_54_tahun,
+        value.jumlah_L_55_sampai_59_tahun,
+        value.jumlah_P_55_sampai_59_tahun,
+        value.jumlah_L_60_sampai_64_tahun,
+        value.jumlah_P_60_sampai_64_tahun,
+        value.jumlah_L_65_sampai_69_tahun,
+        value.jumlah_P_65_sampai_69_tahun,
+        value.jumlah_L_70_sampai_74_tahun,
+        value.jumlah_P_70_sampai_74_tahun,
+        value.jumlah_L_75_sampai_79_tahun,
+        value.jumlah_P_75_sampai_79_tahun,
+        value.jumlah_L_80_sampai_84_tahun,
+        value.jumlah_P_80_sampai_84_tahun,
+        value.jumlah_L_diatas_85_tahun,
+        value.jumlah_P_diatas_85_tahun,
+        value.jumlah_kasus_baru_L,
+        value.jumlah_kasus_baru_P,
+        value.total_kasus_baru,
+        value.jumlah_kunjungan_L,
+        value.jumlah_kunjungan_P,
+        value.total_jumlah_kunjungan,
+      ]);
+
+      downloadExcel({
+        fileName: namafile,
+        sheet: "RL 5.1",
+        tablePayload: {
+          header,
+          body,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSpinner(false);
+    }
+  };
+
   const [activeTab, setActiveTab] = useState("tab1");
 
   const handleTabClick = (tab) => {
@@ -626,7 +816,7 @@ function TabOne() {
 
   const stickyOffsets =
     user.jenisUserId === 4
-      ? { no: "0px", aksi: "52px", icd: "205px", diag: "287px" }
+      ? { no: "0px", aksi: "40px", icd: "202px", diag: "307px" }
       : { no: "0px", icd: "52px", diag: "134px" };
 
   return (
@@ -881,7 +1071,7 @@ function TabOne() {
                   style={{ textDecoration: "none" }}
                   to={`/rl51/tambah/`}
                 >
-                  +
+                  Tambah
                 </Link>
               </>
             ) : (
@@ -893,18 +1083,22 @@ function TabOne() {
               Filter
             </button>
 
-            <DownloadTableExcel
+            {/* <DownloadTableExcel
               filename={namafile}
               sheet="data RL 51"
               currentTableRef={tableRef.current}
             >
-              {/* <button> Export excel </button> */}
               <button className={style.btnPrimary}>
                 {" "}
                 <FaDownload />
                 Download
               </button>
-            </DownloadTableExcel>
+            </DownloadTableExcel> */}
+
+            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
+              <FaDownload />
+              Download
+            </button>
           </div>
 
           <div className={style.filterLabel}>
@@ -934,12 +1128,13 @@ function TabOne() {
                 Data
               </button>
             </li>
-            {(user.jenisUserId === 1 ||
-              user.jenisUserId === 2 ||
-              user.jenisUserId === 3 ||
-              user.jenisUserId === 4) &&
-            dataRL.length > 0 &&
-            rumahSakit != null ? (
+            {user.jenisUserId === 1 ||
+            user.jenisUserId === 2 ||
+            user.jenisUserId === 3 ||
+            user.jenisUserId === 4 ? (
+              //   &&
+              // dataRL.length > 0 &&
+              // rumahSakit != null
               <li className={`nav-item ${style.navItem}`}>
                 <button
                   type="button"
@@ -977,7 +1172,7 @@ function TabOne() {
                         <th
                           className={style["sticky-header-view"]}
                           rowSpan="3"
-                          style={{ width: "2%", left: stickyOffsets.aksi }}
+                          style={{ width: "3%", left: stickyOffsets.aksi }}
                         >
                           Aksi
                         </th>
@@ -1112,7 +1307,7 @@ function TabOne() {
                         disabled={true}
                         style={{ textAlign: "center" }}
                       /> */}
-                            <p>{index + 1}</p>
+                            <p>{(page - 1) * limit + index + 1}</p>
                           </td>
                           {user.jenisUserId === 4 && (
                             <td
@@ -2071,6 +2266,32 @@ function TabOne() {
                   </tbody>
                 </table>
               </div>
+              <div
+                style={{
+                  bottom: 0,
+                  background: "#fff",
+                  padding: "12px 0",
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 12,
+                  borderTop: "1px solid #ddd",
+                }}
+              >
+                <button disabled={page === 1} onClick={() => fetchRL(page - 1)}>
+                  ◀ Prev
+                </button>
+
+                <span>
+                  Halaman {page} / {totalPages}
+                </span>
+
+                <button
+                  disabled={page === totalPages}
+                  onClick={() => fetchRL(page + 1)}
+                >
+                  Next ▶
+                </button>
+              </div>
             </div>
             <div
               className={`tab-pane fade ${
@@ -2079,7 +2300,23 @@ function TabOne() {
             >
               <div className={style.validasiCard}>
                 <h3 className="mb-3">Validasi RL 5.1</h3>
-                {idValidasi ? (
+                {!isFilterApplied ? (
+                  <div
+                    style={{
+                      backgroundColor: "#fff3cd",
+                      border: "1px solid #ffc107",
+                      color: "#856404",
+                      padding: "15px",
+                      borderRadius: "4px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <strong>
+                      Silakan pilih filter terlebih dahulu untuk menampilkan
+                      data.
+                    </strong>
+                  </div>
+                ) : idValidasi ? (
                   <div
                     style={{
                       backgroundColor: "#E9ECEF",
@@ -2130,76 +2367,72 @@ function TabOne() {
                     <div
                       style={{
                         backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
                         padding: "15px",
-                        borderRadius: "5px",
-                        marginBottom: "20px",
+                        borderRadius: "4px",
+                        textAlign: "center",
                       }}
                     >
-                      <h5 style={{ margin: "0", color: "#856404" }}>
-                        Data Belum di Validasi
-                      </h5>
+                      <strong>Data Belum di Validasi</strong>
                     </div>
                   )
                 )}
-                {isValidated ? (
-                  <h2 className="text-center" style={{ color: "green" }}>
-                    Data telah di validasi
-                  </h2>
-                ) : (
-                  (user.jenisUserId === 3 ||
-                    (user.jenisUserId === 4 && idValidasi)) && (
-                    <form onSubmit={simpanValidasi}>
-                      <ToastContainer />
-                      <div className="mb-3">
-                        <label htmlFor="statusValidasi" className="form-label">
-                          Status
-                        </label>
-                        <select
-                          id="statusValidasi"
-                          name="statusValidasi"
-                          value={statusValidasi}
-                          required
-                          onChange={(e) => statusValidasiChangeHadler(e)}
-                          className="form-select"
-                        >
-                          {user.jenisUserId === 4 ? (
-                            <>
-                              <option value="">Pilih Status</option>
-                              <option value="2">Selesai Diperbaiki</option>
-                            </>
-                          ) : (
-                            <>
-                              <option value="1">Perlu Perbaikan</option>
-                              <option value="2">Selesai Diperbaiki</option>
-                              <option value="3">Disetujui</option>
-                            </>
-                          )}
-                        </select>
-                      </div>
-                      <div className="mb-3">
-                        <label
-                          htmlFor="keteranganValidasi"
-                          className="form-label"
-                        >
-                          Catatan
-                        </label>
-                        <textarea
-                          id="keteranganValidasi"
-                          name="keteranganValidasi"
-                          value={keteranganValidasi}
-                          onChange={(e) => keteranganValidasiChangeHadler(e)}
-                          placeholder="Tambahkan catatan (opsional)"
-                          rows={4}
-                          className="form-control"
-                          disabled={user.jenisUserId === 4}
-                        />
-                      </div>
-                      <button type="submit" className="btn btn-primary">
-                        <HiSaveAs size={20} /> Simpan
-                      </button>
-                    </form>
+                {dataRL.length > 0 && rumahSakit?.id ? (
+                  isValidated ? (
+                    <h2 className="text-center" style={{ color: "green" }}>
+                      Data telah di validasi
+                    </h2>
+                  ) : (
+                    (user.jenisUserId === 3 ||
+                      (user.jenisUserId === 4 && idValidasi)) && (
+                      <form onSubmit={simpanValidasi}>
+                        <ToastContainer />
+
+                        <div className={style.validasiFormGroup}>
+                          <label htmlFor="statusValidasi">Status</label>
+                          <select
+                            id="statusValidasi"
+                            name="statusValidasi"
+                            value={statusValidasi}
+                            required
+                            onChange={(e) => statusValidasiChangeHadler(e)}
+                          >
+                            {user.jenisUserId === 4 ? (
+                              <>
+                                <option value="">Pilih Status</option>
+                                <option value="2">Selesai Diperbaiki</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="1">Perlu Perbaikan</option>
+                                <option value="2">Selesai Diperbaiki</option>
+                                <option value="3">Disetujui</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+
+                        <div className={style.validasiFormGroup}>
+                          <label htmlFor="keteranganValidasi">Catatan</label>
+                          <textarea
+                            id="keteranganValidasi"
+                            name="keteranganValidasi"
+                            value={keteranganValidasi}
+                            onChange={(e) => keteranganValidasiChangeHadler(e)}
+                            placeholder="Tambahkan catatan (opsional)"
+                            rows={4}
+                            disabled={user.jenisUserId === 4}
+                          />
+                        </div>
+
+                        <button type="submit" className={style.btnPrimary}>
+                          <HiSaveAs size={20} /> Simpan
+                        </button>
+                      </form>
+                    )
                   )
-                )}
+                ) : null}
               </div>
             </div>
           </div>

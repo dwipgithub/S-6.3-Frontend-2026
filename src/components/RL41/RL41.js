@@ -10,7 +10,9 @@ import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import Spinner from "react-bootstrap/Spinner";
 import { Modal } from "react-bootstrap";
-import { DownloadTableExcel } from "react-export-table-to-excel";
+// import { DownloadTableExcel } from "react-export-table-to-excel";
+import { downloadExcel } from "react-export-table-to-excel";
+
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL41 = () => {
@@ -34,6 +36,9 @@ const RL41 = () => {
   const [user, setUser] = useState({});
   const tableRef = useRef(null);
   const [namafile, setNamaFile] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
 
   const [idValidasi, setidValidasi] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
@@ -42,6 +47,7 @@ const RL41 = () => {
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
   const [spinner, setSpinner] = useState(false);
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
@@ -272,18 +278,7 @@ const RL41 = () => {
     setSpinner(false);
   };
 
-  const getRL = async (e) => {
-    e.preventDefault();
-    if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-    const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
-    setFilterLabel(filter);
+  const fetchRL = async (pageNumber = 1) => {
     setSpinner(true);
     try {
       const customConfig = {
@@ -293,40 +288,50 @@ const RL41 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(bulan),
+          periode: `${tahun}-${bulan}`,
+          page: pageNumber,
+          limit: limit,
         },
       };
+
       const results = await axiosJWT.get(
-        "/apisirs6v2/rlempattitiksatu",
+        "/apisirs6v2/rlempattitiksatupaging",
         customConfig,
       );
 
-      const rlEmpatDetails = results.data.data.map((value) => {
-        return value;
-      });
+      setDataRL(results.data.data);
 
-      // let datarlEmpatDetails = [];
-      // rlEmpatDetails.forEach((element) => {
-      //   element.forEach((value) => {
-      //     datarlEmpatDetails.push(value);
-      //   });
-      // });
-
-      setDataRL(rlEmpatDetails);
-      setNamaFile(
-        "rl41_" +
-          rumahSakit.id +
-          "_".concat(String(tahun).concat("-").concat(bulan).concat("-01")),
-      );
-
-      handleClose();
-      setActiveTab("tab1");
-      await getValidasi();
+      setTotalPages(results.data.pagination.totalPages);
+      setPage(results.data.pagination.page);
     } catch (error) {
       console.log(error);
     }
-
     setSpinner(false);
+  };
+
+  const getRL = async (e) => {
+    e.preventDefault();
+
+    if (!rumahSakit) {
+      toast("rumah sakit harus dipilih", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    const filter = [];
+    filter.push("Nama Rumah Sakit: " + rumahSakit.nama);
+    filter.push("Periode: " + `${tahun}-${bulan}`);
+    setFilterLabel(filter);
+
+    setNamaFile(`rl41_${rumahSakit.id}_${tahun}-${bulan}-01`);
+
+    handleClose();
+    setActiveTab("tab1");
+    setIsFilterApplied(true);
+
+    await fetchRL(1); // ⬅️ mulai dari halaman 1
+    await getValidasi();
   };
 
   const handleClose = () => setShow(false);
@@ -515,6 +520,165 @@ const RL41 = () => {
     }
   };
 
+  const handleDownloadExcel = async () => {
+    try {
+      setSpinner(true);
+
+      const res = await axiosJWT.get(
+        "/apisirs6v2/rlempattitiksatu", // ← API GET ALL
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            rsId: rumahSakit.id,
+            periode: `${tahun}-${bulan}`,
+          },
+        },
+      );
+
+      const allData = res.data.data; // sesuaikan struktur response
+
+      const header = [
+        "No",
+        "Kode ICD-10",
+        "Diagnosis Penyakit",
+        "< 1 Jam L",
+        "< 1 Jam P",
+        "1 - 23 Jam L",
+        "1 - 23 Jam P",
+        "1 - 7 Hari L",
+        "1 - 7 Hari P",
+        "8 - 28 Hari L",
+        "8 - 28 Hari P",
+        "29 Hari - <3 Bulan L",
+        "29 Hari - <3 Bulan P",
+        "3 - <6 Bulan L",
+        "3 - <6 Bulan P",
+        "6 - 11 Bulan L",
+        "6 - 11 Bulan P",
+        "1 - 4 Tahun L",
+        "1 - 4 Tahun P",
+        "5 - 9 Tahun L",
+        "5 - 9 Tahun P",
+        "10 - 14 Tahun L",
+        "10 - 14 Tahun P",
+        "15 - 19 Tahun L",
+        "15 - 19 Tahun P",
+        "20 - 24 Tahun L",
+        "20 - 24 Tahun P",
+        "25 - 29 Tahun L",
+        "25 - 29 Tahun P",
+        "30 - 34 Tahun L",
+        "30 - 34 Tahun P",
+        "35 - 39 Tahun L",
+        "35 - 39 Tahun P",
+        "40 - 44 Tahun L",
+        "40 - 44 Tahun P",
+        "45 - 49 Tahun L",
+        "45 - 49 Tahun P",
+        "50 - 54 Tahun L",
+        "50 - 54 Tahun P",
+        "55 - 59 Tahun L",
+        "55 - 59 Tahun P",
+        "60 - 64 Tahun L",
+        "60 - 64 Tahun P",
+        "65 - 69 Tahun L",
+        "65 - 69 Tahun P",
+        "70 - 74 Tahun L",
+        "70 - 74 Tahun P",
+        "75 - 79 Tahun L",
+        "75 - 79 Tahun P",
+        "80 - 84 Tahun L",
+        "80 - 84 Tahun P",
+        "≥ 85 Tahun L",
+        "≥ 85 Tahun P",
+        "Hidup & Mati L",
+        "Hidup & Mati P",
+        "Total Hidup & Mati",
+        "Keluar Mati L",
+        "Keluar Mati P",
+        "Total Keluar Mati",
+      ];
+
+      const body = allData.map((value, index) => [
+        index + 1,
+        value.icd.icd_code,
+        value.icd.description_code,
+        value.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
+        value.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
+        value.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
+        value.jmlh_pas_hidup_mati_umur_gen_1_23jam_p,
+        value.jmlh_pas_hidup_mati_umur_gen_1_7hr_l,
+        value.jmlh_pas_hidup_mati_umur_gen_1_7hr_p,
+        value.jmlh_pas_hidup_mati_umur_gen_8_28hr_l,
+        value.jmlh_pas_hidup_mati_umur_gen_8_28hr_p,
+        value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l,
+        value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p,
+        value.jmlh_pas_hidup_mati_umur_gen_3_6bln_l,
+        value.jmlh_pas_hidup_mati_umur_gen_3_6bln_p,
+        value.jmlh_pas_hidup_mati_umur_gen_6_11bln_l,
+        value.jmlh_pas_hidup_mati_umur_gen_6_11bln_p,
+        value.jmlh_pas_hidup_mati_umur_gen_1_4th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_1_4th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_5_9th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_5_9th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_10_14th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_10_14th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_15_19th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_15_19th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_20_24th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_20_24th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_25_29th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_25_29th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_30_34th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_30_34th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_35_39th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_35_39th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_40_44th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_40_44th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_45_49th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_45_49th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_50_54th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_50_54th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_55_59th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_55_59th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_60_64th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_60_64th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_65_69th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_65_69th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_70_74th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_70_74th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_75_79th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_75_79th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_80_84th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_80_84th_p,
+        value.jmlh_pas_hidup_mati_umur_gen_lebih85th_l,
+        value.jmlh_pas_hidup_mati_umur_gen_lebih85th_p,
+        value.jmlh_pas_hidup_mati_gen_l,
+        value.jmlh_pas_hidup_mati_gen_p,
+        value.total_pas_hidup_mati,
+        value.jmlh_pas_keluar_mati_gen_l,
+        value.jmlh_pas_keluar_mati_gen_p,
+        value.total_pas_keluar_mati,
+      ]);
+
+      downloadExcel({
+        fileName: namafile,
+        sheet: "RL 4.1",
+        tablePayload: {
+          header,
+          body,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSpinner(false);
+    }
+  };
+
   const [activeTab, setActiveTab] = useState("tab1");
 
   const handleTabClick = (tab) => {
@@ -526,8 +690,8 @@ const RL41 = () => {
 
   const stickyOffsets =
     user.jenisUserId === 4
-      ? { no: "0px", aksi: "52px", icd: "205px", diag: "287px" }
-      : { no: "0px", icd: "52px", diag: "134px" };
+      ? { no: "0px", aksi: "55px", icd: "220px", diag: "325px" }
+      : { no: "0px", icd: "55px", diag: "180px" };
 
   return (
     <div
@@ -789,7 +953,7 @@ const RL41 = () => {
                 className={style.btnPrimary}
                 style={{ textDecoration: "none" }}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
@@ -797,14 +961,9 @@ const RL41 = () => {
             <button className={style.btnPrimary} onClick={handleShow}>
               Filter
             </button>
-            <DownloadTableExcel
-              filename={namafile}
-              sheet="data RL 35"
-              currentTableRef={tableRef.current}
-            >
-              {/* <button> Export excel </button> */}
-              <button className={style.btnPrimary}> Download</button>
-            </DownloadTableExcel>
+            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
+              Download
+            </button>
           </div>
 
           <div className={style.filterLabel}>
@@ -835,12 +994,13 @@ const RL41 = () => {
                   Data
                 </button>
               </li>
-              {(user.jenisUserId === 1 ||
-                user.jenisUserId === 2 ||
-                user.jenisUserId === 3 ||
-                user.jenisUserId === 4) &&
-              dataRL.length > 0 &&
-              rumahSakit != null ? (
+              {user.jenisUserId === 1 ||
+              user.jenisUserId === 2 ||
+              user.jenisUserId === 3 ||
+              user.jenisUserId === 4 ? (
+                //   &&
+                // dataRL.length > 0 &&
+                // rumahSakit != null
                 <li className={`nav-item ${style.navItem}`}>
                   <button
                     type="button"
@@ -860,53 +1020,40 @@ const RL41 = () => {
                 }`}
               >
                 <div className={style["table-container"]}>
-                  <table className={style["table"]} ref={tableRef}>
+                  <table
+                    className={style["table"]}
+                    style={{ width: "500%" }}
+                    ref={tableRef}
+                  >
                     <thead className={style["thead"]}>
                       <tr className="main-header-row">
                         <th
-                          rowSpan={3}
-                          style={{
-                            width: "1%",
-                            verticalAlign: "middle",
-                            left: stickyOffsets.no,
-                          }}
                           className={style["sticky-header-view"]}
+                          rowSpan="3"
+                          style={{ width: "1%", left: stickyOffsets.no }}
                         >
                           No.
                         </th>
                         {user.jenisUserId === 4 && (
                           <th
-                            rowSpan={3}
-                            style={{
-                              width: "3%",
-                              verticalAlign: "middle",
-                              left: stickyOffsets.aksi,
-                            }}
                             className={style["sticky-header-view"]}
+                            rowSpan="3"
+                            style={{ width: "3%", left: stickyOffsets.aksi }}
                           >
                             Aksi
                           </th>
                         )}
                         <th
                           className={style["sticky-header-view"]}
-                          rowSpan={3}
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                            left: stickyOffsets.icd,
-                          }}
+                          rowSpan="3"
+                          style={{ width: "2%", left: stickyOffsets.icd }}
                         >
                           Kode ICD-10
                         </th>
                         <th
                           className={style["sticky-header-view"]}
-                          rowSpan={3}
-                          style={{
-                            width: "5.5%",
-                            textAlign: "left",
-                            verticalAlign: "middle",
-                            left: stickyOffsets.diag,
-                          }}
+                          rowSpan="3"
+                          style={{ width: "5%", left: stickyOffsets.diag }}
                         >
                           Diagnosis Penyakit
                         </th>
@@ -1087,7 +1234,7 @@ const RL41 = () => {
                                 left: stickyOffsets.no,
                               }}
                             >
-                              <label>{index + 1}</label>
+                              <label>{(page - 1) * limit + index + 1}</label>
                             </td>
                             {user.jenisUserId === 4 && (
                               <td
@@ -1100,7 +1247,6 @@ const RL41 = () => {
                               >
                                 <div
                                   style={{
-                                    display: "flex",
                                     alignItems: "center",
                                     width: "100%",
                                   }}
@@ -1314,6 +1460,35 @@ const RL41 = () => {
                     </tbody>
                   </table>
                 </div>
+                <div
+                  style={{
+                    bottom: 0,
+                    background: "#fff",
+                    padding: "12px 0",
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: 12,
+                    borderTop: "1px solid #ddd",
+                  }}
+                >
+                  <button
+                    disabled={page === 1}
+                    onClick={() => fetchRL(page - 1)}
+                  >
+                    ◀ Prev
+                  </button>
+
+                  <span>
+                    Halaman {page} / {totalPages}
+                  </span>
+
+                  <button
+                    disabled={page === totalPages}
+                    onClick={() => fetchRL(page + 1)}
+                  >
+                    Next ▶
+                  </button>
+                </div>
               </div>
               <div
                 className={`tab-pane fade ${
@@ -1322,7 +1497,23 @@ const RL41 = () => {
               >
                 <div className={style.validasiCard}>
                   <h3 className={style.validasiCardTitle}>Validasi RL 4.1</h3>
-                  {idValidasi ? (
+                  {!isFilterApplied ? (
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>
+                        Silakan pilih filter terlebih dahulu untuk menampilkan
+                        data.
+                      </strong>
+                    </div>
+                  ) : idValidasi ? (
                     <div
                       style={{
                         backgroundColor: "#E9ECEF",
@@ -1373,67 +1564,75 @@ const RL41 = () => {
                       <div
                         style={{
                           backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
                           padding: "15px",
-                          borderRadius: "5px",
-                          marginBottom: "20px",
+                          borderRadius: "4px",
+                          textAlign: "center",
                         }}
                       >
-                        <h5 style={{ margin: "0", color: "#856404" }}>
-                          Data Belum di Validasi
-                        </h5>
+                        <strong>Data Belum di Validasi</strong>
                       </div>
                     )
                   )}
-                  {isValidated ? (
-                    <h2 className="text-center" style={{ color: "green" }}>
-                      Data telah di validasi
-                    </h2>
-                  ) : (
-                    (user.jenisUserId === 3 ||
-                      (user.jenisUserId === 4 && idValidasi)) && (
-                      <form onSubmit={simpanValidasi}>
-                        <ToastContainer />
-                        <div className={style.validasiFormGroup}>
-                          <label htmlFor="statusValidasi">Status</label>
-                          <select
-                            id="statusValidasi"
-                            name="statusValidasi"
-                            value={statusValidasi}
-                            required
-                            onChange={(e) => statusValidasiChangeHadler(e)}
-                          >
-                            {user.jenisUserId === 4 ? (
-                              <>
-                                <option value="">Pilih Status</option>
-                                <option value="2">Selesai Diperbaiki</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="1">Perlu Perbaikan</option>
-                                <option value="2">Selesai Diperbaiki</option>
-                                <option value="3">Disetujui</option>
-                              </>
-                            )}
-                          </select>
-                        </div>
-                        <div className={style.validasiFormGroup}>
-                          <label htmlFor="keteranganValidasi">Catatan</label>
-                          <textarea
-                            id="keteranganValidasi"
-                            name="keteranganValidasi"
-                            value={keteranganValidasi}
-                            onChange={(e) => keteranganValidasiChangeHadler(e)}
-                            placeholder="Tambahkan catatan (opsional)"
-                            rows={4}
-                            disabled={user.jenisUserId === 4}
-                          />
-                        </div>
-                        <button type="submit" className={style.btnPrimary}>
-                          <HiSaveAs size={20} /> Simpan
-                        </button>
-                      </form>
+
+                  {dataRL.length > 0 && rumahSakit?.id ? (
+                    isValidated ? (
+                      <h2 className="text-center" style={{ color: "green" }}>
+                        Data telah di validasi
+                      </h2>
+                    ) : (
+                      (user.jenisUserId === 3 ||
+                        (user.jenisUserId === 4 && idValidasi)) && (
+                        <form onSubmit={simpanValidasi}>
+                          <ToastContainer />
+
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="statusValidasi">Status</label>
+                            <select
+                              id="statusValidasi"
+                              name="statusValidasi"
+                              value={statusValidasi}
+                              required
+                              onChange={(e) => statusValidasiChangeHadler(e)}
+                            >
+                              {user.jenisUserId === 4 ? (
+                                <>
+                                  <option value="">Pilih Status</option>
+                                  <option value="2">Selesai Diperbaiki</option>
+                                </>
+                              ) : (
+                                <>
+                                  <option value="1">Perlu Perbaikan</option>
+                                  <option value="2">Selesai Diperbaiki</option>
+                                  <option value="3">Disetujui</option>
+                                </>
+                              )}
+                            </select>
+                          </div>
+
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="keteranganValidasi">Catatan</label>
+                            <textarea
+                              id="keteranganValidasi"
+                              name="keteranganValidasi"
+                              value={keteranganValidasi}
+                              onChange={(e) =>
+                                keteranganValidasiChangeHadler(e)
+                              }
+                              placeholder="Tambahkan catatan (opsional)"
+                              rows={4}
+                              disabled={user.jenisUserId === 4}
+                            />
+                          </div>
+
+                          <button type="submit" className={style.btnPrimary}>
+                            <HiSaveAs size={20} /> Simpan
+                          </button>
+                        </form>
+                      )
                     )
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>

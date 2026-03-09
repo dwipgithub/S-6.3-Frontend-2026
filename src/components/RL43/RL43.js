@@ -43,6 +43,7 @@ const RL43 = () => {
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
@@ -67,7 +68,9 @@ const RL43 = () => {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
+      if (decoded.jenisUserId == 4) {
+        showRumahSakit(decoded.satKerId);
+      }
       setExpire(decoded.exp);
       setUser(decoded);
       // setExpire(decoded.exp);
@@ -179,17 +182,38 @@ const RL43 = () => {
     showRumahSakit(rsId);
   };
 
-  const getRumahSakit = async (kabKotaId) => {
+  // const getRumahSakit = async (kabKotaId) => {
+  //   setLoadingRS(true);
+  //   setDaftarRumahSakit([]);
+  //   try {
+  //     const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       params: {
+  //         kabKotaId: kabKotaId,
+  //       },
+  //     });
+  //     setDaftarRumahSakit(response.data.data);
+  //   } catch (error) {}
+  //   setLoadingRS(false);
+  // };
+
+  const getRumahSakit = async (id, type = "kabkota") => {
     setLoadingRS(true);
     setDaftarRumahSakit([]);
     try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+      let params = {};
+      if (type === "provinsi") {
+        params.provinsiId = id;
+      } else {
+        params.kabKotaId = id;
+      }
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params: {
-          kabKotaId: kabKotaId,
-        },
+        params: params,
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
@@ -255,8 +279,8 @@ const RL43 = () => {
       return;
     }
     const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
+    filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
+    filter.push("Periode: ".concat(String(tahun).concat("-").concat(bulan)));
     setFilterLabel(filter);
     try {
       const customConfig = {
@@ -279,6 +303,7 @@ const RL43 = () => {
       });
       setDataRL(rlEmpatDetails);
       handleClose();
+      setIsFilterApplied(true);
       setActiveTab("tab1");
       await getValidasi();
     } catch (error) {
@@ -707,12 +732,13 @@ const RL43 = () => {
                   Data
                 </button>
               </li>
-              {(user.jenisUserId === 1 ||
-                user.jenisUserId === 2 ||
-                user.jenisUserId === 3 ||
-                user.jenisUserId === 4) &&
-              dataRL.length > 0 &&
-              rumahSakit != null ? (
+              {user.jenisUserId === 1 ||
+              user.jenisUserId === 2 ||
+              user.jenisUserId === 3 ||
+              user.jenisUserId === 4 ? (
+                //   &&
+                // dataRL.length > 0 &&
+                // rumahSakit != null
                 <li className={`nav-item ${style.navItem}`}>
                   <button
                     type="button"
@@ -837,7 +863,23 @@ const RL43 = () => {
                         Info : Validasi RL 4.3 ini berdasarkan validasi RL 4.1
                       </p>
                     </div>
-                    {idValidasi ? (
+                    {!isFilterApplied ? (
+                      <div
+                        style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <strong>
+                          Silakan pilih filter terlebih dahulu untuk menampilkan
+                          data.
+                        </strong>
+                      </div>
+                    ) : idValidasi ? (
                       <div
                         style={{
                           backgroundColor: "#E9ECEF",
@@ -888,24 +930,25 @@ const RL43 = () => {
                         <div
                           style={{
                             backgroundColor: "#fff3cd",
+                            border: "1px solid #ffc107",
+                            color: "#856404",
                             padding: "15px",
-                            borderRadius: "5px",
-                            marginBottom: "20px",
+                            borderRadius: "4px",
+                            textAlign: "center",
                           }}
                         >
-                          <h5 style={{ margin: "0", color: "#856404" }}>
-                            Data Belum di Validasi
-                          </h5>
+                          <strong>Data Belum di Validasi</strong>
                         </div>
                       )
                     )}
-                    {isValidated ? (
-                      <h2 className="text-center" style={{ color: "green" }}>
-                        Data telah di validasi
-                      </h2>
-                    ) : (
-                      <></>
-                    )}
+
+                    {dataRL.length > 0 && rumahSakit?.id ? (
+                      isValidated ? (
+                        <h2 className="text-center" style={{ color: "green" }}>
+                          Data telah di validasi
+                        </h2>
+                      ) : null
+                    ) : null}
                   </div>
                 </div>
               </div>

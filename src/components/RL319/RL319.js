@@ -34,6 +34,7 @@ const RL319 = () => {
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
   const [spinner, setSpinner] = useState(false);
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
@@ -179,7 +180,7 @@ const RL319 = () => {
     }
 
     const filter = [];
-    filter.push("Nama: ".concat(rumahSakit.nama));
+    filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
     filter.push("Periode ".concat(String(tahun)));
     setFilterLabel(filter);
 
@@ -238,6 +239,7 @@ const RL319 = () => {
       // setRumahSakit(null);
       handleClose();
       setActiveTab("tab1");
+      setIsFilterApplied(true);
       await getValidasi();
     } catch (error) {
       console.log(error);
@@ -496,7 +498,7 @@ const RL319 = () => {
       "No",
       "No. Cara Bayar",
       "Cara Pembayaran",
-      "Pasien Rawat Inap Jumlah Pasien Dirawat",
+      "Pasien Rawat Inap Jumlah Pasien Keluar",
       "Pasien Rawat Inap Jumlah Lama Dirawat",
       "Jumlah Pasien Rawat Jalan",
       "Jumlah Pasien Rawat Jalan Laboratorium",
@@ -517,9 +519,15 @@ const RL319 = () => {
       ];
       return data;
     });
+
+    const safeNamaRS = rumahSakit.nama
+      ?.replace(/\./g, "") // hapus titik
+      ?.replace(/[^a-zA-Z0-9-_ ]/g, "") // hapus karakter aneh
+      ?.replace(/\s+/g, "_"); // ganti spasi jadi underscore
+
     downloadExcel({
-      fileName: "RL_3_19",
-      sheet: "react-export-table-to-excel",
+      fileName: `RL_3_19_${safeNamaRS}`,
+      sheet: "RL 3.19",
       tablePayload: {
         header,
         body: body,
@@ -587,6 +595,7 @@ const RL319 = () => {
         position: toast.POSITION.TOP_RIGHT,
       });
       setIsValidated(statusValidasi == 3);
+      await getValidasi();
     } catch (error) {
       toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
         position: toast.POSITION.TOP_RIGHT,
@@ -840,7 +849,7 @@ const RL319 = () => {
                 className={style.btnPrimary}
                 style={{ textDecoration: "none" }}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
@@ -881,12 +890,13 @@ const RL319 = () => {
                   Data
                 </button>
               </li>
-              {(user.jenisUserId === 1 ||
-                user.jenisUserId === 2 ||
-                user.jenisUserId === 3 ||
-                user.jenisUserId === 4) &&
-              dataRL.length > 0 &&
-              rumahSakit != null ? (
+              {user.jenisUserId === 1 ||
+              user.jenisUserId === 2 ||
+              user.jenisUserId === 3 ||
+              user.jenisUserId === 4 ? (
+                //   &&
+                // dataRL.length > 0 &&
+                // rumahSakit != null
                 <li className={`nav-item ${style.navItem}`}>
                   <button
                     type="button"
@@ -1136,7 +1146,23 @@ const RL319 = () => {
               >
                 <div className={style.validasiCard}>
                   <h3 className={style.validasiCardTitle}>Validasi RL 3.19</h3>
-                  {idValidasi ? (
+                  {!isFilterApplied ? (
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>
+                        Silakan pilih filter terlebih dahulu untuk menampilkan
+                        data.
+                      </strong>
+                    </div>
+                  ) : idValidasi ? (
                     <div
                       style={{
                         backgroundColor: "#E9ECEF",
@@ -1187,67 +1213,75 @@ const RL319 = () => {
                       <div
                         style={{
                           backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
                           padding: "15px",
-                          borderRadius: "5px",
-                          marginBottom: "20px",
+                          borderRadius: "4px",
+                          textAlign: "center",
                         }}
                       >
-                        <h5 style={{ margin: "0", color: "#856404" }}>
-                          Data Belum di Validasi
-                        </h5>
+                        <strong>Data Belum di Validasi</strong>
                       </div>
                     )
                   )}
-                  {isValidated ? (
-                    <h2 className="text-center" style={{ color: "green" }}>
-                      Data telah di validasi
-                    </h2>
-                  ) : (
-                    (user.jenisUserId === 3 ||
-                      (user.jenisUserId === 4 && idValidasi)) && (
-                      <form onSubmit={simpanValidasi}>
-                        <ToastContainer />
-                        <div className={style.validasiFormGroup}>
-                          <label htmlFor="statusValidasi">Status</label>
-                          <select
-                            id="statusValidasi"
-                            name="statusValidasi"
-                            value={statusValidasi}
-                            required
-                            onChange={(e) => statusValidasiChangeHadler(e)}
-                          >
-                            {user.jenisUserId === 4 ? (
-                              <>
-                                <option value="">Pilih Status</option>
-                                <option value="2">Selesai Diperbaiki</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="1">Perlu Perbaikan</option>
-                                <option value="2">Selesai Diperbaiki</option>
-                                <option value="3">Disetujui</option>
-                              </>
-                            )}
-                          </select>
-                        </div>
-                        <div className={style.validasiFormGroup}>
-                          <label htmlFor="keteranganValidasi">Catatan</label>
-                          <textarea
-                            id="keteranganValidasi"
-                            name="keteranganValidasi"
-                            value={keteranganValidasi}
-                            onChange={(e) => keteranganValidasiChangeHadler(e)}
-                            placeholder="Tambahkan catatan (opsional)"
-                            rows={4}
-                            disabled={user.jenisUserId === 4}
-                          />
-                        </div>
-                        <button type="submit" className={style.btnPrimary}>
-                          <HiSaveAs size={20} /> Simpan
-                        </button>
-                      </form>
+
+                  {dataRL.length > 0 && rumahSakit?.id ? (
+                    isValidated ? (
+                      <h2 className="text-center" style={{ color: "green" }}>
+                        Data telah di validasi
+                      </h2>
+                    ) : (
+                      (user.jenisUserId === 3 ||
+                        (user.jenisUserId === 4 && idValidasi)) && (
+                        <form onSubmit={simpanValidasi}>
+                          <ToastContainer />
+
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="statusValidasi">Status</label>
+                            <select
+                              id="statusValidasi"
+                              name="statusValidasi"
+                              value={statusValidasi}
+                              required
+                              onChange={(e) => statusValidasiChangeHadler(e)}
+                            >
+                              {user.jenisUserId === 4 ? (
+                                <>
+                                  <option value="">Pilih Status</option>
+                                  <option value="2">Selesai Diperbaiki</option>
+                                </>
+                              ) : (
+                                <>
+                                  <option value="1">Perlu Perbaikan</option>
+                                  <option value="2">Selesai Diperbaiki</option>
+                                  <option value="3">Disetujui</option>
+                                </>
+                              )}
+                            </select>
+                          </div>
+
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="keteranganValidasi">Catatan</label>
+                            <textarea
+                              id="keteranganValidasi"
+                              name="keteranganValidasi"
+                              value={keteranganValidasi}
+                              onChange={(e) =>
+                                keteranganValidasiChangeHadler(e)
+                              }
+                              placeholder="Tambahkan catatan (opsional)"
+                              rows={4}
+                              disabled={user.jenisUserId === 4}
+                            />
+                          </div>
+
+                          <button type="submit" className={style.btnPrimary}>
+                            <HiSaveAs size={20} /> Simpan
+                          </button>
+                        </form>
+                      )
                     )
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
