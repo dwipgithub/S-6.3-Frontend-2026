@@ -201,42 +201,59 @@ const Absensi = () => {
     years.push(i);
   }
 
-  const renderCell = (val, validasi) => {
-    return (
-      <div style={{ textAlign: "center" }}>
-        {val === 0 ? (
+  const renderCell = ({ val, validasi, mode }) => {
+    // ===== DATA ROW =====
+    if (mode === "data") {
+      if (val == null) return null;
+
+      return (
+        <div style={{ textAlign: "center" }}>
+          {val === 0 ? (
+            <span
+              className="fw-bold"
+              style={{ fontSize: "20px", color: "#FF0000" }}
+            >
+              X
+            </span>
+          ) : (
+            <span
+              className="fw-bold"
+              style={{ fontSize: "20px", color: "#32CD32" }}
+            >
+              V
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    // ===== VALIDASI ROW =====
+    if (mode === "validasi") {
+      return (
+        <div style={{ textAlign: "center" }}>
           <span
-            className="text fw-bold"
-            style={{ fontSize: "20px", color: "#FF0000" }}
+            style={{
+              fontSize: "20px",
+              color: getColorByValidasi(validasi?.id),
+            }}
           >
-            X
+            {iconByValidasi(validasi?.id)}
           </span>
-        ) : (
-          <span
-            className="text fw-bold"
-            style={{ fontSize: "20px", color: "#32CD32" }}
-          >
-            V
-          </span>
-        )}
-        <hr style={{ margin: "2px 0", opacity: 1 }} />
-        <span
-          style={{ fontSize: "20px", color: getColorByValidasi(validasi?.id) }}
-        >
-          {iconByValidasi(validasi?.id)}{" "}
-        </span>
-      </div>
-    );
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const iconByValidasi = (id) => {
     switch (id) {
       case 1:
-        return "⚠"; // Perlu Perbaikan
+        return "⚠";
       case 2:
-        return "🔧"; // Selesai Diperbaiki
+        return "🔧";
       case 3:
-        return "✔"; // Disetujui
+        return "✔";
       default:
         return "-";
     }
@@ -245,14 +262,36 @@ const Absensi = () => {
   const getColorByValidasi = (id) => {
     switch (id) {
       case 1:
-        return "#FFA500"; // Orange untuk Perlu Perbaikan
+        return "#FFA500";
       case 2:
-        return "#007BFF"; // Biru untuk Selesai Diperbaiki
+        return "#007BFF";
       case 3:
-        return "#28A745"; // Hijau untuk Disetujui
+        return "#28A745";
       default:
         return "";
     }
+  };
+
+  const renderBulanan = (value, type, mode) =>
+    [...Array(12)].map((_, mIndex) => {
+      const month = mIndex + 1;
+      const val = value[`rl_${type}_bulan_${month}`];
+      const validasi = value[`rl_${type}_bulan_${month}_validasi`];
+
+      return (
+        <td key={`rl_${type}_${month}_${mode}`}>
+          {renderCell({ val, validasi, mode })}
+        </td>
+      );
+    });
+
+  const renderTahunan = (value, type, mode) => {
+    const val = value[`rl_${type}`];
+    const validasi = value[`rl_${type}_validasi`];
+
+    return (
+      <td key={`rl_${type}_${mode}`}>{renderCell({ val, validasi, mode })}</td>
+    );
   };
 
   return (
@@ -1174,190 +1213,151 @@ const Absensi = () => {
               </thead>
               <tbody>
                 {dataAbsensi.map((value, index) => {
-                  return (
-                    <tr key={index}>
-                      <td
-                        style={{ textAlign: "right", verticalAlign: "middle" }}
-                      >
-                        {index + 1}
-                      </td>
-                      <td>{value.rs_id}</td>
-                      <td
-                        className={style["sticky-column"]}
-                        style={{ left: 0 }}
-                      >
-                        {value.nama_rs}
-                      </td>
-                      <td
-                        className={style["sticky-column"]}
-                        style={{ left: "300px" }}
-                      >
-                        {value.kab_kota}
-                      </td>
-                      <td
-                        className={style["sticky-column"]}
-                        style={{
-                          textAlign: "center",
-                          verticalAlign: "middle",
-                          left: "450px",
-                        }}
-                      >
-                        {value.persentase_pengisian} %
-                      </td>
-                      <td
-                        className={style["sticky-column"]}
-                        style={{
-                          textAlign: "center",
-                          verticalAlign: "middle",
-                          left: "600px",
-                        }}
-                      >
-                        Data :
-                        <hr style={{ margin: "2px 0", opacity: 1 }} /> Validasi
-                        :
-                      </td>
-                      {/* 3.1 to 3.10 */}
-                      {[
-                        "31",
-                        "32",
-                        "33",
-                        "34",
-                        "35",
-                        "36",
-                        "37",
-                        "38",
-                        "39",
-                        "310",
-                      ].map((type) =>
-                        [...Array(12)].map((_, mIndex) => {
-                          const month = mIndex + 1;
-                          const val = value[`rl_${type}_bulan_${month}`];
-                          const validasi =
-                            value[`rl_${type}_bulan_${month}_validasi`];
-                          return (
-                            <td
-                              key={`rl_${type}_${month}`}
-                              style={{
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              {renderCell(val, validasi)}
-                            </td>
-                          );
-                        }),
-                      )}
+                  const renderRLCells = (type, mode) =>
+                    [...Array(12)].map((_, mIndex) => {
+                      const month = mIndex + 1;
+                      const val = value[`rl_${type}_bulan_${month}`];
+                      const validasi =
+                        value[`rl_${type}_bulan_${month}_validasi`];
 
-                      {/* 3.11 */}
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {renderCell(value.rl_311, value.rl_311_validasi)}
-                      </td>
-
-                      {/* 3.12 */}
-                      {[...Array(12)].map((_, mIndex) => {
-                        const month = mIndex + 1;
-                        const val = value[`rl_312_bulan_${month}`];
-                        const validasi =
-                          value[`rl_312_bulan_${month}_validasi`];
-                        return (
-                          <td
-                            key={`rl_312_${month}`}
-                            style={{
-                              textAlign: "center",
-                              verticalAlign: "middle",
-                            }}
-                          >
-                            {renderCell(val, validasi)}
-                          </td>
-                        );
-                      })}
-
-                      {/* 3.13 */}
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {renderCell(value.rl_313, value.rl_313_validasi)}
-                      </td>
-
-                      {/* 3.14 */}
-                      {[...Array(12)].map((_, mIndex) => {
-                        const month = mIndex + 1;
-                        const val = value[`rl_314_bulan_${month}`];
-                        const validasi =
-                          value[`rl_314_bulan_${month}_validasi`];
-                        return (
-                          <td
-                            key={`rl_314_${month}`}
-                            style={{
-                              textAlign: "center",
-                              verticalAlign: "middle",
-                            }}
-                          >
-                            {renderCell(val, validasi)}
-                          </td>
-                        );
-                      })}
-
-                      {/* 3.15 to 3.19 */}
-                      {["315", "316", "317", "318", "319"].map((type) => (
-                        <td
-                          key={`rl_${type}`}
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          {renderCell(
-                            value[`rl_${type}`],
-                            value[`rl_${type}_validasi`],
-                          )}
+                      return (
+                        <td key={`rl_${type}_${month}_${mode}`}>
+                          {renderCell({ val, validasi, mode })}
                         </td>
-                      ))}
+                      );
+                    });
 
-                      {/* 4.1 to 4.3 */}
-                      {["41", "42", "43"].map((type) =>
-                        [...Array(12)].map((_, mIndex) => {
-                          const month = mIndex + 1;
-                          const val = value[`rl_${type}_bulan_${month}`];
-                          const validasi =
-                            value[`rl_${type}_bulan_${month}_validasi`];
-                          return (
-                            <td
-                              key={`rl_${type}_${month}`}
-                              style={{
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              {renderCell(val, validasi)}
-                            </td>
-                          );
-                        }),
-                      )}
+                  return (
+                    <React.Fragment key={index}>
+                      {/* ===== ROW DATA ===== */}
+                      <tr>
+                        <td rowSpan="2">{index + 1}</td>
+                        <td rowSpan="2">{value.rs_id}</td>
 
-                      {/* 5.1 to 5.3 */}
-                      {["51", "52", "53"].map((type) =>
-                        [...Array(12)].map((_, mIndex) => {
-                          const month = mIndex + 1;
-                          const val = value[`rl_${type}_bulan_${month}`];
-                          const validasi =
-                            value[`rl_${type}_bulan_${month}_validasi`];
-                          return (
-                            <td
-                              key={`rl_${type}_${month}`}
-                              style={{
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              {renderCell(val, validasi)}
-                            </td>
-                          );
-                        }),
-                      )}
-                    </tr>
+                        <td
+                          rowSpan="2"
+                          className={style["sticky-column"]}
+                          style={{ left: 0 }}
+                        >
+                          {value.nama_rs}
+                        </td>
+
+                        <td
+                          rowSpan="2"
+                          className={style["sticky-column"]}
+                          style={{ left: "300px" }}
+                        >
+                          {value.kab_kota}
+                        </td>
+
+                        <td
+                          rowSpan="2"
+                          className={style["sticky-column"]}
+                          style={{ left: "450px", textAlign: "center" }}
+                        >
+                          {value.persentase_pengisian} %
+                        </td>
+
+                        <td
+                          className={style["sticky-column"]}
+                          style={{ left: "600px", fontWeight: "bold" }}
+                        >
+                          Data
+                        </td>
+
+                        {/* RL 3.1 – 3.10 */}
+                        {[
+                          "31",
+                          "32",
+                          "33",
+                          "34",
+                          "35",
+                          "36",
+                          "37",
+                          "38",
+                          "39",
+                          "310",
+                        ].map((type) => renderRLCells(type, "data"))}
+
+                        {/* ===== 3.11 ===== */}
+                        {renderTahunan(value, "311", "data")}
+
+                        {/* ===== 3.12 ===== */}
+                        {renderBulanan(value, "312", "data")}
+
+                        {/* ===== 3.13 ===== */}
+                        {renderTahunan(value, "313", "data")}
+
+                        {/* ===== 3.14 ===== */}
+                        {renderBulanan(value, "314", "data")}
+
+                        {/* ===== 3.15 – 3.19 ===== */}
+                        {["315", "316", "317", "318", "319"].map((type) =>
+                          renderTahunan(value, type, "data"),
+                        )}
+
+                        {/* ===== 4.1 – 4.3 ===== */}
+                        {["41", "42", "43"].map((type) =>
+                          renderBulanan(value, type, "data"),
+                        )}
+
+                        {/* ===== 5.1 – 5.3 ===== */}
+                        {["51", "52", "53"].map((type) =>
+                          renderBulanan(value, type, "data"),
+                        )}
+                      </tr>
+
+                      {/* ===== ROW VALIDASI ===== */}
+                      <tr>
+                        <td
+                          className={style["sticky-column"]}
+                          style={{ left: "600px", fontWeight: "bold" }}
+                        >
+                          Validasi
+                        </td>
+
+                        {/* RL 3.1 – 3.10 */}
+                        {[
+                          "31",
+                          "32",
+                          "33",
+                          "34",
+                          "35",
+                          "36",
+                          "37",
+                          "38",
+                          "39",
+                          "310",
+                        ].map((type) => renderRLCells(type, "validasi"))}
+
+                        {/* ===== 3.11 ===== */}
+                        {renderTahunan(value, "311", "validasi")}
+
+                        {/* ===== 3.12 ===== */}
+                        {renderBulanan(value, "312", "validasi")}
+
+                        {/* ===== 3.13 ===== */}
+                        {renderTahunan(value, "313", "validasi")}
+
+                        {/* ===== 3.14 ===== */}
+                        {renderBulanan(value, "314", "validasi")}
+
+                        {/* ===== 3.15 – 3.19 ===== */}
+                        {["315", "316", "317", "318", "319"].map((type) =>
+                          renderTahunan(value, type, "validasi"),
+                        )}
+
+                        {/* ===== 4.1 – 4.3 ===== */}
+                        {["41", "42", "43"].map((type) =>
+                          renderBulanan(value, type, "validasi"),
+                        )}
+
+                        {/* ===== 5.1 – 5.3 ===== */}
+                        {["51", "52", "53"].map((type) =>
+                          renderBulanan(value, type, "validasi"),
+                        )}
+                      </tr>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
