@@ -20,6 +20,8 @@ const Absensi = () => {
   const [token, setToken] = useState("");
   const [expire, setExpire] = useState("");
   const [provinsiId, setProvinsiId] = useState(null);
+  const [namaProvinsi, setNamaProvinsi] = useState("");
+  const [namaKabKota, setNamaKabKota] = useState("");
   const [kabKotaId, setKabKotaId] = useState(null);
   const [dataAbsensi, setDataAbsensi] = useState([]);
   const [namafile, setNamaFile] = useState("");
@@ -125,12 +127,16 @@ const Absensi = () => {
 
   const provinsiChangeHandler = (e) => {
     const provinsiId = e.target.value;
+    const namaProvinsi = e.target.selectedOptions[0].text;
+    setNamaProvinsi(namaProvinsi);
     setProvinsiId(provinsiId);
     getKabKota(provinsiId);
   };
 
   const kabKotaChangeHandler = (e) => {
     const kabKotaId = e.target.value;
+    const namaKabKota = e.target.selectedOptions[0].text;
+    setNamaKabKota(namaKabKota);
     setKabKotaId(kabKotaId);
   };
 
@@ -176,17 +182,22 @@ const Absensi = () => {
         return value;
       });
       setDataAbsensi(dataAbsensiDetail);
-      setNamaFile(
-        "Absensi_".concat(
-          String(provinsiId)
-            .concat("-")
-            .concat(kabKotaId)
-            .concat("-")
-            .concat(namaRs)
-            .concat("-")
-            .concat(tahun),
-        ),
-      );
+
+      const parts = [namaProvinsi, namaKabKota, namaRs, tahun].filter(Boolean); // buang yang kosong / null / undefined
+
+      setNamaFile("Absensi_" + parts.join("_"));
+
+      // setNamaFile(
+      //   "Absensi_".concat(
+      //     String(namaProvinsi)
+      //       .concat("-")
+      //       .concat(namaKabKota)
+      //       .concat("-")
+      //       .concat(namaRs)
+      //       .concat("-")
+      //       .concat(tahun),
+      //   ),
+      // );
       setApa(false);
     } catch (error) {
       console.log(error);
@@ -217,10 +228,14 @@ const Absensi = () => {
             </span>
           ) : (
             <span
-              className="fw-bold"
-              style={{ fontSize: "20px", color: "#32CD32" }}
+              style={{
+                fontSize: "20px",
+                fontWeight: "bold",
+                display: "inline-block",
+                color: "#32CD32",
+              }}
             >
-              V
+              ✔
             </span>
           )}
         </div>
@@ -253,7 +268,7 @@ const Absensi = () => {
       case 2:
         return "🔧";
       case 3:
-        return "✔";
+        return "☑";
       default:
         return "-";
     }
@@ -424,25 +439,70 @@ const Absensi = () => {
           <div className="mb-2">
             <strong>Keterangan:</strong>
             <br />
+
             <span style={{ marginRight: "15px" }}>
-              <span style={{ color: "#32CD32", fontWeight: "bold" }}>V</span> :
-              Sudah mengisi data
+              <span
+                style={{
+                  color: "#28A745",
+                  fontWeight: "bold",
+                  fontFamily: "Segoe UI Symbol, Arial",
+                }}
+              >
+                ✓
+              </span>{" "}
+              : Sudah mengisi data
             </span>
+
             <span style={{ marginRight: "15px" }}>
-              <span style={{ color: "#FF0000", fontWeight: "bold" }}>X</span> :
-              Belum mengisi data
+              <span
+                style={{
+                  color: "#FF0000",
+                  fontWeight: "bold",
+                  fontFamily: "Segoe UI Symbol, Arial",
+                }}
+              >
+                ✖
+              </span>{" "}
+              : Belum mengisi data
             </span>
+
             <span style={{ marginRight: "15px" }}>
-              <span style={{ color: "#FFA500", fontWeight: "bold" }}>⚠</span> :
-              Perlu Perbaikan
+              <span
+                style={{
+                  color: "#FFA500",
+                  fontWeight: "bold",
+                  fontFamily: "Segoe UI Symbol, Arial",
+                }}
+              >
+                ⚠
+              </span>{" "}
+              : Perlu Perbaikan
             </span>
+
             <span style={{ marginRight: "15px" }}>
-              <span style={{ color: "#007BFF", fontWeight: "bold" }}>🔧</span> :
-              Selesai Diperbaiki
+              <span
+                style={{
+                  color: "#007BFF",
+                  fontWeight: "bold",
+                  fontFamily: "Segoe UI Symbol, Arial",
+                }}
+              >
+                🔧
+              </span>{" "}
+              : Selesai Diperbaiki
             </span>
+
             <span style={{ marginRight: "15px" }}>
-              <span style={{ color: "#28A745", fontWeight: "bold" }}>✔</span> :
-              Disetujui
+              <span
+                style={{
+                  color: "#28A745",
+                  fontWeight: "bold",
+                  fontFamily: "Segoe UI Symbol, Arial",
+                }}
+              >
+                ☑
+              </span>{" "}
+              : Disetujui
             </span>
           </div>
           {spinner && (
