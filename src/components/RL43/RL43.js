@@ -944,9 +944,20 @@ const RL43 = () => {
 
                     {dataRL.length > 0 && rumahSakit?.id ? (
                       isValidated ? (
-                        <h2 className="text-center" style={{ color: "green" }}>
-                          Data telah di validasi
-                        </h2>
+                        <div
+                          style={{
+                            backgroundColor: "#fff3cd",
+                            border: "1px solid #ffc107",
+                            color: "#856404",
+                            padding: "15px",
+                            borderRadius: "4px",
+                            textAlign: "center",
+                          }}
+                        >
+                          <div className="text-center">
+                            <strong>Data telah di validasi</strong>
+                          </div>
+                        </div>
                       ) : null
                     ) : null}
                   </div>
