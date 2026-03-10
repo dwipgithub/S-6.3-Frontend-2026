@@ -656,7 +656,7 @@ const RL53 = () => {
         <div className="col-md-12">
           <div className="d-flex justify-content-between align-items-center">
             <h4 className={style.pageHeader}>
-              RL. 5.3 10 Besar Kunjungan Penyakit Rawat Jalan
+              RL 5.3 - 10 Besar Kunjungan Penyakit Rawat Jalan
             </h4>
           </div>
           <div className={style.toolbar}>
@@ -889,9 +889,20 @@ const RL53 = () => {
 
                   {dataRL.length > 0 && rumahSakit?.id ? (
                     isValidated ? (
-                      <h2 className="text-center" style={{ color: "green" }}>
-                        Data telah di validasi
-                      </h2>
+                      <div
+                        style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <div className="text-center">
+                          <strong>Data telah di validasi</strong>
+                        </div>
+                      </div>
                     ) : null
                   ) : null}
                 </div>

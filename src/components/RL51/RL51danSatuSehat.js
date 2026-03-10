@@ -95,8 +95,8 @@ export default function TabMenu() {
     >
       <div className="row">
         <div className="col-md-12">
-          <h4 className="text-secondary">
-            <span>🏥</span>
+          <h4 className={style.pageHeader}>
+            {" "}
             RL 5.1 - Morbiditas Pasien Rawat Jalan
           </h4>
 
@@ -108,7 +108,6 @@ export default function TabMenu() {
                 className={`nav-link ${activeTab === "tab1" ? "active" : ""}`}
                 onClick={() => setActiveTab("tab1")}
               >
-                <span>📄</span>
                 SIRS
               </button>
             </li>
@@ -117,10 +116,10 @@ export default function TabMenu() {
             {user.jenisUserId === 4 && statusSatset === 1 && (
               <li className="nav-item">
                 <button
+                  style={{ color: "black" }}
                   className={`nav-link ${activeTab === "tab2" ? "active" : ""}`}
                   onClick={() => setActiveTab("tab2")}
                 >
-                  <span>🌐</span>
                   SATUSEHAT
                 </button>
               </li>
@@ -1079,7 +1078,7 @@ function TabOne() {
             )}
 
             <button className={style.btnPrimary} onClick={handleShow}>
-              <FaSlidersH />
+              {/* <FaSlidersH /> */}
               Filter
             </button>
 
@@ -1096,7 +1095,7 @@ function TabOne() {
             </DownloadTableExcel> */}
 
             <button className={style.btnPrimary} onClick={handleDownloadExcel}>
-              <FaDownload />
+              {/* <FaDownload /> */}
               Download
             </button>
           </div>
@@ -2299,7 +2298,7 @@ function TabOne() {
               }`}
             >
               <div className={style.validasiCard}>
-                <h3 className="mb-3">Validasi RL 5.1</h3>
+                <h3 className={style.validasiCardTitle}>Validasi RL 5.1</h3>
                 {!isFilterApplied ? (
                   <div
                     style={{
@@ -2380,9 +2379,20 @@ function TabOne() {
                 )}
                 {dataRL.length > 0 && rumahSakit?.id ? (
                   isValidated ? (
-                    <h2 className="text-center" style={{ color: "green" }}>
-                      Data telah di validasi
-                    </h2>
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div className="text-center">
+                        <strong>Data telah di validasi</strong>
+                      </div>
+                    </div>
                   ) : (
                     (user.jenisUserId === 3 ||
                       (user.jenisUserId === 4 && idValidasi)) && (
@@ -3342,16 +3352,8 @@ function TabTwo() {
       <div className="row">
         <div className="col-md-12">
           <div style={{ marginBottom: "10px" }}>
-            <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-              onClick={handleShow}
-            >
-              <FaSlidersH />
+            <button className={style.btnPrimary} onClick={handleShow}>
+              {/* <FaSlidersH /> */}
               Filter
             </button>
 

@@ -72,7 +72,7 @@
 
 .navTabs .navLink.active,
 .navLink.active {
-  color: #4472c4;
+  color: #475569;
   border-bottom-color: #00b9ad;
 }
 
@@ -255,7 +255,7 @@
 }
 
 .validasiCardTitle {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: 600;
   color: #1e293b;
   margin-bottom: 1.25rem;

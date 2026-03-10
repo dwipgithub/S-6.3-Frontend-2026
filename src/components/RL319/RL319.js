@@ -840,7 +840,7 @@ const RL319 = () => {
       <div className="row">
         <div className="col-md-12">
           <div className="d-flex justify-content-between align-items-center">
-            <h4 className={style.pageHeader}>RL. 3.19 Cara Bayar</h4>
+            <h4 className={style.pageHeader}>RL 3.19 - Cara Bayar</h4>
           </div>
           <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
@@ -1227,9 +1227,20 @@ const RL319 = () => {
 
                   {dataRL.length > 0 && rumahSakit?.id ? (
                     isValidated ? (
-                      <h2 className="text-center" style={{ color: "green" }}>
-                        Data telah di validasi
-                      </h2>
+                      <div
+                        style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <div className="text-center">
+                          <strong>Data telah di validasi</strong>
+                        </div>
+                      </div>
                     ) : (
                       (user.jenisUserId === 3 ||
                         (user.jenisUserId === 4 && idValidasi)) && (
