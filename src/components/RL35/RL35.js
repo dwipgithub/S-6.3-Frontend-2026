@@ -845,30 +845,21 @@ const RL35 = () => {
           <span style={{ color: "gray" }}>
             <h4> RL 3.5 - Kunjungan</h4>
           </span>
-          <div style={{ marginBottom: "10px" }}>
+          <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
                 to={`/rl35/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                type="button"
+                className={style.btnPrimary}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
             )}
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              type="button"
+              className={style.btnPrimary}
               onClick={handleShow}
             >
               Filter
@@ -880,13 +871,8 @@ const RL35 = () => {
             >
               {/* <button> Export excel </button> */}
               <button
-                className="btn"
-                style={{
-                  fontSize: "18px",
-                  marginLeft: "5px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                type="button"
+                className={style.btnPrimary}
               >
                 {" "}
                 Download

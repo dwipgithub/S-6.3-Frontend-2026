@@ -1010,7 +1010,7 @@ const RL32 = () => {
                 className={style.btnPrimary}
                 style={{ textDecoration: "none" }}
               >
-                + Tambah
+               Tambah
               </Link>
             ) : null}
             <button

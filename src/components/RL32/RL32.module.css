@@ -20,13 +20,13 @@
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 6px;
-  background: linear-gradient(180deg, #5a8a8c 0%, #4a7a7c 100%);
+  background: #00b9ad;
   color: #fff;
   transition: background 0.2s, transform 0.1s;
 }
 
 .btnPrimary:hover {
-  background: linear-gradient(180deg, #4a7a7c 0%, #3d6a6c 100%);
+  background: #00b9ad;
   color: #fff;
   transform: translateY(-1px);
 }

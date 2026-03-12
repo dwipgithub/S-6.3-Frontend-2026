@@ -1370,14 +1370,14 @@ const RL37 = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <div style={{ marginBottom: "10px" }}>
+          <div className={style.toolbar}>
             {user.jenisUserId === 4 && (
-              <Link className="btn" to={`/rl37/tambah/`} style={{ marginRight: "5px", fontSize: "18px", backgroundColor: "#779D9E", color: "#FFFFFF" }}>+</Link>
+              <Link to={`/rl37/tambah/`} type="button" className={style.btnPrimary}> Tambah </Link>
             )}
-            <button className="btn" style={{ fontSize: "18px", backgroundColor: "#779D9E", color: "#FFFFFF" }} onClick={handleShow}>Filter</button>
+            <button type="button" className={style.btnPrimary} onClick={handleShow}>Filter</button>
 
             <DownloadTableExcel filename={namafile} sheet="data RL 37" currentTableRef={tableRef.current}>
-              <button className="btn" style={{ fontSize: "18px", marginLeft: "5px", backgroundColor: "#779D9E", color: "#FFFFFF" }}>Download</button>
+              <button type="button" className={style.btnPrimary}>Download</button>
             </DownloadTableExcel>
           </div>
 

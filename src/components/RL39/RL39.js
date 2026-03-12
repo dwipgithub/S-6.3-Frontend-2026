@@ -875,30 +875,19 @@ export const RL39 = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <div style={{ marginBottom: "10px" }}>
+          <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
                 to={`/rl39/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                type="button" className={style.btnPrimary}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
             )}
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              type="button" className={style.btnPrimary}
               onClick={handleShow}
             >
               Filter
@@ -910,13 +899,7 @@ export const RL39 = () => {
             >
               {/* <button> Export excel </button> */}
               <button
-                className="btn"
-                style={{
-                  fontSize: "18px",
-                  marginLeft: "5px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                type="button" className={style.btnPrimary}
               >
                 {" "}
                 Download

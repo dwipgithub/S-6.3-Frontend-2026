@@ -345,7 +345,7 @@ const getRL = async (e) => {
   };
 
   return (
-    <div className="container" style={{ marginTop: "70px" }}>
+    <div className="container" style={{ marginTop: "20px" }}>
       <h4 className={style.pageHeader}>RL 3.1 Indikator Pelayanan</h4>
 
       <Modal show={show} onHide={() => setShow(false)} style={{ position: "fixed" }}>
@@ -464,17 +464,18 @@ const getRL = async (e) => {
       {/* Tabel & bagian Download dll tetap seperti sebelumnya */}
       <div className="row">
         <div className="col-md-12">
-          <div style={{ marginBottom: "10px" }}>
+          <div className={style.toolbar}>
             <button
-              className="btn"
-              style={{ fontSize: "18px", backgroundColor: "#779D9E", color: "#FFFFFF" }}
+              type="button"
+              className={style.btnPrimary}
               onClick={() => setShow(true)}
             >
               Filter
             </button>
+
             <button
-              className="btn"
-              style={{ fontSize: "18px", marginLeft: "5px", backgroundColor: "#779D9E", color: "#FFFFFF" }}
+              type="button"
+              className={style.btnPrimary}
               onClick={handleDownloadExcel}
             >
               Download

@@ -586,7 +586,7 @@ const RL34 = () => {
   }
 
   return (
-    <div className="container" style={{ marginTop: "20px", marginBottom: "70px" }}>
+    <div className="container" style={{ marginTop: "20px", marginBottom: "20px" }}>
       <h2>RL 3.4 Pengunjung</h2>
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
@@ -815,39 +815,25 @@ const RL34 = () => {
           <div style={{ marginBottom: "10px" }}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
                 to={`/rl34/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                type="button"
+                className={style.btnPrimary}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
             )}
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              type="button"
+              className={style.btnPrimary}
               onClick={handleShow}
             >
               Filter
             </button>
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                marginLeft: "5px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              type="button"
+              className={style.btnPrimary}
               onClick={handleDownloadExcel}
             >
               Download
