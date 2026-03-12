@@ -880,6 +880,7 @@ export const RL39 = () => {
               <Link
                 to={`/rl39/tambah/`}
                 type="button" className={style.btnPrimary}
+                style={{ textDecoration: "none" }}
               >
                 Tambah
               </Link>

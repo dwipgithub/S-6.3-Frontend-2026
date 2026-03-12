@@ -940,6 +940,7 @@ const RL33 = () => {
                 to={`/rl33/tambah/`}
                 type="button"
                 className={style.btnPrimary}
+                style={{ textDecoration: "none" }}
               >
                 Tambah
               </Link>
