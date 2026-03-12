@@ -41,6 +41,7 @@ const RL41 = () => {
   const [totalPages, setTotalPages] = useState(0);
 
   const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
@@ -261,6 +262,7 @@ const RL41 = () => {
 
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
         setStatusValidasi(results.data.data[0].statusValidasiId);
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
@@ -464,11 +466,13 @@ const RL41 = () => {
   };
 
   const simpanValidasi = async (e) => {
+    setSpinner(true);
     e.preventDefault();
     if (rumahSakit == null) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
@@ -476,6 +480,7 @@ const RL41 = () => {
       toast(`Keterangan tidak boleh kosong`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
@@ -518,6 +523,7 @@ const RL41 = () => {
         position: toast.POSITION.TOP_RIGHT,
       });
     }
+    setSpinner(false);
   };
 
   const handleDownloadExcel = async () => {
@@ -1530,9 +1536,9 @@ const RL41 = () => {
                           Status
                         </strong>
                         :{" "}
-                        {statusValidasi == 1
+                        {idValidasiSubmited == 1
                           ? "Perlu Perbaikan"
-                          : statusValidasi == 2
+                          : idValidasiSubmited == 2
                             ? "Selesai Diperbaiki"
                             : "Disetujui"}
                       </p>
@@ -1616,27 +1622,32 @@ const RL41 = () => {
                               ) : (
                                 <>
                                   <option value="1">Perlu Perbaikan</option>
-                                  <option value="2">Selesai Diperbaiki</option>
                                   <option value="3">Disetujui</option>
                                 </>
                               )}
                             </select>
                           </div>
 
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="keteranganValidasi">Catatan</label>
-                            <textarea
-                              id="keteranganValidasi"
-                              name="keteranganValidasi"
-                              value={keteranganValidasi}
-                              onChange={(e) =>
-                                keteranganValidasiChangeHadler(e)
-                              }
-                              placeholder="Tambahkan catatan (opsional)"
-                              rows={4}
-                              disabled={user.jenisUserId === 4}
-                            />
-                          </div>
+                          {user.jenisUserId === 3 ? (
+                            <>
+                              <div className={style.validasiFormGroup}>
+                                <label htmlFor="keteranganValidasi">
+                                  Catatan
+                                </label>
+                                <textarea
+                                  id="keteranganValidasi"
+                                  name="keteranganValidasi"
+                                  value={keteranganValidasi}
+                                  onChange={(e) =>
+                                    keteranganValidasiChangeHadler(e)
+                                  }
+                                  placeholder="Tambahkan catatan (opsional)"
+                                  rows={4}
+                                  disabled={user.jenisUserId === 4}
+                                />
+                              </div>
+                            </>
+                          ) : null}
 
                           <button type="submit" className={style.btnPrimary}>
                             <HiSaveAs size={20} /> Simpan
