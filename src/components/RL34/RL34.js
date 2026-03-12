@@ -818,6 +818,7 @@ const RL34 = () => {
                 to={`/rl34/tambah/`}
                 type="button"
                 className={style.btnPrimary}
+                style={{ textDecoration: "none" }}
               >
                 Tambah
               </Link>

@@ -1372,7 +1372,7 @@ const RL37 = () => {
         <div className="col-md-12">
           <div className={style.toolbar}>
             {user.jenisUserId === 4 && (
-              <Link to={`/rl37/tambah/`} type="button" className={style.btnPrimary}> Tambah </Link>
+              <Link to={`/rl37/tambah/`} type="button" className={style.btnPrimary} style={{ textDecoration: "none" }} > Tambah </Link>
             )}
             <button type="button" className={style.btnPrimary} onClick={handleShow}>Filter</button>
 
