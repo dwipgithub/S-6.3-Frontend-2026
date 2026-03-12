@@ -1246,42 +1246,28 @@ const RL36 = () => {
           <h4>
             <span style={{ color: "gray" }}>RL. 3.6 Kebidanan</span>
           </h4>
-          <div style={{ marginBottom: "10px" }}>
+          <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
                 to={`/rl36/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                 type="button"
+                 className={style.btnPrimary}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
             )}
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+               type="button"
+               className={style.btnPrimary}
               onClick={handleShow}
             >
               Filter
             </button>
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                marginLeft: "5px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+               type="button"
+               className={style.btnPrimary}
               onClick={handleDownloadExcel}
             >
               Download
