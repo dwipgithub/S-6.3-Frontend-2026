@@ -463,8 +463,13 @@ const FormTambahRL41 = () => {
 
   return (
     <div
-      className="container"
-      style={{ marginTop: "20px", marginBottom: "100px" }}
+      className="container-fluid"
+      style={{
+        marginTop: "20px",
+        marginBottom: "100px",
+        paddingLeft: "30px",
+        paddingRight: "30px",
+      }}
     >
       <div className="row">
         <div className="col-md-6">

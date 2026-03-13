@@ -15,7 +15,7 @@ const FOOTER_HEIGHT = 70; /* sama dengan max-height footer agar menu bawah tidak
 
 export { SIDEBAR_WIDTH, TOPBAR_HEIGHT };
 
-const NavigationBar = () => {
+const NavigationBar = ({ sidebarOpen, setSidebarOpen }) => {
   const [user, setUser] = useState({});
   const [expire, setExpire] = useState("");
   const { CSRFToken } = useCSRFTokenContext();
@@ -231,6 +231,10 @@ const NavigationBar = () => {
     }
   };
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   return (
     <>
       {/* Top bar */}
@@ -261,6 +265,18 @@ const NavigationBar = () => {
             <span style={{ color: "#CDDC29" }}>ONLINE</span>
           </span>
         </Navbar.Brand>
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          style={{
+            border: "none",
+            background: "transparent",
+            fontSize: "22px",
+            marginLeft: "15px",
+            cursor: "pointer",
+          }}
+        >
+          ☰
+        </button>
         <Nav className="ms-auto">
           <NavDropdown
             title={
@@ -287,13 +303,13 @@ const NavigationBar = () => {
           maxHeight: `calc(100vh - ${TOPBAR_HEIGHT}px - ${FOOTER_HEIGHT}px)`,
           position: "fixed",
           top: TOPBAR_HEIGHT,
-          left: 0,
+          left: sidebarOpen ? 0 : `-${SIDEBAR_WIDTH}px`,
           overflowY: "auto",
           overflowX: "hidden",
           WebkitOverflowScrolling: "touch",
           backgroundColor: "#f8f9fa",
           borderRight: "1px solid #e2e8f0",
-          // fontFamily: "'Times New Roman', Times, serif",
+          transition: "left 0.3s ease",
         }}
       >
         <style>{`
