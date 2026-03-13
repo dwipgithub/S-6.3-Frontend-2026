@@ -1002,7 +1002,7 @@ const RL32 = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <h4 className={style.pageHeader}>RL. 3.2 Rawat Inap</h4>
+          <h4 className={style.pageHeader}>RL. 3.2 - Rawat Inap</h4>
           <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link

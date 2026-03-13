@@ -587,7 +587,7 @@ const RL34 = () => {
 
   return (
     <div className="container" style={{ marginTop: "20px", marginBottom: "20px" }}>
-      <h2>RL 3.4 Pengunjung</h2>
+     <h4 className={style.pageHeader}>RL 3.4 - Pengunjung</h4>
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>

@@ -931,9 +931,7 @@ const RL33 = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <h4>
-            <span style={{ color: "gray" }}>RL. 3.3 Rawat Darurat</span>
-          </h4>
+            <h4 className={style.pageHeader}>RL. 3.3 - Rawat Darurat</h4>
           <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
