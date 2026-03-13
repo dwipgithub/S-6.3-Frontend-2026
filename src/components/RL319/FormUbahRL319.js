@@ -345,8 +345,13 @@ export const FormUbahRL319 = () => {
 
   return (
     <div
-      className="container"
-      style={{ marginTop: "20px", marginBottom: "70px" }}
+      className="container-fluid"
+      style={{
+        marginTop: "20px",
+        marginBottom: "70px",
+        paddingLeft: "30px",
+        paddingRight: "30px",
+      }}
     >
       <h2>RL. 3.19</h2>
       <form onSubmit={updateDataRLTigaTitikSembilanBelas}>

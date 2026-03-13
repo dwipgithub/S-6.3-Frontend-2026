@@ -415,8 +415,13 @@ const RL52 = () => {
 
   return (
     <div
-      className="container"
-      style={{ marginTop: "20px", marginBottom: "70px" }}
+      className="container-fluid"
+      style={{
+        marginTop: "20px",
+        marginBottom: "70px",
+        paddingLeft: "30px",
+        paddingRight: "30px",
+      }}
     >
       {spinner && (
         <div

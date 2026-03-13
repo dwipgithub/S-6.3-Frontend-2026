@@ -93,7 +93,7 @@ export const FormUbahRL41 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getRumahSakit = async (id) => {
@@ -215,7 +215,7 @@ export const FormUbahRL41 = () => {
         await axiosJWT.patch(
           "/apisirs6v2/rlempattitiksatu/" + id,
           payloadInsert,
-          customConfig
+          customConfig,
         );
         toast("Data Berhasil Diupdate", {
           position: toast.POSITION.TOP_RIGHT,
@@ -234,7 +234,7 @@ export const FormUbahRL41 = () => {
         `Data Gagal Disimpan, Data Jumlah Pasien Keluar Mati Lebih Dari Jumlah Pasien Hidup dan Mati`,
         {
           position: toast.POSITION.TOP_RIGHT,
-        }
+        },
       );
       setButtonStatus(false);
     }
@@ -280,7 +280,15 @@ export const FormUbahRL41 = () => {
   };
 
   return (
-    <div className="container" style={{ marginTop: "70px" }}>
+    <div
+      className="container-fluid"
+      style={{
+        marginTop: "20px",
+        marginBottom: "70px",
+        paddingLeft: "30px",
+        paddingRight: "30px",
+      }}
+    >
       <form onSubmit={UpdateRLEmpatTitikSatu}>
         <div className="row">
           <div className="col-md-6">

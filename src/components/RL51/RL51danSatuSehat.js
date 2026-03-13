@@ -90,8 +90,13 @@ export default function TabMenu() {
 
   return (
     <div
-      className="container"
-      style={{ marginTop: "20px", marginBottom: "70px" }}
+      className="container-fluid"
+      style={{
+        marginTop: "20px",
+        marginBottom: "70px",
+        paddingLeft: "30px",
+        paddingRight: "30px",
+      }}
     >
       <div className="row">
         <div className="col-md-12">
@@ -825,7 +830,7 @@ function TabOne() {
       : { no: "0px", icd: "52px", diag: "134px" };
 
   return (
-    <div className="container">
+    <div className="container-fluid">
       {spinner && (
         <div
           className="d-flex justify-content-center align-items-center"
