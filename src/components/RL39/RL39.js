@@ -647,8 +647,7 @@ export const RL39 = () => {
       className="container"
       style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h4 style={{ color: "grey" }}>
-        <span> RL 3.9-Radiologi</span>
+      <h4 className={style.pageHeader}> RL 3.9 - Radiologi
       </h4>
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
@@ -947,15 +946,14 @@ export const RL39 = () => {
                     {spinner && <Spinner animation="grow" variant="success"></Spinner>}
                     {spinner && <Spinner animation="grow" variant="success"></Spinner>}
                   </div>
-                  <table className={style.rlTable} ref={tableRef}>
-                <thead>
-                  <tr>
-                    <th style={{ width: "6%" }}>No</th>
-                    <th style={{ width: "12%" }}> </th>
-                    {/* <th style={{"width": "7%"}}>No Kegiatan</th> */}
-                    <th>Jenis Kegiatan</th>
-                    <th>Jumlah</th>
-                  </tr>
+                  <table className={style["table"]} ref={tableRef}>
+                  <thead>
+                    <tr className="main-header-row">
+                        <th style={{ width: "5%", verticalAlign: "middle" }}>No</th>
+                        <th style={{ width: "5%", verticalAlign: "middle" }}></th>
+                        <th style={{ width: "45%", verticalAlign: "middle" }}>Jenis Kegiatan</th>
+                        <th style={{ width: "45%", verticalAlign: "middle" }}>Jumlah</th>
+                    </tr>
                 </thead>
 
                 <tbody>

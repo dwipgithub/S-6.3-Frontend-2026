@@ -346,7 +346,7 @@ const getRL = async (e) => {
 
   return (
     <div className="container" style={{ marginTop: "20px" }}>
-      <h4 className={style.pageHeader}>RL 3.1 Indikator Pelayanan</h4>
+      <h4 className={style.pageHeader}>RL 3.1 - Indikator Pelayanan</h4>
 
       <Modal show={show} onHide={() => setShow(false)} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
@@ -490,7 +490,7 @@ const getRL = async (e) => {
             </div>
           )}
 
-          <Table className={style.rlTable} striped responsive style={{ width: "100%" }}>
+           <table className={style.table}>
             <thead>
               <tr>
                 <th>No.</th>
@@ -543,7 +543,7 @@ const getRL = async (e) => {
                 </tr>
               )}
             </tbody>
-          </Table>
+          </table>
         </div>
       </div>
     </div>

@@ -1243,9 +1243,7 @@ const RL36 = () => {
       </Modal>
       <div className="row">
         <div className="col-md-12">
-          <h4>
-            <span style={{ color: "gray" }}>RL. 3.6 Kebidanan</span>
-          </h4>
+            <h4 className={style.pageHeader}> RL. 3.6 - Kebidanan</h4>
           <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link

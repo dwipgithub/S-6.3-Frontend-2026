@@ -842,9 +842,7 @@ const RL35 = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <span style={{ color: "gray" }}>
-            <h4> RL 3.5 - Kunjungan</h4>
-          </span>
+            <h4 className={style.pageHeader}> RL 3.5 - Kunjungan</h4>
           <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link

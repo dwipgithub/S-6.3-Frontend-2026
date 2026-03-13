@@ -1265,9 +1265,7 @@ const RL37 = () => {
 
   return (
     <div className="container" style={{ marginTop: "20px", marginBottom: "70px" }}>
-      <h4 style={{ color: "grey" }}>
-        <span> RL 3.7-Neonatal, Bayi dan Balita </span>
-      </h4>
+        <h4 className={style.pageHeader}> RL 3.7 - Neonatal, Bayi dan Balita </h4>
 
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
