@@ -467,7 +467,7 @@ const FormTambahRL39 = () => {
               <thead>
                 <tr>
                   <th style={{ width: "6%" }}>No.</th>
-                  <th style={{ width: "2%" }}></th>
+                  <th style={{ width: "%" }}></th>
                   <th style={{ width: "7%" }}>No Kegiatan</th>
                   <th>Jenis Kegiatan</th>
                   <th>Jumlah</th>

@@ -120,90 +120,112 @@ const RL33 = () => {
     } catch (error) {}
   };
 
-  const getDataRLTigaTitikTiga = async (e) => {
-    e.preventDefault();
-    if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
+const getDataRLTigaTitikTiga = async (e) => {
+  e.preventDefault();
+
+  // ⭐ FIX VALIDASI RS (object kosong sering lolos)
+  if (!rumahSakit || !rumahSakit.id) {
+    toast(`rumah sakit harus dipilih`, {
+      position: toast.POSITION.TOP_RIGHT,
+    });
+    return;
+  }
+
+  const filter = [];
+  filter.push("Nama: ".concat(rumahSakit.nama));
+  filter.push(
+    "Periode ".concat(
+      String(months[bulan - 1].label)
+        .concat(" ")
+        .concat(tahun)
+    )
+  );
+  setFilterLabel(filter);
+
+  try {
+    const customConfig = {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        rsId: rumahSakit.id, // ⭐ FIX PENTING (tadi kamu tidak kirim rsId)
+        tahun: tahun,
+        bulan: bulan,
+      },
+    };
+
+    const results = await axiosJWT.get(
+      "/apisirs6v2/rltigatitiktiga",
+      customConfig
+    );
+
+    // ⭐ GUARD kalau backend return kosong
+    if (!results.data.data || results.data.data.length === 0) {
+      setDataRL([]);
+      toast("Data RL tidak ditemukan", {
         position: toast.POSITION.TOP_RIGHT,
       });
+      handleClose();
       return;
     }
 
-    const filter = [];
-    filter.push("Nama: ".concat(rumahSakit.nama));
-    filter.push(
-      "Periode ".concat(
-        String(months[bulan - 1].label)
-          .concat(" ")
-          .concat(tahun)
-      )
-    );
-    setFilterLabel(filter);
+    // ⭐ FLATTEN LEBIH AMAN
+    let dataRLTigaTitikTigaDetails = [];
+    results.data.data.forEach((value) => {
+      if (value.rl_tiga_titik_tiga_details) {
+        value.rl_tiga_titik_tiga_details.forEach((v) => {
+          dataRLTigaTitikTigaDetails.push(v);
+        });
+      }
+    });
 
+    setDataRL(dataRLTigaTitikTigaDetails);
+
+    // reset validasi state
+    setValidasiId(null);
+    setStatusValidasi(0);
+    setKeteranganValidasi("");
+    setDataValidasi(null);
+
+    handleClose();
+
+    // ================= LOAD VALIDASI =================
     try {
-      const customConfig = {
+      const validasiConfig = {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         params: {
-          tahun: tahun,
-          bulan: bulan,
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
         },
       };
-      const results = await axiosJWT.get(
-        "/apisirs6v2/rltigatitiktiga",
-        customConfig
+
+      const validasiResponse = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiktigavalidasi",
+        validasiConfig
       );
 
-      const rlTigaTitikTigaDetails = results.data.data.map((value) => {
-        return value.rl_tiga_titik_tiga_details;
-      });
-
-      let dataRLTigaTitikTigaDetails = [];
-      rlTigaTitikTigaDetails.forEach((element) => {
-        element.forEach((value) => {
-          dataRLTigaTitikTigaDetails.push(value);
-        });
-      });
-      setDataRL(dataRLTigaTitikTigaDetails);
-      setValidasiId(null);
-      setStatusValidasi(0);
-      setKeteranganValidasi("");
-      setDataValidasi(null);
-      handleClose();
-      
-      // Load validasi data setelah filter diterapkan
-      try {
-        const validasiConfig = {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            rsId: rumahSakit.id,
-            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
-          },
-        };
-        const validasiResponse = await axiosJWT.get(
-          "/apisirs6v2/rltigatitiktigavalidasi",
-          validasiConfig
-        );
-
-        if (validasiResponse.data.data && validasiResponse.data.data.length > 0) {
-          const validasi = validasiResponse.data.data[0];
-          setValidasiId(validasi.id);
-          setStatusValidasi(validasi.statusValidasiId);
-          setKeteranganValidasi(validasi.catatan || "");
-          setDataValidasi(validasi);
-        }
-      } catch (error) {
-        console.log(error);
+      if (validasiResponse.data.data && validasiResponse.data.data.length > 0) {
+        const validasi = validasiResponse.data.data[0];
+        setValidasiId(validasi.id);
+        setStatusValidasi(validasi.statusValidasiId);
+        setKeteranganValidasi(validasi.catatan || "");
+        setDataValidasi(validasi);
       }
     } catch (error) {
       console.log(error);
     }
-  };
+
+  } catch (error) {
+    console.log(error);
+    toast("Gagal mengambil data RL", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
+  }
+};
 
   // const hapusData = async (id) => {
   //   const customConfig = {
@@ -1285,98 +1307,162 @@ const RL33 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Form Validasi RL 3.3</h3>
-              
-                  {dataRL.length === 0 ? (
-                    <div style={{
-                      backgroundColor: "#fff3cd",
-                      border: "1px solid #ffc107",
-                      color: "#856404",
-                      padding: "15px",
-                      borderRadius: "4px",
-                      textAlign: "center"
-                    }}>
-                      <strong>Data belum tersedia untuk proses validasi.</strong>
-                    </div>
-                  ) : (
-                    <>
-                      {dataValidasi && (
-                        <div
-                          style={{
-                            backgroundColor: "#f0f0f0",
-                            padding: "10px",
-                            borderRadius: "4px",
-                            marginBottom: "15px",
-                          }}
-                        >
-                          <p style={{ margin: "5px 0" }}>
-                            <strong>Status:</strong>{" "}
-                            {dataValidasi.statusValidasiId === 1
-                              ? "Perlu Perbaikan"
-                              : dataValidasi.statusValidasiId === 2
-                              ? "Selesai Diperbaiki"
-                              : dataValidasi.statusValidasiId === 3
-                              ? "Disetujui"
-                              : ""}
-                          </p>
-                          <p style={{ margin: "5px 0" }}>
-                            <strong>Dibuat:</strong>{" "}
-                            {new Date(dataValidasi.createdAt).toLocaleDateString(
-                              "id-ID"
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.2</h3>
+
+                    {/* =========================
+                        1️⃣ DATA RL KOSONG
+                    ========================== */}
+                    {dataRL.length === 0 ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data belum tersedia untuk proses validasi.</strong>
+                      </div>
+
+                    /* =========================
+                        2️⃣ RS BELUM PERNAH DIVALIDASI
+                    ========================== */
+                    ) : (!dataValidasi && user.jenisUserId === 4) ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data Belum di Validasi</strong>
+                      </div>
+
+                    ) : (
+
+                      <>
+                        {/* =========================
+                            3️⃣ INFO VALIDASI
+                        ========================== */}
+                        {dataValidasi && (
+                              <div style={{
+                                backgroundColor: "#f0f0f0",
+                                padding: "12px",
+                                borderRadius: "4px",
+                                marginBottom: "15px"
+                              }}>
+
+                                {/* STATUS */}
+                                <div style={{ display: "flex", marginBottom: "4px" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Status
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {dataValidasi.statusValidasiId === 1
+                                      ? "Perlu Perbaikan"
+                                      : dataValidasi.statusValidasiId === 2
+                                      ? "Selesai Diperbaiki"
+                                      : dataValidasi.statusValidasiId === 3
+                                      ? "Disetujui"
+                                      : "-"}
+                                  </div>
+                                </div>
+
+                                {/* CATATAN */}
+                                {(dataValidasi.keteranganValidasi ||
+                                  dataValidasi.catatan ||
+                                  dataValidasi.keterangan) && (
+                                  <div style={{ display: "flex", marginBottom: "4px" }}>
+                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                      Catatan
+                                    </div>
+                                    <div style={{ width: "10px" }}>:</div>
+                                    <div>
+                                      {dataValidasi.keteranganValidasi ||
+                                        dataValidasi.catatan ||
+                                        dataValidasi.keterangan}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* DIBUAT */}
+                                <div style={{ display: "flex" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Dibuat
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                                  </div>
+                                </div>
+
+                              </div>
                             )}
-                          </p>
-                        </div>
-                      )}
 
-                      {/* Jika validasi sudah disetujui, hanya tampilkan status dan dibuat */}
-                      {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
-                        <div style={{ color: "#28a745", fontWeight: "bold" }}>
-                          Validasi telah disetujui dan tidak dapat diubah.
-                        </div>
-                      ) : (
-                        <form onSubmit={simpanValidasi}>
-                          <ToastContainer />
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="statusValidasi">Status</label>
-                            <select
-                              id="statusValidasi"
-                              name="statusValidasi"
-                              value={statusValidasi}
-                              onChange={(e) => statusValidasiChangeHadler(e)}
-                            >
-                              <option value={0}>Pilih</option>
-                              {user.jenisUserId === 4 ? (
-                                <option value="2">Selesai Diperbaiki</option>
-                              ) : (
-                                <>
-                                  <option value="1">Perlu Perbaikan</option>
-                                  <option value="3">Disetujui</option>
-                                </>
-                              )}
-                            </select>
-                          </div>
+                        {/* =========================
+                            4️⃣ STATUS FINAL LOCK
+                        ========================== */}
+                        {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                        <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Validasi telah disetujui dan tidak dapat diubah.</strong>
+                      </div>
 
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="keteranganValidasi">Catatan</label>
-                            <textarea
-                              id="keteranganValidasi"
-                              name="keteranganValidasi"
-                              value={keteranganValidasi}
-                              onChange={(e) => keteranganValidasiChangeHadler(e)}
-                              placeholder="Tambahkan catatan (opsional)"
-                              rows={4}
-                              disabled={user.jenisUserId === 4}
-                            />
-                          </div>
+                        ) : (
 
-                          <button type="submit" className={style.btnPrimary}>
-                            <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
-                          </button>
-                        </form>
-                      )}
-                    </>
-                  )}
-                </div>
+                          /* =========================
+                              5️⃣ FORM VALIDASI
+                          ========================== */
+                          <form onSubmit={simpanValidasi}>
+                            <ToastContainer />
+
+                            <div className={style.validasiFormGroup}>
+                              <label>Status</label>
+                              <select
+                                value={statusValidasi}
+                                onChange={statusValidasiChangeHadler}
+                              >
+                                <option value={0}>Pilih</option>
+
+                                {user.jenisUserId === 4
+                                  ? <option value="2">Selesai Diperbaiki</option>
+                                  : <>
+                                      <option value="1">Perlu Perbaikan</option>
+                                      <option value="3">Disetujui</option>
+                                    </>
+                                }
+                              </select>
+                            </div>
+
+                            {/* ✅ TEXTAREA HANYA UNTUK VALIDATOR */}
+                            {user.jenisUserId !== 4 && (
+                              <div className={style.validasiFormGroup}>
+                                <label>Catatan</label>
+                                <textarea
+                                  onChange={keteranganValidasiChangeHadler}
+                                  rows={4}
+                                />
+                              </div>
+                            )}
+
+                            <button type="submit" className={style.btnPrimary}>
+                              <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                            </button>
+
+                          </form>
+
+                        )}
+                      </>
+                    )}
+                  </div>
               </div>
             </div>
           </div>
