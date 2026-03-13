@@ -873,7 +873,8 @@ const RL38 = () => {
               .join(", ")}
           </h5>
         </div>
-
+      
+        <div>
           <ul className={`nav nav-tabs ${style.navTabs}`}>
               <li className={`nav-item ${style.navItem}`}>
                 <button
@@ -1051,62 +1052,114 @@ const RL38 = () => {
               </div>
               <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Form Validasi RL 3.8</h3>
-                  
-                  {dataRL.length === 0 ? (
-                    <div style={{
-                      backgroundColor: "#fff3cd",
-                      border: "1px solid #ffc107",
-                      color: "#856404",
-                      padding: "15px",
-                      borderRadius: "4px",
-                      textAlign: "center"
-                    }}>
-                      <strong>Data belum tersedia untuk proses validasi.</strong>
-                    </div>
-                  ) : (
-                    <>
-                      {dataValidasi && (
+                      <h3 className={style.validasiCardTitle}>Form Validasi RL 3.9</h3>
+
+                      {dataRL.length === 0 ? (
+
+                        /* ✅ DATA RL KOSONG */
                         <div style={{
-                          backgroundColor: "#f0f0f0",
-                          padding: "10px",
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
                           borderRadius: "4px",
-                          marginBottom: "15px",
+                          textAlign: "center"
                         }}>
-                          <p style={{ margin: "5px 0" }}>
-                            <strong>Status:</strong> {dataValidasi.statusValidasiId === 1 ? "Perlu Perbaikan" : dataValidasi.statusValidasiId === 2 ? "Selesai Diperbaiki" : dataValidasi.statusValidasiId === 3 ? "Disetujui" : ""}
-                          </p>
-                          <p style={{ margin: "5px 0" }}>
-                            <strong>Dibuat:</strong> {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
-                          </p>
+                          <strong>Data RL belum tersedia.</strong>
                         </div>
-                      )}
 
-                      {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
-                        <div style={{ color: "#28a745", fontWeight: "bold" }}>
-                          Validasi telah disetujui dan tidak dapat diubah.
+                      ) : !dataValidasi && user.jenisUserId === 4 ? (
+
+                        /* ✅ NOTE UNTUK RS → FORM HILANG */
+                        <div style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center"
+                        }}>
+                          Data belum di validasi.
                         </div>
+
                       ) : (
-                        <form onSubmit={simpanValidasi}>
-                          <ToastContainer />
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="statusValidasi">Status</label>
-                            <select id="statusValidasi" name="statusValidasi" value={statusValidasi} onChange={statusValidasiChangeHadler}>
-                              <option value={0}>Pilih</option>
-                              {user.jenisUserId === 4 ? <option value="2">Selesai Diperbaiki</option> : <><option value="1">Perlu Perbaikan</option><option value="3">Disetujui</option></>}
-                            </select>
-                          </div>
 
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="keteranganValidasi">Catatan</label>
-                            <textarea id="keteranganValidasi" name="keteranganValidasi" value={keteranganValidasi} onChange={keteranganValidasiChangeHadler} placeholder="Tambahkan catatan (opsional)" rows={4} disabled={user.jenisUserId === 4} />
-                          </div>
+                        <>
+                          {/* INFO VALIDASI */}
+                          {dataValidasi && (
+                            <div style={{
+                              backgroundColor: "#f0f0f0",
+                              padding: "10px",
+                              borderRadius: "4px",
+                              marginBottom: "15px"
+                            }}>
+                              <p style={{ margin: "5px 0" }}>
+                                <strong>Status:</strong>{" "}
+                                {dataValidasi.statusValidasiId === 1
+                                  ? "Perlu Perbaikan"
+                                  : dataValidasi.statusValidasiId === 2
+                                  ? "Selesai Diperbaiki"
+                                  : dataValidasi.statusValidasiId === 3
+                                  ? "Disetujui"
+                                  : ""}
+                              </p>
+                              <p style={{ margin: "5px 0" }}>
+                                <strong>Dibuat:</strong>{" "}
+                                {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                              </p>
+                            </div>
+                          )}
 
-                          <button type="submit" className={style.btnPrimary}><HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}</button>
-                        </form>
+                          {/* LOCK FINAL */}
+                          {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                            <div style={{ color: "#28a745", fontWeight: "bold" }}>
+                              Validasi telah disetujui dan tidak dapat diubah.
+                            </div>
+                          ) : (
+
+                            /* FORM VALIDASI */
+                            <form onSubmit={simpanValidasi}>
+                              <ToastContainer />
+
+                              <div className={style.validasiFormGroup}>
+                                <label>Status</label>
+                                <select
+                                  value={statusValidasi}
+                                  onChange={statusValidasiChangeHadler}
+                                >
+                                  <option value={0}>Pilih</option>
+
+                                  {user.jenisUserId === 4
+                                    ? <option value="2">Selesai Diperbaiki</option>
+                                    : <>
+                                        <option value="1">Perlu Perbaikan</option>
+                                        <option value="3">Disetujui</option>
+                                      </>
+                                  }
+                                </select>
+                              </div>
+
+                              <div className={style.validasiFormGroup}>
+                                <label>Catatan</label>
+                                <textarea
+                                  value={keteranganValidasi}
+                                  onChange={keteranganValidasiChangeHadler}
+                                  rows={4}
+                                  disabled={user.jenisUserId === 4}
+                                />
+                              </div>
+
+                              <button type="submit" className={style.btnPrimary}>
+                                <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                              </button>
+
+                            </form>
+
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
+
+                    </div>
                 </div>
               </div>
             </div>

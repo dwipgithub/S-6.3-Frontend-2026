@@ -463,7 +463,7 @@ const FormTambahRL39 = () => {
                 <Spinner animation="grow" variant="success"></Spinner>
               )}
             </div>
-            <table className={style.rlTable}>
+             <table className={style["table"]}>
               <thead>
                 <tr>
                   <th style={{ width: "6%" }}>No.</th>

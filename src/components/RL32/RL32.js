@@ -1002,7 +1002,7 @@ const RL32 = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <h4 className={style.pageHeader}>RL. 3.2 - Rawat Inap</h4>
+          <h4 className={style.pageHeader}>RL. 3.2 Rawat Inap</h4>
           <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
@@ -1010,7 +1010,7 @@ const RL32 = () => {
                 className={style.btnPrimary}
                 style={{ textDecoration: "none" }}
               >
-               Tambah
+              Tambah
               </Link>
             ) : null}
             <button
@@ -1601,98 +1601,162 @@ const RL32 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Validasi RL 3.2</h3>
-                  
-                  {dataRL.length === 0 ? (
-                    <div style={{
-                      backgroundColor: "#fff3cd",
-                      border: "1px solid #ffc107",
-                      color: "#856404",
-                      padding: "15px",
-                      borderRadius: "4px",
-                      textAlign: "center"
-                    }}>
-                      <strong>Data belum tersedia untuk proses validasi. </strong>
-                    </div>
-                  ) : (
-                    <>
-                      {dataValidasi && (
-                        <div
-                          style={{
-                            backgroundColor: "#f0f0f0",
-                            padding: "10px",
-                            borderRadius: "4px",
-                            marginBottom: "15px",
-                          }}
-                        >
-                          <p style={{ margin: "5px 0" }}>
-                            <strong>Status:</strong>{" "}
-                            {dataValidasi.statusValidasiId === 1
-                              ? "Perlu Perbaikan"
-                              : dataValidasi.statusValidasiId === 2
-                              ? "Selesai Diperbaiki"
-                              : dataValidasi.statusValidasiId === 3
-                              ? "Disetujui"
-                              : ""}
-                          </p>
-                          <p style={{ margin: "5px 0" }}>
-                            <strong>Dibuat:</strong>{" "}
-                            {new Date(dataValidasi.createdAt).toLocaleDateString(
-                              "id-ID"
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.2</h3>
+
+                    {/* =========================
+                        1️⃣ DATA RL KOSONG
+                    ========================== */}
+                    {dataRL.length === 0 ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data belum tersedia untuk proses validasi.</strong>
+                      </div>
+
+                    /* =========================
+                        2️⃣ RS BELUM PERNAH DIVALIDASI
+                    ========================== */
+                    ) : (!dataValidasi && user.jenisUserId === 4) ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data Belum di Validasi</strong>
+                      </div>
+
+                    ) : (
+
+                      <>
+                        {/* =========================
+                            3️⃣ INFO VALIDASI
+                        ========================== */}
+                        {dataValidasi && (
+                              <div style={{
+                                backgroundColor: "#f0f0f0",
+                                padding: "12px",
+                                borderRadius: "4px",
+                                marginBottom: "15px"
+                              }}>
+
+                                {/* STATUS */}
+                                <div style={{ display: "flex", marginBottom: "4px" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Status
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {dataValidasi.statusValidasiId === 1
+                                      ? "Perlu Perbaikan"
+                                      : dataValidasi.statusValidasiId === 2
+                                      ? "Selesai Diperbaiki"
+                                      : dataValidasi.statusValidasiId === 3
+                                      ? "Disetujui"
+                                      : "-"}
+                                  </div>
+                                </div>
+
+                                {/* CATATAN */}
+                                {(dataValidasi.keteranganValidasi ||
+                                  dataValidasi.catatan ||
+                                  dataValidasi.keterangan) && (
+                                  <div style={{ display: "flex", marginBottom: "4px" }}>
+                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                      Catatan
+                                    </div>
+                                    <div style={{ width: "10px" }}>:</div>
+                                    <div>
+                                      {dataValidasi.keteranganValidasi ||
+                                        dataValidasi.catatan ||
+                                        dataValidasi.keterangan}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* DIBUAT */}
+                                <div style={{ display: "flex" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Dibuat
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                                  </div>
+                                </div>
+
+                              </div>
                             )}
-                          </p>
-                        </div>
-                      )}
 
-                      {/* Jika validasi sudah disetujui, hanya tampilkan status dan dibuat */}
-                      {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
-                        <div style={{ color: "#28a745", fontWeight: "bold" }}>
-                          {/* Valida */}
-                        </div>
-                      ) : (
-                        <form onSubmit={simpanValidasi}>
-                          <ToastContainer />
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="statusValidasi">Status</label>
-                            <select
-                              id="statusValidasi"
-                              name="statusValidasi"
-                              value={statusValidasi}
-                              onChange={(e) => statusValidasiChangeHadler(e)}
-                            >
-                              <option value={0}>Pilih</option>
-                              {user.jenisUserId === 4 ? (
-                                <option value="2">Selesai Diperbaiki</option>
-                              ) : (
-                                <>
-                                  <option value="1">Perlu Perbaikan</option>
-                                  <option value="3">Disetujui</option>
-                                </>
-                              )}
-                            </select>
-                          </div>
+                        {/* =========================
+                            4️⃣ STATUS FINAL LOCK
+                        ========================== */}
+                        {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                        <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Validasi telah disetujui dan tidak dapat diubah.</strong>
+                      </div>
 
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="keteranganValidasi">Catatan</label>
-                            <textarea
-                              id="keteranganValidasi"
-                              name="keteranganValidasi"
-                              value={keteranganValidasi}
-                              onChange={(e) => keteranganValidasiChangeHadler(e)}
-                              placeholder="Tambahkan catatan (opsional)"
-                              rows={4}
-                              disabled={user.jenisUserId === 4}
-                            />
-                          </div>
+                        ) : (
 
-                          <button type="submit" className={style.btnPrimary}>
-                            <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
-                          </button>
-                        </form>
-                      )}
-                    </>
-                  )}
-                </div>
+                          /* =========================
+                              5️⃣ FORM VALIDASI
+                          ========================== */
+                          <form onSubmit={simpanValidasi}>
+                            <ToastContainer />
+
+                            <div className={style.validasiFormGroup}>
+                              <label>Status</label>
+                              <select
+                                value={statusValidasi}
+                                onChange={statusValidasiChangeHadler}
+                              >
+                                <option value={0}>Pilih</option>
+
+                                {user.jenisUserId === 4
+                                  ? <option value="2">Selesai Diperbaiki</option>
+                                  : <>
+                                      <option value="1">Perlu Perbaikan</option>
+                                      <option value="3">Disetujui</option>
+                                    </>
+                                }
+                              </select>
+                            </div>
+
+                            {/* ✅ TEXTAREA HANYA UNTUK VALIDATOR */}
+                            {user.jenisUserId !== 4 && (
+                              <div className={style.validasiFormGroup}>
+                                <label>Catatan</label>
+                                <textarea
+                                  onChange={keteranganValidasiChangeHadler}
+                                  rows={4}
+                                />
+                              </div>
+                            )}
+
+                            <button type="submit" className={style.btnPrimary}>
+                              <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                            </button>
+
+                          </form>
+
+                        )}
+                      </>
+                    )}
+                  </div>
               </div>
             </div>
           </div>

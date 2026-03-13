@@ -949,10 +949,10 @@ export const RL39 = () => {
                   <table className={style["table"]} ref={tableRef}>
                   <thead>
                     <tr className="main-header-row">
-                        <th style={{ width: "5%", verticalAlign: "middle" }}>No</th>
-                        <th style={{ width: "5%", verticalAlign: "middle" }}></th>
+                        <th style={{ width: "3%", verticalAlign: "middle" }}>No</th>
+                        <th style={{ width: "12%", verticalAlign: "middle" }}></th>
                         <th style={{ width: "45%", verticalAlign: "middle" }}>Jenis Kegiatan</th>
-                        <th style={{ width: "45%", verticalAlign: "middle" }}>Jumlah</th>
+                        <th style={{ width: "40%", verticalAlign: "middle" }}>Jumlah</th>
                     </tr>
                 </thead>
 
@@ -1059,7 +1059,7 @@ export const RL39 = () => {
 
             <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
               <div className={style.validasiCard}>
-                <h3 className={style.validasiCardTitle}>Form Validasi RL 3.9</h3>
+                <h3 className={style.validasiCardTitle}>Validasi RL 3.9</h3>
                 {dataRL.length === 0 ? (
                   <div style={{ backgroundColor: "#fff3cd", border: "1px solid #ffc107", color: "#856404", padding: "15px", borderRadius: "4px", textAlign: "center" }}>
                     <strong>Data belum tersedia untuk proses validasi.</strong>
