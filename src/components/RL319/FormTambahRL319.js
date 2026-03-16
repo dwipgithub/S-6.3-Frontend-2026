@@ -476,15 +476,10 @@ const FormTambahRL319 = () => {
 
   return (
     <div
-      className="container-fluid"
-      style={{
-        marginTop: "20px",
-        marginBottom: "70px",
-        paddingLeft: "30px",
-        paddingRight: "30px",
-      }}
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h2>RL. 3.19</h2>
+      <h2>RL 3.19 - Cara Bayar</h2>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -795,7 +790,7 @@ const FormTambahRL319 = () => {
           <ToastContainer />
           <button
             type="submit"
-            className="btn btn-outline-success"
+            className={style.btnPrimary}
             disabled={buttonStatus}
           >
             <HiSaveAs /> Simpan

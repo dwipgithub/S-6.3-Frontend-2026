@@ -345,15 +345,10 @@ export const FormUbahRL319 = () => {
 
   return (
     <div
-      className="container-fluid"
-      style={{
-        marginTop: "20px",
-        marginBottom: "70px",
-        paddingLeft: "30px",
-        paddingRight: "30px",
-      }}
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h2>RL. 3.19</h2>
+      <h2>RL 3.19 - Cara Bayar</h2>
       <form onSubmit={updateDataRLTigaTitikSembilanBelas}>
         <div className="row">
           <div className="col-md-6">
@@ -594,7 +589,7 @@ export const FormUbahRL319 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button type="submit" className="btn btn-outline-success">
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Update
           </button>
         </div>

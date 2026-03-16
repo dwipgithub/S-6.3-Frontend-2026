@@ -463,13 +463,8 @@ const FormTambahRL41 = () => {
 
   return (
     <div
-      className="container-fluid"
-      style={{
-        marginTop: "20px",
-        marginBottom: "100px",
-        paddingLeft: "30px",
-        paddingRight: "30px",
-      }}
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <div className="row">
         <div className="col-md-6">
@@ -571,7 +566,7 @@ const FormTambahRL41 = () => {
                   </label>
                 </div>
                 <div className="mt-3 mb-3">
-                  <button type="submit" className="btn btn-outline-success">
+                  <button type="submit" className={style.btnPrimary}>
                     <HiSaveAs /> Cari
                   </button>
                 </div>
@@ -805,7 +800,7 @@ const FormTambahRL41 = () => {
                     <ToastContainer />
                     <button
                       type="submit"
-                      className="btn btn-outline-success"
+                      className={style.btnPrimary}
                       disabled={buttonStatus}
                     >
                       <HiSaveAs /> Simpan

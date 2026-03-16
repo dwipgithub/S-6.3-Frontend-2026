@@ -701,13 +701,8 @@ const RL41 = () => {
 
   return (
     <div
-      className="container-fluid"
-      style={{
-        marginTop: "20px",
-        marginBottom: "70px",
-        paddingLeft: "30px",
-        paddingRight: "30px",
-      }}
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       {spinner && (
         <div
@@ -941,7 +936,7 @@ const RL41 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
