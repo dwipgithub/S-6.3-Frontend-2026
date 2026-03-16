@@ -405,7 +405,7 @@ const Absensi = () => {
                 </div>
 
                 <div className="mt-1">
-                  <button type="submit" className="btn btn-outline-success">
+                  <button type="submit" className={style.btnPrimary}>
                     <HiSaveAs /> Cari
                   </button>
                   <DownloadTableExcel
@@ -415,12 +415,9 @@ const Absensi = () => {
                   >
                     {/* <button> Export excel </button> */}
                     <button
-                      className="btn"
+                      className={style.btnPrimary}
                       style={{
-                        fontSize: "18px",
                         marginLeft: "5px",
-                        backgroundColor: "#779D9E",
-                        color: "#FFFFFF",
                       }}
                       hidden={apa}
                     >

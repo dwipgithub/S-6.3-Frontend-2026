@@ -281,13 +281,8 @@ export const FormUbahRL41 = () => {
 
   return (
     <div
-      className="container-fluid"
-      style={{
-        marginTop: "20px",
-        marginBottom: "70px",
-        paddingLeft: "30px",
-        paddingRight: "30px",
-      }}
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <form onSubmit={UpdateRLEmpatTitikSatu}>
         <div className="row">
@@ -1330,7 +1325,7 @@ export const FormUbahRL41 = () => {
                 <ToastContainer />
                 <button
                   type="submit"
-                  className="btn btn-outline-success"
+                  className={style.btnPrimary}
                   disabled={buttonStatus}
                 >
                   <HiSaveAs /> Simpan

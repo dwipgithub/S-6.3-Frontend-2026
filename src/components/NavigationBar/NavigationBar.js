@@ -303,13 +303,14 @@ const NavigationBar = ({ sidebarOpen, setSidebarOpen }) => {
           maxHeight: `calc(100vh - ${TOPBAR_HEIGHT}px - ${FOOTER_HEIGHT}px)`,
           position: "fixed",
           top: TOPBAR_HEIGHT,
-          left: sidebarOpen ? 0 : `-${SIDEBAR_WIDTH}px`,
+          left: 0,
+          transform: sidebarOpen ? "translateY(0)" : "translateY(-100%)",
           overflowY: "auto",
           overflowX: "hidden",
           WebkitOverflowScrolling: "touch",
           backgroundColor: "#f8f9fa",
           borderRight: "1px solid #e2e8f0",
-          transition: "left 0.3s ease",
+          transition: "transform 0.3s ease",
         }}
       >
         <style>{`
