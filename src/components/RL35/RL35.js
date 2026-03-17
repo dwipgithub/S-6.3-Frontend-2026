@@ -929,13 +929,13 @@ const RL35 = () => {
                   </th>
                   <th
                     rowSpan={2}
-                    style={{ width: "15%", verticalAlign: "middle" }}
+                    style={{ width: "8%", verticalAlign: "middle" }}
                   >
                     Aksi
                   </th>
                   <th
                     rowSpan={2}
-                    style={{ width: "35%", verticalAlign: "middle" }}
+                    style={{ width: "12%", verticalAlign: "middle" }}
                   >
                     Jenis Kegiatan
                   </th>

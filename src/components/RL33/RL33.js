@@ -1041,7 +1041,7 @@ const getDataRLTigaTitikTiga = async (e) => {
                     No Pelayanan
                   </th>
                   <th
-                    style={{ width: "6%" }}
+                    style={{ width: "7%" }}
                     rowSpan={2}
                     className={style["sticky-header"]}
                   >
