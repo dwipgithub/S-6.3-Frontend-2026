@@ -2,21 +2,23 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
-import style from "./FormTambahRL316.module.css";
+import style from "./RL316.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { confirmAlert } from "react-confirm-alert";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "react-confirm-alert/src/react-confirm-alert.css";
-import Table from "react-bootstrap/Table";
 import Modal from "react-bootstrap/Modal";
+import Table from "react-bootstrap/Table";
+import Spinner from "react-bootstrap/Spinner";
+import { downloadExcel } from "react-export-table-to-excel";
 import { DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL316 = () => {
   const [tahun, setTahun] = useState("2025");
   const [filterLabel, setFilterLabel] = useState([]);
-  const [rumahSakit, setRumahSakit] = useState("");
+  const [rumahSakit, setRumahSakit] = useState(null);
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
@@ -26,8 +28,18 @@ const RL316 = () => {
   const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
   const navigate = useNavigate();
-  const tableRef = useRef(null);
+  // beda
   const [namafile, setNamaFile] = useState("");
+
+  const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
+  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [tglValidasi, setTglValidasi] = useState("");
+  const [isValidated, setIsValidated] = useState(false);
+  const [loadingRS, setLoadingRS] = useState(false);
+  const [spinner, setSpinner] = useState(false);
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
   const [pelayananKbPaskaPersalinan, setpelayanankbpaskapersalinan] =
@@ -61,7 +73,9 @@ const RL316 = () => {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
+      if (decoded.jenisUserId == 4) {
+        showRumahSakit(decoded.satKerId);
+      }
       setExpire(decoded.exp);
       setUser(decoded);
     } catch (error) {
@@ -91,39 +105,28 @@ const RL316 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
-  const tahunChangeHandler = (event) => {
-    setTahun(event.target.value);
-  };
-  const provinsiChangeHandler = (e) => {
-    const provinsiId = e.target.value;
-    getKabKota(provinsiId);
-  };
-
-  const kabKotaChangeHandler = (e) => {
-    const kabKotaId = e.target.value;
-    getRumahSakit(kabKotaId);
-  };
-
-  const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
-  };
-
-  const getRumahSakit = async (kabKotaId) => {
+  const getRumahSakit = async (id, type = "kabkota") => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
     try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+      let params = {};
+      if (type === "provinsi") {
+        params.provinsiId = id;
+      } else {
+        params.kabKotaId = id;
+      }
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params: {
-          kabKotaId: kabKotaId,
-        },
+        params: params,
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -138,10 +141,63 @@ const RL316 = () => {
     } catch (error) {}
   };
 
+  const rumahSakitChangeHandler = (e) => {
+    const rsId = e.target.value;
+    showRumahSakit(rsId);
+  };
+
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+    if (selected) {
+      setRumahSakit(selected);
+    } else {
+      setRumahSakit(null);
+    }
+  };
+
+  const getValidasi = async () => {
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: tahun,
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rltigatitikenambelasvalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
+        setStatusValidasi(results.data.data[0].statusValidasiId);
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
   const getRL = async (e) => {
     e.preventDefault();
     if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
+      toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
@@ -163,7 +219,7 @@ const RL316 = () => {
       };
       const results = await axiosJWT.get(
         "/apisirs6v2/rltigatitikenambelas",
-        customConfig
+        customConfig,
       );
 
       const rlTigaTitikEnamBelasDetails = results.data.data.map((value) => {
@@ -188,11 +244,27 @@ const RL316 = () => {
 
       setDataRL(rlTigaTitikEnamBelasDetails);
       setNamaFile("RL316_" + rumahSakit.id + "_".concat(String(tahun)));
-      setRumahSakit(null);
       handleClose();
+      setActiveTab("tab1");
+      setIsFilterApplied(true);
+      await getValidasi();
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const tahunChangeHandler = (event) => {
+    setTahun(event.target.value);
+  };
+
+  const provinsiChangeHandler = (e) => {
+    const provinsiId = e.target.value;
+    getKabKota(provinsiId);
+  };
+
+  const kabKotaChangeHandler = (e) => {
+    const kabKotaId = e.target.value;
+    getRumahSakit(kabKotaId);
   };
 
   const deleteRL = async (id) => {
@@ -206,7 +278,7 @@ const RL316 = () => {
     try {
       await axiosJWT.delete(
         `/apisirs6v2/rltigatitikenambelas/${id}`,
-        customConfig
+        customConfig,
       );
       toast("Data Berhasil Dihapus", {
         position: toast.POSITION.TOP_RIGHT,
@@ -263,6 +335,43 @@ const RL316 = () => {
       default:
     }
   };
+
+  function handleDownloadExcel() {
+    const header = [
+      "No",
+      "Jenis Pelayanan KB",
+      "Pasca Persalinan",
+      "Pasca Keguguran",
+      "Interval",
+      "Total",
+      "Komplikasi",
+      "Kegagalan",
+      "Efek Samping",
+      "Drop Out",
+    ];
+
+    const body = dataRL.map((value, index) => [
+      index + 1,
+      value.nama,
+      value.pelayanan_kb_paska_persalinan,
+      value.pelayanan_kb_paska_keguguran,
+      value.pelayanan_kb_interval,
+      value.pelayanan_kb_total,
+      value.komplikasi_kb,
+      value.kegagalan_kb,
+      value.efek_samping,
+      value.drop_out,
+    ]);
+
+    downloadExcel({
+      fileName: namafile,
+      sheet: "RL316",
+      tablePayload: {
+        header,
+        body,
+      },
+    });
+  }
 
   const getProvinsi = async () => {
     try {
@@ -337,11 +446,107 @@ const RL316 = () => {
     setDataRL(newDataRL);
   };
 
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    setSpinner(true);
+    e.preventDefault();
+    if (rumahSakit == null) {
+      toast(`Rumah sakit harus dipilih`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    if (statusValidasi == 1 && keteranganValidasi == "") {
+      toast(`Keterangan tidak boleh kosong`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+
+      if (idValidasi != "") {
+        await axiosJWT.patch(
+          "/apisirs6v2/rltigatitikenambelasvalidasi/" + idValidasi,
+          {
+            statusValidasiId: statusValidasi,
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      } else {
+        await axiosJWT.post(
+          "/apisirs6v2/rltigatitikenambelasvalidasi",
+          {
+            rsId: rumahSakit.id,
+            periode: `${tahun}-12-01`,
+            statusValidasiId: statusValidasi,
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      }
+      toast("Data Berhasil Disimpan", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setIsValidated(statusValidasi == 3);
+      await getValidasi();
+    } catch (error) {
+      toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    }
+    setSpinner(false);
+  };
+
+  const [activeTab, setActiveTab] = useState("tab1");
+
+  const handleTabClick = (tab) => {
+    if (tab === "tab2") {
+      getValidasi();
+    }
+    setActiveTab(tab);
+  };
+
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
+      {spinner && (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            zIndex: 9999,
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+          }}
+        >
+          <Spinner animation="border" variant="primary" />
+        </div>
+      )}
+      <ToastContainer />
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>
@@ -349,7 +554,7 @@ const RL316 = () => {
 
         <form onSubmit={getRL}>
           <Modal.Body>
-            {user.jenisUserId === 1 ? (
+            {user.jenisUserId === 1 || user.jenisUserId === 99 ? (
               <>
                 <div
                   className="form-floating"
@@ -534,317 +739,380 @@ const RL316 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
           </Modal.Footer>
         </form>
       </Modal>
+      {/* RL 3.16 - Keluarga Berencana */}
       <div className="row">
         <div className="col-md-12">
-          <span style={{ color: "gray" }}>
-            <h4>RL 3.16 - Keluarga Berencana</h4>
-          </span>
-          <div style={{ marginBottom: "10px" }}>
+          <div className="d-flex justify-content-between align-items-center">
+            <h4 className={style.pageHeader}>RL 3.16 - Keluarga Berencana</h4>
+          </div>
+          <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
                 to={`/rl316/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                className={style.btnPrimary}
+                style={{ textDecoration: "none" }}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
             )}
-            <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-              onClick={handleShow}
-            >
+            <button className={style.btnPrimary} onClick={handleShow}>
               Filter
             </button>
-
-            <DownloadTableExcel
-              filename={namafile}
-              sheet="data RL 316"
-              currentTableRef={tableRef.current}
-            >
-              {/* <button> Export excel </button> */}
-              <button
-                className="btn"
-                style={{
-                  fontSize: "18px",
-                  marginLeft: "5px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
-              >
-                {" "}
-                Download
-              </button>
-            </DownloadTableExcel>
+            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
+              Download
+            </button>
           </div>
 
-          <div>
-            <h5 style={{ fontSize: "14px" }}>
-              {filterLabel.length > 0 ? (
-                <>
-                  filtered by{" "}
+          <div className={style.filterLabel}>
+            {filterLabel.length > 0 ? (
+              <div>
+                <h5 style={{ fontSize: "14px" }}>
+                  Filtered By{" "}
                   {filterLabel
                     .map((value) => {
                       return value;
                     })
                     .join(", ")}
-                </>
-              ) : (
-                <></>
-              )}
-            </h5>
+                </h5>
+              </div>
+            ) : (
+              <></>
+            )}
           </div>
-          <div className={`${style["table-container"]} mt-2 mb-1 pb-2 `}>
-            <table
-              className={style.table}
-              style={{ width: "200%" }}
-              ref={tableRef}
-            >
-              <thead className={style.thead}>
-                <tr className="main-header-row">
-                  <th
-                    className={style["sticky-header-view"]}
-                    rowSpan="2"
-                    style={{ width: "1%" }}
+
+          <div>
+            <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button
+                  type="button"
+                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                  onClick={() => handleTabClick("tab1")}
+                >
+                  Data
+                </button>
+              </li>
+              {user.jenisUserId === 1 ||
+              user.jenisUserId === 2 ||
+              user.jenisUserId === 3 ||
+              user.jenisUserId === 4 ? (
+                //   &&
+                // dataRL.length > 0 &&
+                // rumahSakit != null
+                <li className={`nav-item ${style.navItem}`}>
+                  <button
+                    type="button"
+                    className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                    onClick={() => handleTabClick("tab2")}
                   >
-                    No.
-                  </th>
-                  <th
-                    className={style["sticky-header-view"]}
-                    rowSpan="2"
-                    style={{ width: "2%" }}
-                  >
-                    Aksi
-                  </th>
-                  <th
-                    className={style["sticky-header-view"]}
-                    rowSpan="2"
-                    style={{ width: "5%" }}
-                  >
-                    Jenis Pelayanan Keluarga Berencana
-                  </th>
-                  <th colSpan="4" style={{ width: "5%" }}>
-                    Pelayanan KB
-                  </th>
-                  <th rowSpan="2" style={{ width: "5%" }}>
-                    Komplikasi KB
-                  </th>
-                  <th rowSpan="2" style={{ width: "5%" }}>
-                    Kegagalan KB
-                  </th>
-                  <th rowSpan="2" style={{ width: "5%" }}>
-                    Efek Samping
-                  </th>
-                  <th rowSpan="2" style={{ width: "5%" }}>
-                    Drop Out
-                  </th>
-                </tr>
-                <tr>
-                  <th style={{ width: "5%" }}>{"Pasca Persalinan"}</th>
-                  <th style={{ width: "5%" }}>{"Pasca Keguguran"}</th>
-                  <th style={{ width: "5%" }}>{"Interval"}</th>
-                  <th style={{ width: "5%" }}>{"Total"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dataRL.map((value, index) => {
-                  return (
-                    <tr key={value.id}>
-                      <td
-                        className={style["sticky-column-view"]}
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="id"
-                        className="form-control"
-                        value={index + 1}
-                        disabled={true}
-                        style={{ textAlign: "center" }}
-                      /> */}
-                        <p>{index + 1}</p>
-                      </td>
-                      <td
-                        className={style["sticky-column-view"]}
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        <ToastContainer />
-                        {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
-                        {user.jenisUserId === 4 ? (
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "center",
-                            }}
+                    Validasi
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+
+            <div className={`tab-content ${style.tabContent}`}>
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab1" ? "show active" : ""
+                }`}
+              >
+                <div className={style.tableContainer}>
+                  <table className={`table table-bordered ${style.table}`}>
+                    <thead>
+                      <tr>
+                        <th
+                          className={style["sticky-header-view"]}
+                          rowSpan="2"
+                          style={{ width: "60px" }}
+                        >
+                          No
+                        </th>
+
+                        {user.jenisUserId === 4 && (
+                          <th
+                            className={style["sticky-header"]}
+                            rowSpan="2"
+                            style={{ width: "140px" }}
                           >
-                            <button
-                              className="btn btn-danger"
-                              style={{
-                                margin: "0 5px 0 0",
-                                backgroundColor: "#FF6663",
-                                border: "1px solid #FF6663",
-                              }}
-                              type="button"
-                              onClick={(e) => deleteConfirmation(value.id)}
-                            >
-                              Hapus
-                            </button>
-                            {value.id_metoda != 9 ? (
-                              <Link
-                                to={`/rl316/ubah/${value.id}`}
-                                className="btn btn-warning"
+                            Aksi
+                          </th>
+                        )}
+
+                        <th
+                          className={style["sticky-header-view"]}
+                          rowSpan="2"
+                          style={{ minWidth: "220px", textAlign: "center" }}
+                        >
+                          Jenis Pelayanan KB
+                        </th>
+
+                        <th colSpan="4" style={{ textAlign: "center" }}>
+                          Pelayanan KB
+                        </th>
+
+                        <th rowSpan="2" style={{ width: "110px" }}>
+                          Komplikasi
+                        </th>
+                        <th rowSpan="2" style={{ width: "110px" }}>
+                          Kegagalan
+                        </th>
+                        <th rowSpan="2" style={{ width: "110px" }}>
+                          Efek Samping
+                        </th>
+                        <th rowSpan="2" style={{ width: "110px" }}>
+                          Drop Out
+                        </th>
+                      </tr>
+
+                      <tr>
+                        <th style={{ width: "120px", textAlign: "center" }}>
+                          Pasca Persalinan
+                        </th>
+                        <th style={{ width: "120px", textAlign: "center" }}>
+                          Pasca Keguguran
+                        </th>
+                        <th style={{ width: "120px", textAlign: "center" }}>
+                          Interval
+                        </th>
+                        <th style={{ width: "120px", textAlign: "center" }}>
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {dataRL.map((value, index) => (
+                        <tr key={value.id}>
+                          <td className={style["sticky-column-view"]}>
+                            {index + 1}
+                          </td>
+
+                          {user.jenisUserId === 4 && (
+                            <td>
+                              <div
                                 style={{
-                                  margin: "0 5px 0 0",
-                                  backgroundColor: "#CFD35E",
-                                  border: "1px solid #CFD35E",
-                                  color: "#FFFFFF",
+                                  display: "flex",
+                                  gap: "6px",
+                                  justifyContent: "center",
                                 }}
                               >
-                                Ubah
-                              </Link>
-                            ) : (
-                              <></>
-                            )}
+                                <button
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => deleteConfirmation(value.id)}
+                                >
+                                  Hapus
+                                </button>
+
+                                {value.id_metoda != 9 && (
+                                  <Link
+                                    to={`/rl316/ubah/${value.id}`}
+                                    className="btn btn-sm btn-warning text-white"
+                                  >
+                                    Ubah
+                                  </Link>
+                                )}
+                              </div>
+                            </td>
+                          )}
+
+                          <td className={style["sticky-column-view"]}>
+                            {value.nama}
+                          </td>
+
+                          <td className="text-center">
+                            {value.pelayanan_kb_paska_persalinan}
+                          </td>
+                          <td className="text-center">
+                            {value.pelayanan_kb_paska_keguguran}
+                          </td>
+                          <td className="text-center">
+                            {value.pelayanan_kb_interval}
+                          </td>
+                          <td className="text-center fw-bold">
+                            {value.pelayanan_kb_total}
+                          </td>
+                          <td className="text-center">{value.komplikasi_kb}</td>
+                          <td className="text-center">{value.kegagalan_kb}</td>
+                          <td className="text-center">{value.efek_samping}</td>
+                          <td className="text-center">{value.drop_out}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab2" ? "show active" : ""
+                }`}
+              >
+                <div className={style.validasiCard}>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.16</h3>
+                  {!isFilterApplied ? (
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>
+                        Silakan pilih filter terlebih dahulu untuk menampilkan
+                        data.
+                      </strong>
+                    </div>
+                  ) : idValidasi ? (
+                    <div
+                      style={{
+                        backgroundColor: "#E9ECEF",
+                        padding: "15px",
+                        borderRadius: "5px",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      <p style={{ margin: "0" }}>
+                        <strong
+                          style={{ width: "100px", display: "inline-block" }}
+                        >
+                          Status
+                        </strong>
+                        :{" "}
+                        {idValidasiSubmited == 1
+                          ? "Perlu Perbaikan"
+                          : idValidasiSubmited == 2
+                            ? "Selesai Diperbaiki"
+                            : "Disetujui"}
+                      </p>
+                      <p style={{ margin: "0" }}>
+                        <strong
+                          style={{ width: "100px", display: "inline-block" }}
+                        >
+                          Catatan
+                        </strong>
+                        : {keteranganValidasi || "-"}
+                      </p>
+                      <p style={{ margin: "0" }}>
+                        <strong
+                          style={{ width: "100px", display: "inline-block" }}
+                        >
+                          Tanggal
+                        </strong>
+                        :{" "}
+                        {tglValidasi
+                          ? new Date(tglValidasi).toLocaleString("id-ID", {
+                              day: "2-digit",
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : "-"}
+                      </p>
+                    </div>
+                  ) : (
+                    user.jenisUserId !== 3 && (
+                      <div
+                        style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <strong>Data Belum di Validasi</strong>
+                      </div>
+                    )
+                  )}
+
+                  {dataRL.length > 0 && rumahSakit?.id ? (
+                    isValidated ? (
+                      <div
+                        style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <div className="text-center">
+                          <strong>Data telah di validasi</strong>
+                        </div>
+                      </div>
+                    ) : (
+                      (user.jenisUserId === 3 ||
+                        (user.jenisUserId === 4 && idValidasi)) && (
+                        <form onSubmit={simpanValidasi}>
+                          <ToastContainer />
+
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="statusValidasi">Status</label>
+                            <select
+                              id="statusValidasi"
+                              name="statusValidasi"
+                              value={statusValidasi}
+                              required
+                              onChange={(e) => statusValidasiChangeHadler(e)}
+                            >
+                              {user.jenisUserId === 4 ? (
+                                <>
+                                  <option value="">Pilih Status</option>
+                                  <option value="2">Selesai Diperbaiki</option>
+                                </>
+                              ) : (
+                                <>
+                                  <option value="1">Perlu Perbaikan</option>
+                                  <option value="3">Disetujui</option>
+                                </>
+                              )}
+                            </select>
                           </div>
-                        ) : (
-                          <></>
-                        )}
-                      </td>
-                      <td
-                        className={style["sticky-column-view"]}
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="jenisSpesialisasi"
-                        className="form-control"
-                        value={value.nama}
-                        disabled={true}
-                      /> */}
 
-                        <p>{value.nama}</p>
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="pelayananKbPaskaPersalinan"
-                        className="form-control"
-                        value={value.pelayanan_kb_paska_persalinan}
-                        disabled={true}
-                      /> */}
-                        <p>{value.pelayanan_kb_paska_persalinan}</p>
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="pelayananKbPaskaKeguguran"
-                        className="form-control"
-                        value={value.pelayanan_kb_paska_keguguran}
-                        disabled={true}
-                      /> */}
-                        <p>{value.pelayanan_kb_paska_keguguran}</p>
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="pelayananKbInterval"
-                        className="form-control"
-                        value={value.pelayanan_kb_interval}
-                        disabled={true}
-                      /> */}
-                        <p>{value.pelayanan_kb_interval}</p>
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="pelayananKbTotal"
-                        className="form-control"
-                        value={value.pelayanan_kb_total}
-                        disabled={true}
-                      /> */}
-                        <p>{value.pelayanan_kb_total}</p>
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="komplikasiKB"
-                        className="form-control"
-                        value={value.komplikasi_kb}
-                        disabled={true}
-                      /> */}
-                        <p>{value.komplikasi_kb}</p>
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="kegagalanKB"
-                        className="form-control"
-                        value={value.kegagalan_kb}
-                        disabled={true}
-                      /> */}
-                        <p>{value.kegagalan_kb}</p>
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="efekSamping"
-                        className="form-control"
-                        value={value.efek_samping}
-                        disabled={true}
-                      /> */}
-                        <p>{value.efek_samping}</p>
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {/* <input
-                        type="text"
-                        name="dropOut"
-                        className="form-control"
-                        value={value.drop_out}
-                        disabled={true}
-                      /> */}
-                        <p>{value.drop_out}</p>
-                      </td>
-                    </tr>
-                  );
-                })}
+                          {user.jenisUserId === 3 ? (
+                            <>
+                              <div className={style.validasiFormGroup}>
+                                <label htmlFor="keteranganValidasi">
+                                  Catatan
+                                </label>
+                                <textarea
+                                  id="keteranganValidasi"
+                                  name="keteranganValidasi"
+                                  value={keteranganValidasi}
+                                  onChange={(e) =>
+                                    keteranganValidasiChangeHadler(e)
+                                  }
+                                  placeholder="Tambahkan catatan (opsional)"
+                                  rows={4}
+                                  disabled={user.jenisUserId === 4}
+                                />
+                              </div>
+                            </>
+                          ) : null}
 
-                {dataRL.length > 0 ? <tr></tr> : <></>}
-              </tbody>
-            </table>
+                          <button type="submit" className={style.btnPrimary}>
+                            <HiSaveAs size={20} /> Simpan
+                          </button>
+                        </form>
+                      )
+                    )
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

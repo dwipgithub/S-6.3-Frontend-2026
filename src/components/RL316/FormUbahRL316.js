@@ -77,7 +77,7 @@ export const FormEditRL316 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getRumahSakit = async (id) => {
@@ -102,7 +102,7 @@ export const FormEditRL316 = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
     // console.log(response);
     setNoMetoda(response.data.data.id_metoda);
@@ -212,7 +212,7 @@ export const FormEditRL316 = () => {
           efek_samping,
           drop_out,
         },
-        customConfig
+        customConfig,
       );
       toast("Data Berhasil Diupdate", {
         position: toast.POSITION.TOP_RIGHT,
@@ -252,7 +252,7 @@ export const FormEditRL316 = () => {
     if (object.target.value.length > object.target.maxLength) {
       object.target.value = object.target.value.slice(
         0,
-        object.target.maxLength
+        object.target.maxLength,
       );
     }
   };
