@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
@@ -10,6 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import Modal from "react-bootstrap/Modal";
 // import Table from "react-bootstrap/Table";
+import Spinner from "react-bootstrap/Spinner";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
@@ -17,7 +18,7 @@ const RL315 = () => {
   const [bulan, setBulan] = useState(1);
   const [tahun, setTahun] = useState("");
   const [filterLabel, setFilterLabel] = useState([]);
-  const [rumahSakit, setRumahSakit] = useState("");
+  const [rumahSakit, setRumahSakit] = useState(null);
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
@@ -27,6 +28,16 @@ const RL315 = () => {
   const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
   const navigate = useNavigate();
+
+  const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
+  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [tglValidasi, setTglValidasi] = useState("");
+  const [isValidated, setIsValidated] = useState(false);
+  const [loadingRS, setLoadingRS] = useState(false);
+  const [spinner, setSpinner] = useState(false);
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
@@ -48,7 +59,9 @@ const RL315 = () => {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
+      if (decoded.jenisUserId == 4) {
+        showRumahSakit(decoded.satKerId);
+      }
       setExpire(decoded.exp);
       setUser(decoded);
     } catch (error) {
@@ -78,21 +91,28 @@ const RL315 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
-  const getRumahSakit = async (kabKotaId) => {
+  const getRumahSakit = async (id, type = "kabkota") => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
     try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+      let params = {};
+      if (type === "provinsi") {
+        params.provinsiId = id;
+      } else {
+        params.kabKotaId = id;
+      }
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params: {
-          kabKotaId: kabKotaId,
-        },
+        params: params,
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -107,10 +127,59 @@ const RL315 = () => {
     } catch (error) {}
   };
 
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+    if (selected) {
+      setRumahSakit(selected);
+    } else {
+      setRumahSakit(null);
+    }
+  };
+
+  const getValidasi = async () => {
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: tahun,
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiklimabelasvalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
+        setStatusValidasi(results.data.data[0].statusValidasiId);
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
   const getDataRLTigaTitikLimaBelas = async (event) => {
     event.preventDefault();
     if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
+      setSpinner(false);
+      toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
@@ -121,6 +190,7 @@ const RL315 = () => {
     filter.push("Periode ".concat(String(tahun)));
     setFilterLabel(filter);
 
+    setSpinner(true);
     try {
       const customConfig = {
         headers: {
@@ -128,12 +198,13 @@ const RL315 = () => {
           Authorization: `Bearer ${token}`,
         },
         params: {
+          rsId: rumahSakit.id,
           tahun: tahun,
         },
       };
       const results = await axiosJWT.get(
         "/apisirs6v2/rltigatitiklimabelas",
-        customConfig
+        customConfig,
       );
 
       const rlTigaTitikLimaBelasDetails = results.data.data.map((value) => {
@@ -148,11 +219,15 @@ const RL315 = () => {
       });
 
       setDataRL(dataRLTigaTitikLimaBelasDetails);
-      setRumahSakit(null);
+      // setRumahSakit(null);
       handleClose();
+      setActiveTab("tab1");
+      setIsFilterApplied(true);
+      await getValidasi();
     } catch (error) {
       console.log(error);
     }
+    setSpinner(false);
   };
 
   const hapusData = async (id) => {
@@ -166,7 +241,7 @@ const RL315 = () => {
     try {
       const results = await axiosJWT.delete(
         `/apisirs6v2/rltigatitiklimabelas/${id}`,
-        customConfig
+        customConfig,
       );
       toast("Data Berhasil Dihapus", {
         position: toast.POSITION.TOP_RIGHT,
@@ -299,11 +374,107 @@ const RL315 = () => {
     });
   }
 
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    setSpinner(true);
+    e.preventDefault();
+    if (rumahSakit == null) {
+      toast(`Rumah sakit harus dipilih`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    if (statusValidasi == 1 && keteranganValidasi == "") {
+      toast(`Keterangan tidak boleh kosong`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+
+      if (idValidasi != "") {
+        await axiosJWT.patch(
+          "/apisirs6v2/rltigatitiklimabelasvalidasi/" + idValidasi,
+          {
+            statusValidasiId: statusValidasi,
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      } else {
+        await axiosJWT.post(
+          "/apisirs6v2/rltigatitiklimabelasvalidasi",
+          {
+            rsId: rumahSakit.id,
+            periode: `${tahun}-12-01`,
+            statusValidasiId: statusValidasi,
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      }
+      toast("Data Berhasil Disimpan", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setIsValidated(statusValidasi == 3);
+      await getValidasi();
+    } catch (error) {
+      toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    }
+    setSpinner(false);
+  };
+
+  const [activeTab, setActiveTab] = useState("tab1");
+
+  const handleTabClick = (tab) => {
+    if (tab === "tab2") {
+      getValidasi();
+    }
+    setActiveTab(tab);
+  };
+
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
+      {spinner && (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            zIndex: 9999,
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+          }}
+        >
+          <Spinner animation="border" variant="primary" />
+        </div>
+      )}
+      <ToastContainer />
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>
@@ -311,7 +482,7 @@ const RL315 = () => {
 
         <form onSubmit={getDataRLTigaTitikLimaBelas}>
           <Modal.Body>
-            {user.jenisUserId === 1 ? (
+            {user.jenisUserId === 1 || user.jenisUserId === 99 ? (
               <>
                 <div
                   className="form-floating"
@@ -322,7 +493,10 @@ const RL315 = () => {
                     id="provinsi"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => getKabKota(e.target.value)}
+                    onChange={(e) => {
+                      getKabKota(e.target.value);
+                      getRumahSakit(e.target.value, "provinsi");
+                    }}
                   >
                     <option key={0} value={0}>
                       Pilih
@@ -372,10 +546,10 @@ const RL315 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => showRumahSakit(e.target.value)}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -427,10 +601,10 @@ const RL315 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => showRumahSakit(e.target.value)}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -457,10 +631,10 @@ const RL315 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => showRumahSakit(e.target.value)}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -496,280 +670,425 @@ const RL315 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
           </Modal.Footer>
         </form>
       </Modal>
+      {/* RL. 3.15 Kesehatan Jiwa */}
       <div className="row">
         <div className="col-md-12">
-          <h4>
-            <span style={{ color: "gray" }}>RL. 3.15 Kesehatan Jiwa</span>
-          </h4>
-          <div style={{ marginBottom: "10px" }}>
+          <div className="d-flex justify-content-between align-items-center">
+            <h4 className={style.pageHeader}>RL 3.15 - Kesehatan Jiwa</h4>
+          </div>
+          <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
-                to={`/rl315/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                to={`/rl319/tambah/`}
+                className={style.btnPrimary}
+                style={{ textDecoration: "none" }}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
             )}
-            <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-              onClick={handleShow}
-            >
+            <button className={style.btnPrimary} onClick={handleShow}>
               Filter
             </button>
-            <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                marginLeft: "5px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-              onClick={handleDownloadExcel}
-            >
+            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
               Download
             </button>
           </div>
 
-          {filterLabel.length > 0 ? (
-            <div>
-              <h5 style={{ fontSize: "14px" }}>
-                Filtered By{" "}
-                {filterLabel
-                  .map((value) => {
-                    return value;
-                  })
-                  .join(", ")}
-              </h5>
-            </div>
-          ) : (
-            <></>
-          )}
+          <div className={style.filterLabel}>
+            {filterLabel.length > 0 ? (
+              <div>
+                <h5 style={{ fontSize: "14px" }}>
+                  Filtered By{" "}
+                  {filterLabel
+                    .map((value) => {
+                      return value;
+                    })
+                    .join(", ")}
+                </h5>
+              </div>
+            ) : (
+              <></>
+            )}
+          </div>
 
-          <div className={style["table-container"]}>
-            <table className={style.table}>
-              <thead className={style.thead}>
-                <tr className="">
-                  <th
-                    // className={style["sticky-header"]}
-                    style={{ width: "4%" }}
+          <div>
+            <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button
+                  type="button"
+                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                  onClick={() => handleTabClick("tab1")}
+                >
+                  Data
+                </button>
+              </li>
+              {user.jenisUserId === 1 ||
+              user.jenisUserId === 2 ||
+              user.jenisUserId === 3 ||
+              user.jenisUserId === 4 ? (
+                //   &&
+                // dataRL.length > 0 &&
+                // rumahSakit != null
+                <li className={`nav-item ${style.navItem}`}>
+                  <button
+                    type="button"
+                    className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                    onClick={() => handleTabClick("tab2")}
                   >
-                    No
-                  </th>
-                  <th
-                    // className={style["sticky-header"]}
-                    style={{ width: "12%" }}
-                  >
-                    Aksi
-                  </th>
-                  <th
-                  // className={style["sticky-header"]}
-                  // style={{ width: "30%" }}
-                  >
-                    Jenis Kegiatan
-                  </th>
-                  <th>Laki-laki</th>
-                  <th>Perempuan</th>
-                  <th>Jumlah</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dataRL.length > 0 ? (
-                  <>
-                    {dataRL.map((value, index) => {
-                      return (
-                        <tr key={value.id}>
-                          <td className={style["sticky-column"]}>
-                            <input
-                              type="text"
-                              name="no"
-                              className="form-control"
-                              value={
-                                value.jenis_kegiatan_rl_tiga_titik_lima_belas.no
-                              }
-                              disabled={true}
-                            />
-                          </td>
-                          {/* <td className={style["sticky-column"]}>
-                            <ToastContainer />
-                            {value.jenis_kegiatan_rl_tiga_titik_lima_belas
-                              .no === 0 ? (
-                              <></>
-                            ) : (
-                              <div
-                                style={{
-                                  display:
-                                    value
+                    Validasi
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+
+            <div className={`tab-content ${style.tabContent}`}>
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab1" ? "show active" : ""
+                }`}
+              >
+                <div className={style["table-container"]}>
+                  <table className={style.table}>
+                    <thead className={style.thead}>
+                      <tr>
+                        <th
+                          className={style["sticky-header-view"]}
+                          rowSpan="2"
+                          style={{ width: "60px" }}
+                        >
+                          No
+                        </th>
+                        {user.jenisUserId === 4 && (
+                          <th rowSpan="2" style={{ width: "150px" }}>
+                            Aksi
+                          </th>
+                        )}
+                        <th>Jenis Kegiatan</th>
+                        <th>Laki-laki</th>
+                        <th>Perempuan</th>
+                        <th>Jumlah</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {dataRL.length > 0 ? (
+                        <>
+                          {dataRL.map((value, index) => {
+                            return (
+                              <tr key={value.id}>
+                                <td className={style["sticky-column"]}>
+                                  <input
+                                    type="text"
+                                    name="no"
+                                    className="form-control"
+                                    value={
+                                      value
+                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                        .no
+                                    }
+                                    disabled={true}
+                                  />
+                                </td>
+                                <td className={style["sticky-column"]}>
+                                  <ToastContainer />
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent:
+                                        value
+                                          .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                          .nama === "Tidak Ada Data"
+                                          ? "center" // kalau tidak ada data -> tombol hapus di tengah
+                                          : "flex-start", // kalau ada data -> tombol hapus + ubah sejajar dari kiri
+                                    }}
+                                  >
+                                    <button
+                                      className="btn btn-danger"
+                                      style={{
+                                        margin: "0 5px 0 0",
+                                        backgroundColor: "#FF6663",
+                                        border: "1px solid #FF6663",
+                                      }}
+                                      type="button"
+                                      onClick={(e) => hapus(value.id)}
+                                    >
+                                      Hapus
+                                    </button>
+
+                                    {/* Tampilkan tombol Ubah hanya jika bukan "Tidak Ada Data" */}
+                                    {value
                                       .jenis_kegiatan_rl_tiga_titik_lima_belas
-                                      .no == "0"
-                                      ? "none"
-                                      : "flex",
-                                }}
-                              >
-                                <button
-                                  className="btn btn-danger"
-                                  style={{
-                                    margin: "0 5px 0 0",
-                                    backgroundColor: "#FF6663",
-                                    border: "1px solid #FF6663",
-                                  }}
-                                  type="button"
-                                  onClick={(e) => hapus(value.id)}
-                                >
-                                  Hapus
-                                </button>
-                                <Link
-                                  to={`/rl315/ubah/${value.id}`}
-                                  className="btn btn-warning"
-                                  style={{
-                                    margin: "0 5px 0 0",
-                                    backgroundColor: "#CFD35E",
-                                    border: "1px solid #CFD35E",
-                                    color: "#FFFFFF",
-                                  }}
-                                >
-                                  Ubah
-                                </Link>
-                              </div>
-                            )}
-                          </td> */}
-                          <td className={style["sticky-column"]}>
-                            <ToastContainer />
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent:
-                                  value.jenis_kegiatan_rl_tiga_titik_lima_belas
-                                    .nama === "Tidak Ada Data"
-                                    ? "center" // kalau tidak ada data -> tombol hapus di tengah
-                                    : "flex-start", // kalau ada data -> tombol hapus + ubah sejajar dari kiri
-                              }}
-                            >
-                              <button
-                                className="btn btn-danger"
-                                style={{
-                                  margin: "0 5px 0 0",
-                                  backgroundColor: "#FF6663",
-                                  border: "1px solid #FF6663",
-                                }}
-                                type="button"
-                                onClick={(e) => hapus(value.id)}
-                              >
-                                Hapus
-                              </button>
+                                      .nama !== "Tidak Ada Data" && (
+                                      <Link
+                                        to={`/rl315/ubah/${value.id}`}
+                                        className="btn btn-warning"
+                                        style={{
+                                          margin: "0 5px 0 0",
+                                          backgroundColor: "#CFD35E",
+                                          border: "1px solid #CFD35E",
+                                          color: "#FFFFFF",
+                                        }}
+                                      >
+                                        Ubah
+                                      </Link>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className={style["sticky-column"]}>
+                                  <input
+                                    type="text"
+                                    name="jenisKegiatan"
+                                    className="form-control"
+                                    value={
+                                      value
+                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                        .nama
+                                    }
+                                    disabled={true}
+                                  />
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    name="jumlah"
+                                    className="form-control"
+                                    value={
+                                      value
+                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                        .no > 0
+                                        ? value.laki
+                                        : 0
+                                    }
+                                    disabled={true}
+                                  />
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    name="jumlah"
+                                    className="form-control"
+                                    value={
+                                      value
+                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                        .no > 0
+                                        ? value.perempuan
+                                        : 0
+                                    }
+                                    disabled={true}
+                                  />
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    name="jumlah"
+                                    className="form-control"
+                                    value={
+                                      value
+                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                        .no > 0
+                                        ? value.jumlah
+                                        : 0
+                                    }
+                                    disabled={true}
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          <tr>
+                            <th colSpan={3} className="text-center">
+                              Total
+                            </th>
+                            <td className="text-center align-middle">
+                              {total.laki}
+                            </td>
+                            <td className="text-center align-middle">
+                              {total.perempuan}
+                            </td>
+                            <td className="text-center align-middle">
+                              {total.jumlah}
+                            </td>
+                          </tr>
+                        </>
+                      ) : (
+                        <></>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
-                              {/* Tampilkan tombol Ubah hanya jika bukan "Tidak Ada Data" */}
-                              {value.jenis_kegiatan_rl_tiga_titik_lima_belas
-                                .nama !== "Tidak Ada Data" && (
-                                <Link
-                                  to={`/rl315/ubah/${value.id}`}
-                                  className="btn btn-warning"
-                                  style={{
-                                    margin: "0 5px 0 0",
-                                    backgroundColor: "#CFD35E",
-                                    border: "1px solid #CFD35E",
-                                    color: "#FFFFFF",
-                                  }}
-                                >
-                                  Ubah
-                                </Link>
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab2" ? "show active" : ""
+                }`}
+              >
+                <div className={style.validasiCard}>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.15</h3>
+                  {!isFilterApplied ? (
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>
+                        Silakan pilih filter terlebih dahulu untuk menampilkan
+                        data.
+                      </strong>
+                    </div>
+                  ) : idValidasi ? (
+                    <div
+                      style={{
+                        backgroundColor: "#E9ECEF",
+                        padding: "15px",
+                        borderRadius: "5px",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      <p style={{ margin: "0" }}>
+                        <strong
+                          style={{ width: "100px", display: "inline-block" }}
+                        >
+                          Status
+                        </strong>
+                        :{" "}
+                        {idValidasiSubmited == 1
+                          ? "Perlu Perbaikan"
+                          : idValidasiSubmited == 2
+                            ? "Selesai Diperbaiki"
+                            : "Disetujui"}
+                      </p>
+                      <p style={{ margin: "0" }}>
+                        <strong
+                          style={{ width: "100px", display: "inline-block" }}
+                        >
+                          Catatan
+                        </strong>
+                        : {keteranganValidasi || "-"}
+                      </p>
+                      <p style={{ margin: "0" }}>
+                        <strong
+                          style={{ width: "100px", display: "inline-block" }}
+                        >
+                          Tanggal
+                        </strong>
+                        :{" "}
+                        {tglValidasi
+                          ? new Date(tglValidasi).toLocaleString("id-ID", {
+                              day: "2-digit",
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : "-"}
+                      </p>
+                    </div>
+                  ) : (
+                    user.jenisUserId !== 3 && (
+                      <div
+                        style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <strong>Data Belum di Validasi</strong>
+                      </div>
+                    )
+                  )}
+
+                  {dataRL.length > 0 && rumahSakit?.id ? (
+                    isValidated ? (
+                      <div
+                        style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <div className="text-center">
+                          <strong>Data telah di validasi</strong>
+                        </div>
+                      </div>
+                    ) : (
+                      (user.jenisUserId === 3 ||
+                        (user.jenisUserId === 4 && idValidasi)) && (
+                        <form onSubmit={simpanValidasi}>
+                          <ToastContainer />
+
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="statusValidasi">Status</label>
+                            <select
+                              id="statusValidasi"
+                              name="statusValidasi"
+                              value={statusValidasi}
+                              required
+                              onChange={(e) => statusValidasiChangeHadler(e)}
+                            >
+                              {user.jenisUserId === 4 ? (
+                                <>
+                                  <option value="">Pilih Status</option>
+                                  <option value="2">Selesai Diperbaiki</option>
+                                </>
+                              ) : (
+                                <>
+                                  <option value="1">Perlu Perbaikan</option>
+                                  <option value="3">Disetujui</option>
+                                </>
                               )}
-                            </div>
-                          </td>
-                          <td className={style["sticky-column"]}>
-                            <input
-                              type="text"
-                              name="jenisKegiatan"
-                              className="form-control"
-                              value={
-                                value.jenis_kegiatan_rl_tiga_titik_lima_belas
-                                  .nama
-                              }
-                              disabled={true}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              name="jumlah"
-                              className="form-control"
-                              value={
-                                value.jenis_kegiatan_rl_tiga_titik_lima_belas
-                                  .no > 0
-                                  ? value.laki
-                                  : 0
-                              }
-                              disabled={true}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              name="jumlah"
-                              className="form-control"
-                              value={
-                                value.jenis_kegiatan_rl_tiga_titik_lima_belas
-                                  .no > 0
-                                  ? value.perempuan
-                                  : 0
-                              }
-                              disabled={true}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              name="jumlah"
-                              className="form-control"
-                              value={
-                                value.jenis_kegiatan_rl_tiga_titik_lima_belas
-                                  .no > 0
-                                  ? value.jumlah
-                                  : 0
-                              }
-                              disabled={true}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    <tr>
-                      <th colSpan={3} className="text-center">
-                        Total
-                      </th>
-                      <td className="text-center align-middle">{total.laki}</td>
-                      <td className="text-center align-middle">
-                        {total.perempuan}
-                      </td>
-                      <td className="text-center align-middle">
-                        {total.jumlah}
-                      </td>
-                    </tr>
-                  </>
-                ) : (
-                  <></>
-                )}
-              </tbody>
-            </table>
+                            </select>
+                          </div>
+
+                          {user.jenisUserId === 3 ? (
+                            <>
+                              <div className={style.validasiFormGroup}>
+                                <label htmlFor="keteranganValidasi">
+                                  Catatan
+                                </label>
+                                <textarea
+                                  id="keteranganValidasi"
+                                  name="keteranganValidasi"
+                                  value={keteranganValidasi}
+                                  onChange={(e) =>
+                                    keteranganValidasiChangeHadler(e)
+                                  }
+                                  placeholder="Tambahkan catatan (opsional)"
+                                  rows={4}
+                                  disabled={user.jenisUserId === 4}
+                                />
+                              </div>
+                            </>
+                          ) : null}
+
+                          <button type="submit" className={style.btnPrimary}>
+                            <HiSaveAs size={20} /> Simpan
+                          </button>
+                        </form>
+                      )
+                    )
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
