@@ -910,14 +910,14 @@ const RL38 = () => {
                         </th>
                         <th
                           rowSpan={2}
-                          style={{ width: "14%", verticalAlign: "middle" }}
+                          style={{ width: "8%", verticalAlign: "middle" }}
                         >
                           Aksi
                         </th>
                         <th
                           rowSpan={2}
                           style={{
-                            width: "30%",
+                            width: "20%",
                             textAlign: "center",
                             verticalAlign: "middle",
                           }}

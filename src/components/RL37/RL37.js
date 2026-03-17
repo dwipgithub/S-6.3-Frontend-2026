@@ -1401,7 +1401,7 @@ const RL37 = () => {
                       <thead className={style.thead}>
                         <tr className="main-header-row">
                           <th className={style["sticky-header-view"]} style={{ width: "2.5%" }}>No.</th>
-                          <th className={style["sticky-header-view"]} style={{ width: "6%" }}>Aksi</th>
+                          <th className={style["sticky-header-view"]} style={{ width: "7%" }}>Aksi</th>
                           <th className={style["sticky-header-view"]} style={{ width: "10%" }}>Jenis Kegiatan</th>
                           <th>Rujukan Medis Rumah Sakit</th>
                           <th>Rujukan Medis Bidan</th>

@@ -1081,7 +1081,7 @@ const RL32 = () => {
                         <th
                           className={style["sticky-header"]}
                           rowSpan="2"
-                          style={{ width: "5%" }}
+                          style={{ width: "7%" }}
                         >
                           Aksi
                         </th>

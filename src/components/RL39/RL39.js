@@ -950,7 +950,7 @@ export const RL39 = () => {
                   <thead>
                     <tr className="main-header-row">
                         <th style={{ width: "3%", verticalAlign: "middle" }}>No</th>
-                        <th style={{ width: "12%", verticalAlign: "middle" }}></th>
+                        <th style={{ width: "12%", verticalAlign: "middle" }}>Aksi</th>
                         <th style={{ width: "45%", verticalAlign: "middle" }}>Jenis Kegiatan</th>
                         <th style={{ width: "40%", verticalAlign: "middle" }}>Jumlah</th>
                     </tr>
