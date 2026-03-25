@@ -35,6 +35,7 @@ const RL310 = () => {
 
   // untuk validasi
   const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
@@ -172,14 +173,6 @@ const RL310 = () => {
   const rumahSakitChangeHandler = (e) => {
     const rsId = e.target.value;
     showRumahSakit(rsId);
-  };
-
-  const statusValidasiChangeHandler = (e) => {
-    setStatusValidasi(e.target.value);
-  };
-
-  const keteranganValidasiChangeHandler = (e) => {
-    setKeteranganValidasi(e.target.value);
   };
 
   const getRumahSakit = async (kabKotaId) => {
@@ -477,12 +470,22 @@ const RL310 = () => {
     );
   });
 
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
   const simpanValidasi = async (e) => {
+    setSpinner(true);
     e.preventDefault();
     if (rumahSakit == null) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
@@ -490,6 +493,7 @@ const RL310 = () => {
       toast(`Keterangan tidak boleh kosong`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
@@ -504,7 +508,7 @@ const RL310 = () => {
 
       if (idValidasi != "") {
         await axiosJWT.patch(
-          "/apisirs6v2/rltigatitiksepuluhvalidasi/" + idValidasi,
+          "/apisirs6v2/rlempattitiksatuvalidasi/" + idValidasi,
           {
             statusValidasiId: statusValidasi,
             catatan: keteranganValidasi,
@@ -513,7 +517,7 @@ const RL310 = () => {
         );
       } else {
         await axiosJWT.post(
-          "/apisirs6v2/rltigatitiksepuluhvalidasi",
+          "/apisirs6v2/rlempattitiksatuvalidasi",
           {
             rsId: rumahSakit.id,
             periode: String(tahun).concat("-").concat(bulan),
@@ -526,13 +530,13 @@ const RL310 = () => {
       toast("Data Berhasil Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
       });
-      getValidasi();
       setIsValidated(statusValidasi == 3);
     } catch (error) {
       toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
         position: toast.POSITION.TOP_RIGHT,
       });
     }
+    setSpinner(false);
   };
 
   function handleDownloadExcel() {
@@ -828,7 +832,7 @@ const RL310 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -1246,9 +1250,9 @@ const RL310 = () => {
                         Status
                       </strong>
                       :{" "}
-                      {statusValidasi == 1
+                      {idValidasiSubmited == 1
                         ? "Perlu Perbaikan"
-                        : statusValidasi == 2
+                        : idValidasiSubmited == 2
                           ? "Selesai Diperbaiki"
                           : "Disetujui"}
                     </p>
@@ -1322,7 +1326,7 @@ const RL310 = () => {
                             name="statusValidasi"
                             value={statusValidasi}
                             required
-                            onChange={(e) => statusValidasiChangeHandler(e)}
+                            onChange={(e) => statusValidasiChangeHadler(e)}
                           >
                             {user.jenisUserId === 4 ? (
                               <>
@@ -1332,25 +1336,32 @@ const RL310 = () => {
                             ) : (
                               <>
                                 <option value="1">Perlu Perbaikan</option>
-                                <option value="2">Selesai Diperbaiki</option>
                                 <option value="3">Disetujui</option>
                               </>
                             )}
                           </select>
                         </div>
 
-                        <div className={style.validasiFormGroup}>
-                          <label htmlFor="keteranganValidasi">Catatan</label>
-                          <textarea
-                            id="keteranganValidasi"
-                            name="keteranganValidasi"
-                            value={keteranganValidasi}
-                            onChange={(e) => keteranganValidasiChangeHandler(e)}
-                            placeholder="Tambahkan catatan (opsional)"
-                            rows={4}
-                            disabled={user.jenisUserId === 4}
-                          />
-                        </div>
+                        {user.jenisUserId === 3 ? (
+                          <>
+                            <div className={style.validasiFormGroup}>
+                              <label htmlFor="keteranganValidasi">
+                                Catatan
+                              </label>
+                              <textarea
+                                id="keteranganValidasi"
+                                name="keteranganValidasi"
+                                value={keteranganValidasi}
+                                onChange={(e) =>
+                                  keteranganValidasiChangeHadler(e)
+                                }
+                                placeholder="Tambahkan catatan (opsional)"
+                                rows={4}
+                                disabled={user.jenisUserId === 4}
+                              />
+                            </div>
+                          </>
+                        ) : null}
 
                         <button type="submit" className={style.btnPrimary}>
                           <HiSaveAs size={20} /> Simpan

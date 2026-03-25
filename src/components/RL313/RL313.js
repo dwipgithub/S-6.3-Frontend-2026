@@ -26,7 +26,7 @@ const RL313 = () => {
   const [expire, setExpire] = useState("");
   const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
-
+  const [spinner, setSpinner] = useState(false);
   const [totalall, settotalall] = useState(0);
 
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ const RL313 = () => {
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
-  const [spinner, setSpinner] = useState(false);
+
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -261,6 +261,9 @@ const RL313 = () => {
 
       setNamaFile(`RL313_${rs.id}_${tahun}`);
       handleClose();
+      setActiveTab("tab1");
+      setIsFilterApplied(true);
+      await getValidasi();
     } catch (error) {
       console.log(error);
     }
@@ -330,6 +333,8 @@ const RL313 = () => {
   };
 
   const getValidasi = async () => {
+    if (!rumahSakit || !rumahSakit.id) return;
+
     setSpinner(true);
     try {
       const customConfig = {
@@ -343,7 +348,7 @@ const RL313 = () => {
         },
       };
       const results = await axiosJWT.get(
-        "/apisirs6v2/rltigatitiksembilanbelasvalidasi",
+        "/apisirs6v2/rltigatitiktigabelasvalidasi",
         customConfig,
       );
 
@@ -377,14 +382,16 @@ const RL313 = () => {
   const simpanValidasi = async (e) => {
     setSpinner(true);
     e.preventDefault();
-    if (rumahSakit == null) {
+    if (!rumahSakit || !rumahSakit.id) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
     }
 
-    if (statusValidasi == 1 && keteranganValidasi == "") {
+    // if (statusValidasi == 1 && keteranganValidasi == "") {
+    if (Number(statusValidasi) === 1 && keteranganValidasi.trim() === "") {
+      setSpinner(false);
       toast(`Keterangan tidak boleh kosong`, {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -402,7 +409,7 @@ const RL313 = () => {
 
       if (idValidasi != "") {
         await axiosJWT.patch(
-          "/apisirs6v2/rltigatitiksembilanbelasvalidasi/" + idValidasi,
+          "/apisirs6v2/rltigatitiktigabelasvalidasi/" + idValidasi,
           {
             statusValidasiId: statusValidasi,
             catatan: keteranganValidasi,
@@ -411,7 +418,7 @@ const RL313 = () => {
         );
       } else {
         await axiosJWT.post(
-          "/apisirs6v2/rltigatitiksembilanbelasvalidasi",
+          "/apisirs6v2/rltigatitiktigabelasvalidasi",
           {
             rsId: rumahSakit.id,
             periode: `${tahun}-12-01`,
@@ -425,7 +432,8 @@ const RL313 = () => {
       toast("Data Berhasil Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
       });
-      setIsValidated(statusValidasi == 3);
+      // setIsValidated(statusValidasi == 3);
+      // setIsValidated(Number(statusValidasi) === 3);
       await getValidasi();
     } catch (error) {
       toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
@@ -656,8 +664,8 @@ const RL313 = () => {
           </Modal.Body>
           <Modal.Footer>
             <div className="mt-3 mb-3">
-              <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              {/* <ToastContainer /> */}
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -725,13 +733,7 @@ const RL313 = () => {
                   Data
                 </button>
               </li>
-              {user.jenisUserId === 1 ||
-              user.jenisUserId === 2 ||
-              user.jenisUserId === 3 ||
-              user.jenisUserId === 4 ? (
-                //   &&
-                // dataRL.length > 0 &&
-                // rumahSakit != null
+              {[1, 2, 3, 4].includes(user.jenisUserId) && (
                 <li className={`nav-item ${style.navItem}`}>
                   <button
                     type="button"
@@ -741,7 +743,7 @@ const RL313 = () => {
                     Validasi
                   </button>
                 </li>
-              ) : null}
+              )}
             </ul>
 
             <div className={`tab-content ${style.tabContent}`}>
@@ -750,10 +752,11 @@ const RL313 = () => {
                   activeTab === "tab1" ? "show active" : ""
                 }`}
               >
-                <div className="table-responsive">
+                <div className={style["table-container"]}>
                   <table
-                    className="table table-bordered table-striped"
+                    className={style["table"]}
                     ref={tableRef}
+                    style={{ width: "100%", tableLayout: "fixed" }}
                   >
                     <thead className="table-success">
                       <tr>
@@ -761,9 +764,11 @@ const RL313 = () => {
                         {user.jenisUserId === 4 && (
                           <th style={{ width: "15%" }}>Aksi</th>
                         )}
-                        <th>Kelompok</th>
-                        <th>Jenis Tindakan</th>
-                        <th style={{ width: "15%" }}>Jumlah</th>
+                        <th className="text-center">Kelompok</th>
+                        <th className="text-center">Jenis Tindakan</th>
+                        <th className="text-center" style={{ width: "15%" }}>
+                          Jumlah
+                        </th>
                       </tr>
                     </thead>
 
@@ -775,23 +780,41 @@ const RL313 = () => {
                           {user.jenisUserId === 4 && (
                             <td className="text-center">
                               <button
-                                className="btn btn-danger btn-sm me-2"
+                                className="btn btn-danger"
+                                style={{
+                                  margin: "0 5px 0 0",
+                                  backgroundColor: "#FF6663",
+                                  border: "1px solid #FF6663",
+                                }}
+                                type="button"
                                 onClick={() => deleteConfirmation(value.id)}
                               >
                                 Hapus
                               </button>
 
-                              <Link
-                                to={`/rl313/edit/${value.id}`}
-                                className="btn btn-warning btn-sm text-white"
-                              >
-                                Ubah
-                              </Link>
+                              {value.no != 88 && (
+                                <Link
+                                  to={`/rl313/edit/${value.id}`}
+                                  className="btn btn-warning"
+                                  style={{
+                                    margin: "0 5px 0 0",
+                                    backgroundColor: "#CFD35E",
+                                    border: "1px solid #CFD35E",
+                                    color: "#FFFFFF",
+                                  }}
+                                >
+                                  Ubah
+                                </Link>
+                              )}
                             </td>
                           )}
 
-                          <td>{value.nama_kelompok_jenis_tindakan}</td>
-                          <td>{value.nama_jenis_tindakan}</td>
+                          <td className="text-center">
+                            {value.nama_kelompok_jenis_tindakan}
+                          </td>
+                          <td className="text-center">
+                            {value.nama_jenis_tindakan}
+                          </td>
                           <td className="text-center">{value.jumlah}</td>
                         </tr>
                       ))}
@@ -800,7 +823,9 @@ const RL313 = () => {
                         <tr className="table-light fw-bold">
                           <td className="text-center">99</td>
                           {user.jenisUserId === 4 && <td></td>}
-                          <td colSpan="2">Total</td>
+                          <td className="text-center" colSpan="2">
+                            Total
+                          </td>
                           <td className="text-center">{totalall}</td>
                         </tr>
                       )}
@@ -890,7 +915,7 @@ const RL313 = () => {
                           textAlign: "center",
                         }}
                       >
-                        <strong>Data Belum di Validasi</strong>
+                        <strong>Data Belum Divalidasi</strong>
                       </div>
                     )
                   )}
@@ -908,7 +933,7 @@ const RL313 = () => {
                         }}
                       >
                         <div className="text-center">
-                          <strong>Data telah di validasi</strong>
+                          <strong>Data telah Divalidasi</strong>
                         </div>
                       </div>
                     ) : (
@@ -934,27 +959,32 @@ const RL313 = () => {
                               ) : (
                                 <>
                                   <option value="1">Perlu Perbaikan</option>
-                                  <option value="2">Selesai Diperbaiki</option>
                                   <option value="3">Disetujui</option>
                                 </>
                               )}
                             </select>
                           </div>
 
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="keteranganValidasi">Catatan</label>
-                            <textarea
-                              id="keteranganValidasi"
-                              name="keteranganValidasi"
-                              value={keteranganValidasi}
-                              onChange={(e) =>
-                                keteranganValidasiChangeHadler(e)
-                              }
-                              placeholder="Tambahkan catatan (opsional)"
-                              rows={4}
-                              disabled={user.jenisUserId === 4}
-                            />
-                          </div>
+                          {user.jenisUserId === 3 ? (
+                            <>
+                              <div className={style.validasiFormGroup}>
+                                <label htmlFor="keteranganValidasi">
+                                  Catatan
+                                </label>
+                                <textarea
+                                  id="keteranganValidasi"
+                                  name="keteranganValidasi"
+                                  value={keteranganValidasi}
+                                  onChange={(e) =>
+                                    keteranganValidasiChangeHadler(e)
+                                  }
+                                  placeholder="Tambahkan catatan (opsional)"
+                                  rows={4}
+                                  disabled={user.jenisUserId === 4}
+                                />
+                              </div>
+                            </>
+                          ) : null}
 
                           <button type="submit" className={style.btnPrimary}>
                             <HiSaveAs size={20} /> Simpan

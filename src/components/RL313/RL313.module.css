@@ -156,7 +156,7 @@
 .table thead th.sticky-header:nth-child(2) {
   position: -webkit-sticky;
   position: sticky;
-  left: 80px; /* Width of 1st column */
+  left: 50px; /* Width of 1st column */
   z-index: 3;
   background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
@@ -221,7 +221,7 @@
 .table tbody td.sticky-column:nth-child(2) {
   position: -webkit-sticky; /* For Safari */
   position: sticky;
-  left: 80px;
+  left: 50px;
   z-index: 2;
 }
 
@@ -260,7 +260,7 @@
 }
 
 .validasiCardTitle {
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #1e293b;
   margin-bottom: 1.25rem;
@@ -346,4 +346,26 @@
   /* position: sticky; */
   left: 240px;
   /* z-index: 5; */
+}
+
+/* new css ZUL */
+.tableContainer {
+  width: 100%;
+  overflow-x: hidden; /* HILANGKAN SCROLL */
+}
+
+.table {
+  width: 100%;
+  table-layout: auto; /* Jangan fixed */
+}
+
+.table th,
+.table td {
+  vertical-align: middle;
+  text-align: center;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  text-align: left; /* Golongan Obat rata kiri */
 }

@@ -348,9 +348,9 @@ const RL315 = () => {
 
   let total = { laki: 0, perempuan: 0, jumlah: 0 };
   dataRL.map((value, index) => {
-    total.perempuan += parseInt(value.perempuan);
-    total.laki += parseInt(value.laki);
-    total.jumlah += parseInt(value.jumlah);
+    total.perempuan += parseInt(value.perempuan || 0);
+    total.laki += parseInt(value.laki || 0);
+    total.jumlah += parseInt(value.jumlah || 0);
   });
 
   function handleDownloadExcel() {
@@ -393,7 +393,7 @@ const RL315 = () => {
       return;
     }
 
-    if (statusValidasi == 1 && keteranganValidasi == "") {
+    if (statusValidasi === 1 && keteranganValidasi === "") {
       toast(`Keterangan tidak boleh kosong`, {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -686,7 +686,7 @@ const RL315 = () => {
           <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                to={`/rl319/tambah/`}
+                to={`/rl315/tambah/`}
                 className={style.btnPrimary}
                 style={{ textDecoration: "none" }}
               >
@@ -756,86 +756,110 @@ const RL315 = () => {
                   activeTab === "tab1" ? "show active" : ""
                 }`}
               >
-                <div className={style["table-container"]}>
-                  <table className={style.table}>
-                    <thead className={style.thead}>
+                <div style={{ width: "100%", overflowX: "hidden" }}>
+                  <table
+                    className="table table-bordered"
+                    style={{
+                      width: "100%",
+                      tableLayout: "fixed",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <thead>
                       <tr>
                         <th
-                          className={style["sticky-header-view"]}
-                          rowSpan="2"
-                          style={{ width: "60px" }}
+                          className={style["sticky-header"]}
+                          style={{ width: "5%", textAlign: "center" }}
                         >
                           No
                         </th>
+
                         {user.jenisUserId === 4 && (
-                          <th rowSpan="2" style={{ width: "150px" }}>
+                          <th
+                            className={style["sticky-header"]}
+                            style={{ width: "15%", textAlign: "center" }}
+                          >
                             Aksi
                           </th>
                         )}
-                        <th>Jenis Kegiatan</th>
-                        <th>Laki-laki</th>
-                        <th>Perempuan</th>
-                        <th>Jumlah</th>
+
+                        <th
+                          className={style["sticky-header"]}
+                          style={{ width: "35%", textAlign: "center" }}
+                        >
+                          Jenis Kegiatan
+                        </th>
+                        <th
+                          className={style["sticky-header"]}
+                          style={{ width: "15%", textAlign: "center" }}
+                        >
+                          Laki-laki
+                        </th>
+                        <th
+                          className={style["sticky-header"]}
+                          style={{ width: "15%", textAlign: "center" }}
+                        >
+                          Perempuan
+                        </th>
+                        <th
+                          className={style["sticky-header"]}
+                          style={{ width: "15%", textAlign: "center" }}
+                        >
+                          Jumlah
+                        </th>
                       </tr>
                     </thead>
 
                     <tbody>
-                      {dataRL.length > 0 ? (
+                      {dataRL.length > 0 && (
                         <>
-                          {dataRL.map((value, index) => {
-                            return (
-                              <tr key={value.id}>
-                                <td className={style["sticky-column"]}>
-                                  <input
-                                    type="text"
-                                    name="no"
-                                    className="form-control"
-                                    value={
-                                      value
-                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
-                                        .no
-                                    }
-                                    disabled={true}
-                                  />
-                                </td>
-                                <td className={style["sticky-column"]}>
-                                  <ToastContainer />
+                          {dataRL.map((value) => (
+                            <tr key={value.id}>
+                              {/* NO */}
+                              <td>
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm"
+                                  style={{
+                                    textAlign: "center",
+                                    padding: "2px",
+                                  }}
+                                  value={
+                                    value
+                                      .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                      .no
+                                  }
+                                  disabled
+                                />
+                              </td>
+
+                              {/* AKSI */}
+                              {user.jenisUserId === 4 && (
+                                <td>
                                   <div
                                     style={{
                                       display: "flex",
-                                      justifyContent:
-                                        value
-                                          .jenis_kegiatan_rl_tiga_titik_lima_belas
-                                          .nama === "Tidak Ada Data"
-                                          ? "center" // kalau tidak ada data -> tombol hapus di tengah
-                                          : "flex-start", // kalau ada data -> tombol hapus + ubah sejajar dari kiri
+                                      justifyContent: "center",
+                                      gap: "4px",
                                     }}
                                   >
                                     <button
-                                      className="btn btn-danger"
-                                      style={{
-                                        margin: "0 5px 0 0",
-                                        backgroundColor: "#FF6663",
-                                        border: "1px solid #FF6663",
-                                      }}
-                                      type="button"
-                                      onClick={(e) => hapus(value.id)}
+                                      className="btn btn-danger btn-sm"
+                                      style={{ padding: "2px 6px" }}
+                                      onClick={() => hapus(value.id)}
                                     >
                                       Hapus
                                     </button>
 
-                                    {/* Tampilkan tombol Ubah hanya jika bukan "Tidak Ada Data" */}
                                     {value
                                       .jenis_kegiatan_rl_tiga_titik_lima_belas
                                       .nama !== "Tidak Ada Data" && (
                                       <Link
                                         to={`/rl315/ubah/${value.id}`}
-                                        className="btn btn-warning"
+                                        className="btn btn-warning btn-sm"
                                         style={{
-                                          margin: "0 5px 0 0",
-                                          backgroundColor: "#CFD35E",
-                                          border: "1px solid #CFD35E",
-                                          color: "#FFFFFF",
+                                          padding: "2px 6px",
+                                          color: "#fff",
                                         }}
                                       >
                                         Ubah
@@ -843,84 +867,99 @@ const RL315 = () => {
                                     )}
                                   </div>
                                 </td>
-                                <td className={style["sticky-column"]}>
-                                  <input
-                                    type="text"
-                                    name="jenisKegiatan"
-                                    className="form-control"
-                                    value={
-                                      value
-                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
-                                        .nama
-                                    }
-                                    disabled={true}
-                                  />
-                                </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="jumlah"
-                                    className="form-control"
-                                    value={
-                                      value
-                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
-                                        .no > 0
-                                        ? value.laki
-                                        : 0
-                                    }
-                                    disabled={true}
-                                  />
-                                </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="jumlah"
-                                    className="form-control"
-                                    value={
-                                      value
-                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
-                                        .no > 0
-                                        ? value.perempuan
-                                        : 0
-                                    }
-                                    disabled={true}
-                                  />
-                                </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="jumlah"
-                                    className="form-control"
-                                    value={
-                                      value
-                                        .jenis_kegiatan_rl_tiga_titik_lima_belas
-                                        .no > 0
-                                        ? value.jumlah
-                                        : 0
-                                    }
-                                    disabled={true}
-                                  />
-                                </td>
-                              </tr>
-                            );
-                          })}
+                              )}
+
+                              {/* JENIS KEGIATAN (DIUBAH JADI TEXT, BUKAN INPUT) */}
+                              <td
+                                style={{
+                                  textAlign: "left",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {
+                                  value.jenis_kegiatan_rl_tiga_titik_lima_belas
+                                    .nama
+                                }
+                              </td>
+
+                              {/* LAKI */}
+                              <td>
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm"
+                                  style={{
+                                    textAlign: "center",
+                                    padding: "2px",
+                                  }}
+                                  value={
+                                    value
+                                      .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                      .no > 0
+                                      ? value.laki
+                                      : 0
+                                  }
+                                  disabled
+                                />
+                              </td>
+
+                              {/* PEREMPUAN */}
+                              <td>
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm"
+                                  style={{
+                                    textAlign: "center",
+                                    padding: "2px",
+                                  }}
+                                  value={
+                                    value
+                                      .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                      .no > 0
+                                      ? value.perempuan
+                                      : 0
+                                  }
+                                  disabled
+                                />
+                              </td>
+
+                              {/* JUMLAH */}
+                              <td>
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm"
+                                  style={{
+                                    textAlign: "center",
+                                    padding: "2px",
+                                  }}
+                                  value={
+                                    value
+                                      .jenis_kegiatan_rl_tiga_titik_lima_belas
+                                      .no > 0
+                                      ? value.jumlah
+                                      : 0
+                                  }
+                                  disabled
+                                />
+                              </td>
+                            </tr>
+                          ))}
+
+                          {/* TOTAL */}
                           <tr>
-                            <th colSpan={3} className="text-center">
+                            <th colSpan={user.jenisUserId === 4 ? 3 : 2}>
                               Total
                             </th>
-                            <td className="text-center align-middle">
+                            <td style={{ textAlign: "center" }}>
                               {total.laki}
                             </td>
-                            <td className="text-center align-middle">
+                            <td style={{ textAlign: "center" }}>
                               {total.perempuan}
                             </td>
-                            <td className="text-center align-middle">
+                            <td style={{ textAlign: "center" }}>
                               {total.jumlah}
                             </td>
                           </tr>
                         </>
-                      ) : (
-                        <></>
                       )}
                     </tbody>
                   </table>
