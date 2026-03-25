@@ -34,6 +34,9 @@ const Absensi = () => {
   const { CSRFToken } = useCSRFTokenContext();
   const [spinner, setSpinner] = useState(false);
 
+  const [sortBy, setSortBy] = useState("nama_rs");
+  const [sortOrder, setSortOrder] = useState("asc");
+
   useEffect(() => {
     refreshToken();
     getProvinsi();
@@ -309,6 +312,29 @@ const Absensi = () => {
     );
   };
 
+  const sortedData = [...dataAbsensi].sort((a, b) => {
+    if (!sortBy) return 0;
+
+    let valA = a[sortBy];
+    let valB = b[sortBy];
+
+    if (sortBy === "nama_rs") {
+      return sortOrder === "asc"
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+    }
+
+    if (sortBy === "persentasePengisian") {
+      return sortOrder === "asc" ? valA - valB : valB - valA;
+    }
+
+    if (sortBy === "persentaseValidasi") {
+      return sortOrder === "asc" ? valA - valB : valB - valA;
+    }
+
+    return 0;
+  });
+
   return (
     <div
       className="container"
@@ -318,6 +344,9 @@ const Absensi = () => {
         <div className="row">
           <div className="col-md-6">
             <div className="card">
+              <div className="card-header">
+                <strong>FILTER</strong>
+              </div>
               <div className="card-body">
                 <div
                   className="form-floating"
@@ -429,8 +458,65 @@ const Absensi = () => {
               </div>
             </div>
           </div>
+
+          <div className="col-md-6">
+            <div className="container">
+              <div className="card">
+                <div className="card-header">
+                  <strong>SORTING</strong>
+                </div>
+                <div className="card-body">
+                  <div className="row mt-3" style={{ marginBottom: "10px" }}>
+                    <div className="col-md-7">
+                      <div
+                        className="form-floating"
+                        style={{ width: "100%", paddingBottom: "5px" }}
+                      >
+                        <select
+                          name="sortBy"
+                          id="sortBy"
+                          typeof="select"
+                          className="form-select"
+                          onChange={(e) => setSortBy(e.target.value)}
+                        >
+                          <option value="nama_rs">Nama RS</option>
+                          <option value="persentasePengisian">
+                            Persentase Pengisian
+                          </option>
+                          <option value="persentaseValidasi">
+                            Persentase Validasi
+                          </option>
+                        </select>
+                        <label htmlFor="sortBy">Sort By</label>
+                      </div>
+                    </div>
+
+                    <div className="col-md-4">
+                      <div
+                        className="form-floating"
+                        style={{ width: "100%", paddingBottom: "5px" }}
+                      >
+                        <select
+                          name="sortOrder"
+                          id="sortOrder"
+                          typeof="select"
+                          className="form-select"
+                          onChange={(e) => setSortOrder(e.target.value)}
+                        >
+                          <option value="asc">Ascending</option>
+                          <option value="desc">Descending</option>
+                        </select>
+                        <label htmlFor="sortOrder">Order by</label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </form>
+
       <div className="row mt-3">
         <div className="col-md-12">
           <div className="mb-2">
@@ -543,18 +629,21 @@ const Absensi = () => {
                   >
                     Kab.Kota
                   </th>
+
                   <th
                     className={style["sticky-header"]}
                     rowSpan="2"
-                    style={{ width: "150px", left: "450px" }}
+                    style={{ width: "100px", left: "450px" }}
+                  ></th>
+
+                  <th
+                    className={style["sticky-header"]}
+                    rowSpan="2"
+                    style={{ width: "150px", left: "550px" }}
                   >
                     Pengisian %
                   </th>
-                  <th
-                    className={style["sticky-header"]}
-                    rowSpan="2"
-                    style={{ width: "100px", left: "600px" }}
-                  ></th>
+
                   <th colSpan="12">RL 3.1</th>
                   <th colSpan="12">RL 3.2</th>
                   <th colSpan="12">RL 3.3</th>
@@ -1269,7 +1358,7 @@ const Absensi = () => {
                 </tr>
               </thead>
               <tbody>
-                {dataAbsensi.map((value, index) => {
+                {sortedData.map((value, index) => {
                   const renderRLCells = (type, mode) =>
                     [...Array(12)].map((_, mIndex) => {
                       const month = mIndex + 1;
@@ -1308,18 +1397,17 @@ const Absensi = () => {
                         </td>
 
                         <td
-                          rowSpan="2"
                           className={style["sticky-column"]}
-                          style={{ left: "450px", textAlign: "center" }}
+                          style={{ left: "460px", fontWeight: "bold" }}
                         >
-                          {value.persentase_pengisian} %
+                          Data
                         </td>
 
                         <td
                           className={style["sticky-column"]}
-                          style={{ left: "600px", fontWeight: "bold" }}
+                          style={{ left: "560px", textAlign: "center" }}
                         >
-                          Data
+                          {Number(value.persentasePengisian ?? 0).toFixed(2)} %
                         </td>
 
                         {/* RL 3.1 – 3.10 */}
@@ -1368,9 +1456,17 @@ const Absensi = () => {
                       <tr>
                         <td
                           className={style["sticky-column"]}
-                          style={{ left: "600px", fontWeight: "bold" }}
+                          style={{ left: "460px", fontWeight: "bold" }}
                         >
                           Validasi
+                        </td>
+
+                        <td
+                          className={style["sticky-column"]}
+                          style={{ left: "560px", textAlign: "center" }}
+                        >
+                          {Number(value.persentaseValidasi ?? 0).toFixed(2)}{" "}
+                          %{" "}
                         </td>
 
                         {/* RL 3.1 – 3.10 */}

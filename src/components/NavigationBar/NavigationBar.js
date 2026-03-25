@@ -304,7 +304,9 @@ const NavigationBar = ({ sidebarOpen, setSidebarOpen }) => {
           position: "fixed",
           top: TOPBAR_HEIGHT,
           left: 0,
-          transform: sidebarOpen ? "translateY(0)" : "translateY(-100%)",
+          transform: sidebarOpen
+            ? "translateY(0)"
+            : "translateY(calc(-100% - 60px))",
           overflowY: "auto",
           overflowX: "hidden",
           WebkitOverflowScrolling: "touch",
