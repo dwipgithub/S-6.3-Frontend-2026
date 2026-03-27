@@ -32,7 +32,9 @@ const RL311 = () => {
   const navigate = useNavigate();
   const tableRef = useRef(null);
   const [namafile, setNamaFile] = useState("");
+
   const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
@@ -310,45 +312,6 @@ const RL311 = () => {
     }
   };
 
-  const getValidasi = async () => {
-    if (!rumahSakit || !rumahSakit.id) return;
-
-    setSpinner(true);
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          rsId: rumahSakit.id,
-          periode: tahun,
-        },
-      };
-      const results = await axiosJWT.get(
-        "/apisirs6v2/rltigatitiksebelasvalidasi",
-        customConfig,
-      );
-
-      if (results.data.data != null && results.data.data.length > 0) {
-        setidValidasi(results.data.data[0].id);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
-        setKeteranganValidasi(results.data.data[0].catatan || "");
-        setTglValidasi(results.data.data[0].modifiedAt);
-        setIsValidated(results.data.data[0].statusValidasiId === 3);
-      } else {
-        setidValidasi("");
-        setStatusValidasi(1);
-        setKeteranganValidasi("");
-        setTglValidasi("");
-        setIsValidated(false);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-    setSpinner(false);
-  };
-
   function handleDownloadExcel() {
     const header = ["No", "Jenis Kegiatan", "Jumlah"];
 
@@ -376,6 +339,44 @@ const RL311 = () => {
     });
   }
 
+  const getValidasi = async () => {
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: tahun,
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiksebelasvalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
+        setStatusValidasi(results.data.data[0].statusValidasiId);
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
   const statusValidasiChangeHadler = (e) => {
     setStatusValidasi(e.target.value);
   };
@@ -387,19 +388,19 @@ const RL311 = () => {
   const simpanValidasi = async (e) => {
     setSpinner(true);
     e.preventDefault();
-    if (!rumahSakit || !rumahSakit.id) {
+    if (rumahSakit == null) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
-    // if (statusValidasi == 1 && keteranganValidasi == "") {
-    if (Number(statusValidasi) === 1 && keteranganValidasi.trim() === "") {
-      setSpinner(false);
+    if (statusValidasi == 1 && keteranganValidasi == "") {
       toast(`Keterangan tidak boleh kosong`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
@@ -433,18 +434,17 @@ const RL311 = () => {
           customConfig,
         );
       }
-      setSpinner(false);
       toast("Data Berhasil Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
       });
-      // setIsValidated(statusValidasi == 3);
-      // setIsValidated(Number(statusValidasi) === 3);
+      setIsValidated(statusValidasi == 3);
       await getValidasi();
     } catch (error) {
       toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
         position: toast.POSITION.TOP_RIGHT,
       });
     }
+    setSpinner(false);
   };
 
   const [activeTab, setActiveTab] = useState("tab1");
@@ -455,7 +455,6 @@ const RL311 = () => {
     }
     setActiveTab(tab);
   };
-
   return (
     <div
       className="container"
@@ -762,9 +761,9 @@ const RL311 = () => {
                       <tr className="main-header-row">
                         <th style={{ width: "5%" }}>No</th>
                         {user.jenisUserId === 4 && (
-                          <th style={{ width: "18%" }}>Aksi</th>
+                          <th style={{ width: "13%" }}>Aksi</th>
                         )}
-                        <th>Jenis Kegiatan</th>
+                        <th style={{ textAlign: "center" }}>Jenis Kegiatan</th>
                         <th style={{ width: "15%" }}>Jumlah</th>
                       </tr>
                     </thead>
@@ -805,7 +804,9 @@ const RL311 = () => {
                             </td>
                           )}
 
-                          <td>{value.nama_jenis_kegiatan}</td>
+                          <td style={{ textAlign: "left" }}>
+                            {value.nama_jenis_kegiatan}
+                          </td>
 
                           <td className="text-center">{value.jumlah}</td>
                         </tr>
@@ -830,7 +831,7 @@ const RL311 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Validasi RL 3.11</h3>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.18</h3>
                   {!isFilterApplied ? (
                     <div
                       style={{
@@ -863,9 +864,9 @@ const RL311 = () => {
                           Status
                         </strong>
                         :{" "}
-                        {statusValidasi == 1
+                        {idValidasiSubmited == 1
                           ? "Perlu Perbaikan"
-                          : statusValidasi == 2
+                          : idValidasiSubmited == 2
                             ? "Selesai Diperbaiki"
                             : "Disetujui"}
                       </p>
@@ -905,7 +906,7 @@ const RL311 = () => {
                           textAlign: "center",
                         }}
                       >
-                        <strong>Data Belum divalidasi</strong>
+                        <strong>Data Belum di Validasi</strong>
                       </div>
                     )
                   )}
@@ -923,7 +924,7 @@ const RL311 = () => {
                         }}
                       >
                         <div className="text-center">
-                          <strong>Data telah divalidasi</strong>
+                          <strong>Data telah di validasi</strong>
                         </div>
                       </div>
                     ) : (

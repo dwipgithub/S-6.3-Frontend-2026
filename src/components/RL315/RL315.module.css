@@ -260,7 +260,7 @@
 }
 
 .validasiCardTitle {
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #1e293b;
   margin-bottom: 1.25rem;
@@ -346,4 +346,26 @@
   /* position: sticky; */
   left: 240px;
   /* z-index: 5; */
+}
+
+/* new css ZUL */
+.tableContainer {
+  width: 100%;
+  overflow-x: hidden; /* HILANGKAN SCROLL */
+}
+
+.table {
+  width: 100%;
+  table-layout: auto; /* Jangan fixed */
+}
+
+.table th,
+.table td {
+  vertical-align: middle;
+  text-align: center;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  text-align: left; /* Golongan Obat rata kiri */
 }

@@ -34,12 +34,12 @@ const RL313 = () => {
   const [namafile, setNamaFile] = useState("");
 
   const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
-
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -333,8 +333,6 @@ const RL313 = () => {
   };
 
   const getValidasi = async () => {
-    if (!rumahSakit || !rumahSakit.id) return;
-
     setSpinner(true);
     try {
       const customConfig = {
@@ -354,6 +352,7 @@ const RL313 = () => {
 
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
         setStatusValidasi(results.data.data[0].statusValidasiId);
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
@@ -382,19 +381,19 @@ const RL313 = () => {
   const simpanValidasi = async (e) => {
     setSpinner(true);
     e.preventDefault();
-    if (!rumahSakit || !rumahSakit.id) {
+    if (rumahSakit == null) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
-    // if (statusValidasi == 1 && keteranganValidasi == "") {
-    if (Number(statusValidasi) === 1 && keteranganValidasi.trim() === "") {
-      setSpinner(false);
+    if (statusValidasi == 1 && keteranganValidasi == "") {
       toast(`Keterangan tidak boleh kosong`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
@@ -428,18 +427,17 @@ const RL313 = () => {
           customConfig,
         );
       }
-      setSpinner(false);
       toast("Data Berhasil Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
       });
-      // setIsValidated(statusValidasi == 3);
-      // setIsValidated(Number(statusValidasi) === 3);
+      setIsValidated(statusValidasi == 3);
       await getValidasi();
     } catch (error) {
       toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
         position: toast.POSITION.TOP_RIGHT,
       });
     }
+    setSpinner(false);
   };
 
   const [activeTab, setActiveTab] = useState("tab1");
@@ -762,7 +760,7 @@ const RL313 = () => {
                       <tr>
                         <th style={{ width: "5%" }}>No</th>
                         {user.jenisUserId === 4 && (
-                          <th style={{ width: "15%" }}>Aksi</th>
+                          <th style={{ width: "12%" }}>Aksi</th>
                         )}
                         <th className="text-center">Kelompok</th>
                         <th className="text-center">Jenis Tindakan</th>
@@ -809,13 +807,13 @@ const RL313 = () => {
                             </td>
                           )}
 
-                          <td className="text-center">
+                          <td style={{ textAlign: "left" }}>
                             {value.nama_kelompok_jenis_tindakan}
                           </td>
-                          <td className="text-center">
+                          <td style={{ textAlign: "left" }}>
                             {value.nama_jenis_tindakan}
                           </td>
-                          <td className="text-center">{value.jumlah}</td>
+                          <td className="text-right">{value.jumlah}</td>
                         </tr>
                       ))}
 
@@ -826,7 +824,7 @@ const RL313 = () => {
                           <td className="text-center" colSpan="2">
                             Total
                           </td>
-                          <td className="text-center">{totalall}</td>
+                          <td style={{ textAlign: "center" }}>{totalall}</td>
                         </tr>
                       )}
                     </tbody>
@@ -840,7 +838,7 @@ const RL313 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Validasi RL 3.13</h3>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.18</h3>
                   {!isFilterApplied ? (
                     <div
                       style={{
@@ -873,9 +871,9 @@ const RL313 = () => {
                           Status
                         </strong>
                         :{" "}
-                        {statusValidasi == 1
+                        {idValidasiSubmited == 1
                           ? "Perlu Perbaikan"
-                          : statusValidasi == 2
+                          : idValidasiSubmited == 2
                             ? "Selesai Diperbaiki"
                             : "Disetujui"}
                       </p>
@@ -915,7 +913,7 @@ const RL313 = () => {
                           textAlign: "center",
                         }}
                       >
-                        <strong>Data Belum Divalidasi</strong>
+                        <strong>Data Belum di Validasi</strong>
                       </div>
                     )
                   )}
@@ -933,7 +931,7 @@ const RL313 = () => {
                         }}
                       >
                         <div className="text-center">
-                          <strong>Data telah Divalidasi</strong>
+                          <strong>Data telah di validasi</strong>
                         </div>
                       </div>
                     ) : (

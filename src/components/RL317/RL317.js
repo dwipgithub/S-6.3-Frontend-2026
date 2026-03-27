@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
@@ -46,6 +46,7 @@ export const RL317 = () => {
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
+  const [loadingRS, setLoadingRS] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -151,44 +152,6 @@ export const RL317 = () => {
 
       setRumahSakit(response.data.data);
     } catch (error) {}
-  };
-
-  const getValidasi = async () => {
-    setSpinner(true);
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          rsId: rumahSakit.id,
-          periode: tahun,
-        },
-      };
-      const results = await axiosJWT.get(
-        "/apisirs6v2/rltigatitiktujuhbelasvalidasi",
-        customConfig,
-      );
-
-      if (results.data.data != null && results.data.data.length > 0) {
-        setidValidasi(results.data.data[0].id);
-        setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
-        setKeteranganValidasi(results.data.data[0].catatan || "");
-        setTglValidasi(results.data.data[0].modifiedAt);
-        setIsValidated(results.data.data[0].statusValidasiId === 3);
-      } else {
-        setidValidasi("");
-        setStatusValidasi(1);
-        setKeteranganValidasi("");
-        setTglValidasi("");
-        setIsValidated(false);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-    setSpinner(false);
   };
 
   const getRL = async (e) => {
@@ -395,6 +358,44 @@ export const RL317 = () => {
     }
   };
 
+  const getValidasi = async () => {
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: tahun,
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiktujuhbelasvalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
+        setStatusValidasi(results.data.data[0].statusValidasiId);
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
   const statusValidasiChangeHadler = (e) => {
     setStatusValidasi(e.target.value);
   };
@@ -410,14 +411,15 @@ export const RL317 = () => {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
-    // if (statusValidasi == 1 && keteranganValidasi == "") {
-    if (Number(statusValidasi) === 1 && keteranganValidasi.trim() === "") {
+    if (statusValidasi == 1 && keteranganValidasi == "") {
       toast(`Keterangan tidak boleh kosong`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
@@ -451,17 +453,17 @@ export const RL317 = () => {
           customConfig,
         );
       }
-      setSpinner(false);
       toast("Data Berhasil Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
       });
-      // setIsValidated(statusValidasi == 3);
-      setIsValidated(Number(statusValidasi) === 3);
+      setIsValidated(statusValidasi == 3);
+      await getValidasi();
     } catch (error) {
       toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
         position: toast.POSITION.TOP_RIGHT,
       });
     }
+    setSpinner(false);
   };
 
   const [activeTab, setActiveTab] = useState("tab1");
@@ -804,7 +806,7 @@ export const RL317 = () => {
                       {dataRL.map((value, index) => {
                         return (
                           <tr key={value.id}>
-                            <td>
+                            {/* <td>
                               <input
                                 type="text"
                                 name="id"
@@ -812,11 +814,14 @@ export const RL317 = () => {
                                 value={value.no_golongan_obat}
                                 disabled={true}
                               />
+                            </td> */}
+                            <td className={style["sticky-column-view"]}>
+                              {index + 1}
                             </td>
                             {user.jenisUserId === 4 && (
                               <td className={style["sticky-column"]}>
-                                {value.no_golongan_obat != 4 &&
-                                value.no_golongan_obat != 2 ? (
+                                {value.no_golongan_obat !== 4 &&
+                                value.no_golongan_obat !== 2 ? (
                                   <div style={{ display: "flex" }}>
                                     {user.jenisUserId === 4 ? (
                                       <>
@@ -856,8 +861,8 @@ export const RL317 = () => {
                                 )}
                               </td>
                             )}
-                            <td>
-                              <center>{value.nama_golongan_obat}</center>
+                            <td style={{ textAlign: "left" }}>
+                              {value.nama_golongan_obat}
                             </td>
                             <td>
                               <center>{value.jumlah_item_obat}</center>

@@ -906,7 +906,12 @@ const RL316 = () => {
                                 }}
                               >
                                 <button
-                                  className="btn btn-sm btn-danger"
+                                  className="btn btn-danger"
+                                  style={{
+                                    margin: "0 5px 0 0",
+                                    backgroundColor: "#FF6663",
+                                    border: "1px solid #FF6663",
+                                  }}
                                   onClick={() => deleteConfirmation(value.id)}
                                 >
                                   Hapus
@@ -915,7 +920,13 @@ const RL316 = () => {
                                 {value.id_metoda != 9 && (
                                   <Link
                                     to={`/rl316/ubah/${value.id}`}
-                                    className="btn btn-sm btn-warning text-white"
+                                    className="btn btn-warning"
+                                    style={{
+                                      margin: "0 5px 0 0",
+                                      backgroundColor: "#CFD35E",
+                                      border: "1px solid #CFD35E",
+                                      color: "#FFFFFF",
+                                    }}
                                   >
                                     Ubah
                                   </Link>
@@ -924,9 +935,7 @@ const RL316 = () => {
                             </td>
                           )}
 
-                          <td className={style["sticky-column-view"]}>
-                            {value.nama}
-                          </td>
+                          <td style={{ textAlign: "left" }}>{value.nama}</td>
 
                           <td className="text-center">
                             {value.pelayanan_kb_paska_persalinan}
