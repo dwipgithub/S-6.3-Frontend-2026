@@ -35,6 +35,7 @@ const RL310 = () => {
 
   // untuk validasi
   const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
@@ -174,14 +175,6 @@ const RL310 = () => {
     showRumahSakit(rsId);
   };
 
-  const statusValidasiChangeHandler = (e) => {
-    setStatusValidasi(e.target.value);
-  };
-
-  const keteranganValidasiChangeHandler = (e) => {
-    setKeteranganValidasi(e.target.value);
-  };
-
   const getRumahSakit = async (kabKotaId) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
@@ -235,6 +228,7 @@ const RL310 = () => {
           Authorization: `Bearer ${token}`,
         },
         params: {
+          rsId: rumahSakit.id,
           tahun: tahun,
           bulan: bulan,
         },
@@ -261,46 +255,6 @@ const RL310 = () => {
     } catch (error) {
       console.log(error);
     }
-  };
-
-  const getValidasi = async () => {
-    if (!rumahSakit || !rumahSakit.id) {
-      return;
-    }
-    setSpinner(true);
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(bulan),
-        },
-      };
-      const results = await axiosJWT.get(
-        "/apisirs6v2/rltigatitiksepuluhvalidasi",
-        customConfig,
-      );
-
-      if (results.data.data != null && results.data.data.length > 0) {
-        setidValidasi(results.data.data[0].id);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
-        setKeteranganValidasi(results.data.data[0].catatan || "");
-        setTglValidasi(results.data.data[0].modifiedAt);
-        setIsValidated(results.data.data[0].statusValidasiId === 3);
-      } else {
-        setidValidasi("");
-        setStatusValidasi(1);
-        setKeteranganValidasi("");
-        setTglValidasi("");
-        setIsValidated(false);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-    setSpinner(false);
   };
 
   const hapusData = async (id) => {
@@ -477,64 +431,6 @@ const RL310 = () => {
     );
   });
 
-  const simpanValidasi = async (e) => {
-    e.preventDefault();
-    if (rumahSakit == null) {
-      toast(`Rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-
-    if (statusValidasi == 1 && keteranganValidasi == "") {
-      toast(`Keterangan tidak boleh kosong`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "XSRF-TOKEN": CSRFToken,
-        },
-      };
-
-      if (idValidasi != "") {
-        await axiosJWT.patch(
-          "/apisirs6v2/rltigatitiksepuluhvalidasi/" + idValidasi,
-          {
-            statusValidasiId: statusValidasi,
-            catatan: keteranganValidasi,
-          },
-          customConfig,
-        );
-      } else {
-        await axiosJWT.post(
-          "/apisirs6v2/rltigatitiksepuluhvalidasi",
-          {
-            rsId: rumahSakit.id,
-            periode: String(tahun).concat("-").concat(bulan),
-            statusValidasiId: statusValidasi,
-            catatan: keteranganValidasi,
-          },
-          customConfig,
-        );
-      }
-      toast("Data Berhasil Disimpan", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      getValidasi();
-      setIsValidated(statusValidasi == 3);
-    } catch (error) {
-      toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-    }
-  };
-
   function handleDownloadExcel() {
     const header = [
       "No",
@@ -584,6 +480,114 @@ const RL310 = () => {
       },
     });
   }
+
+  const getValidasi = async () => {
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: tahun,
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiksepuluhvalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
+        setStatusValidasi(results.data.data[0].statusValidasiId);
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    setSpinner(true);
+    e.preventDefault();
+    if (rumahSakit == null) {
+      toast(`Rumah sakit harus dipilih`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    if (statusValidasi == 1 && keteranganValidasi == "") {
+      toast(`Keterangan tidak boleh kosong`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+
+      if (idValidasi != "") {
+        await axiosJWT.patch(
+          "/apisirs6v2/rltigatitiksepuluhvalidasi/" + idValidasi,
+          {
+            statusValidasiId: statusValidasi,
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      } else {
+        await axiosJWT.post(
+          "/apisirs6v2/rltigatitiksepuluhvalidasi",
+          {
+            rsId: rumahSakit.id,
+            periode: `${tahun}-12-01`,
+            statusValidasiId: statusValidasi,
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      }
+      toast("Data Berhasil Disimpan", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setIsValidated(statusValidasi == 3);
+      await getValidasi();
+    } catch (error) {
+      toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    }
+    setSpinner(false);
+  };
 
   const [activeTab, setActiveTab] = useState("tab1");
 
@@ -828,7 +832,7 @@ const RL310 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -926,23 +930,27 @@ const RL310 = () => {
                       <tr className="main-header-row">
                         <th
                           className={style["sticky-header-view"]}
-                          style={{ width: "2%", verticalAlign: "middle" }}
+                          style={{ width: "4%", verticalAlign: "middle" }}
                           rowSpan={3}
                         >
-                          No
+                          No.
                         </th>
                         {user.jenisUserId === 4 && (
                           <th
                             className={style["sticky-header-view"]}
                             rowSpan="3"
-                            style={{ width: "8%", verticalAlign: "middle" }}
+                            style={{ width: "13%", verticalAlign: "middle" }}
                           >
                             Aksi
                           </th>
                         )}
                         <th
                           className={style["sticky-header-view"]}
-                          style={{ width: "20%", verticalAlign: "middle" }}
+                          style={{
+                            width: "20%",
+                            verticalAlign: "middle",
+                            textAlign: "center",
+                          }}
                           rowSpan={3}
                         >
                           Jenis Spesialisasi
@@ -951,7 +959,10 @@ const RL310 = () => {
                         <th
                           colSpan={4}
                           rowSpan={2}
-                          style={{ verticalAlign: "middle" }}
+                          style={{
+                            verticalAlign: "middle",
+                            textAlign: "center",
+                          }}
                         >
                           Dirujuk Keluar
                         </th>
@@ -981,7 +992,7 @@ const RL310 = () => {
                           {dataRL.map((value, index) => {
                             return (
                               <tr key={value.id}>
-                                <td className={style["sticky-column-view"]}>
+                                {/* <td className={style["sticky-column-view"]}>
                                   <input
                                     type="text"
                                     name="no"
@@ -993,173 +1004,119 @@ const RL310 = () => {
                                     }
                                     disabled={true}
                                   />
-                                </td>
-                                <td
-                                  className={style["sticky-column-view"]}
-                                  style={{
-                                    textAlign: "center",
-                                    verticalAlign: "middle",
-                                  }}
-                                >
-                                  <ToastContainer />
-                                  {/* <RiDeleteBin5Fill size={20} onClick={(e) => hapus(value.id)} style={{ color: "gray", cursor: "pointer", marginRight: "5px" }} /> */}
-                                  <button
-                                    className="btn btn-danger"
-                                    disabled={isValidated}
-                                    style={{
-                                      margin: "0 5px 0 0",
-                                      backgroundColor: "#FF6663",
-                                      border: "1px solid #FF6663",
-                                    }}
-                                    type="button"
-                                    onClick={(e) => hapus(value.id)}
-                                  >
-                                    Hapus
-                                  </button>
-                                  <Link
-                                    to={`/rl310/ubah/${value.id}`}
-                                    className="btn btn-warning"
-                                    style={{
-                                      margin: "0 5px 0 0",
-                                      backgroundColor: "#CFD35E",
-                                      border: "1px solid #CFD35E",
-                                      color: "#FFFFFF",
-                                    }}
-                                  >
-                                    Ubah
-                                    {/* <RiEdit2Fill size={20} style={{ color: "gray", cursor: "pointer" }} /> */}
-                                  </Link>
-                                </td>
+                                </td> */}
                                 <td className={style["sticky-column-view"]}>
-                                  <input
-                                    type="text"
-                                    name="nama"
-                                    className="form-control"
-                                    value={
-                                      value
-                                        .jenis_spesialis_rl_tiga_titik_sepuluh
-                                        .nama
-                                    }
-                                    disabled={true}
-                                  />
+                                  {/* {index + 1} */}
+                                  {
+                                    value.jenis_spesialis_rl_tiga_titik_sepuluh
+                                      .no
+                                  }
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="rm_diterima_puskesmas"
-                                    className="form-control"
-                                    value={value.rm_diterima_puskesmas}
-                                    disabled={true}
-                                  />
+                                {user.jenisUserId === 4 && (
+                                  <td
+                                    className={style["sticky-column"]}
+                                    style={{
+                                      textAlign: "center",
+                                      verticalAlign: "middle",
+                                    }}
+                                  >
+                                    {value.jenis_spesialis_rl_tiga_titik_sepuluh
+                                      ?.no !== 0 && (
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          justifyContent: "center",
+                                        }}
+                                      >
+                                        <button
+                                          className="btn btn-danger"
+                                          disabled={isValidated}
+                                          style={{
+                                            margin: "0 5px 0 0",
+                                            backgroundColor: "#FF6663",
+                                            border: "1px solid #FF6663",
+                                          }}
+                                          type="button"
+                                          onClick={() => hapus(value.id)}
+                                        >
+                                          Hapus
+                                        </button>
+
+                                        <Link
+                                          to={`/rl310/ubah/${value.id}`}
+                                          className="btn btn-warning"
+                                          style={{
+                                            margin: "0 5px 0 0",
+                                            backgroundColor: "#CFD35E",
+                                            border: "1px solid #CFD35E",
+                                            color: "#FFFFFF",
+                                          }}
+                                        >
+                                          Ubah
+                                        </Link>
+                                      </div>
+                                    )}
+                                  </td>
+                                )}
+                                <td style={{ textAlign: "left" }}>
+                                  {
+                                    value.jenis_spesialis_rl_tiga_titik_sepuluh
+                                      .nama
+                                  }
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="rm_diterima_rs"
-                                    className="form-control"
-                                    value={value.rm_diterima_rs}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.rm_diterima_puskesmas}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="rm_diterima_faskes_lain"
-                                    className="form-control"
-                                    value={value.rm_diterima_faskes_lain}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.rm_diterima_rs}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="rm_diterima_total_rm"
-                                    className="form-control"
-                                    value={value.rm_diterima_total_rm}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.rm_diterima_faskes_lain}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="rm_dikembalikan_puskesmas"
-                                    className="form-control"
-                                    value={value.rm_dikembalikan_puskesmas}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.rm_diterima_total_rm}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="rm_dikembalikan_rs"
-                                    className="form-control"
-                                    value={value.rm_dikembalikan_rs}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.rm_dikembalikan_puskesmas}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="rm_dikembalikan_faskes_lain"
-                                    className="form-control"
-                                    value={value.rm_dikembalikan_faskes_lain}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.rm_dikembalikan_rs}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="rm_dikembalikan_total_rm"
-                                    className="form-control"
-                                    value={value.rm_dikembalikan_total_rm}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.rm_dikembalikan_faskes_lain}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="keluar_pasien_rujukan"
-                                    className="form-control"
-                                    value={value.keluar_pasien_rujukan}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.rm_dikembalikan_total_rm}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="keluar_pasien_datang_sendiri"
-                                    className="form-control"
-                                    value={value.keluar_pasien_datang_sendiri}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.keluar_pasien_rujukan}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="keluar_total_keluar"
-                                    className="form-control"
-                                    value={value.keluar_total_keluar}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.keluar_pasien_datang_sendiri}
                                 </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    name="keluar_diterima_kembali"
-                                    className="form-control"
-                                    value={value.keluar_diterima_kembali}
-                                    disabled={true}
-                                  />
+                                <td style={{ textAlign: "center" }}>
+                                  {value.keluar_total_keluar}
+                                </td>
+                                <td style={{ textAlign: "center" }}>
+                                  {value.keluar_diterima_kembali}
                                 </td>
                               </tr>
                             );
                           })}
-                          <tr>
-                            <td></td>
-                            <td></td>
-                            <td className={style["sticky-column-view"]}>
-                              <strong>Total</strong>
+                          <tr
+                            style={{
+                              fontWeight: "bold",
+                              backgroundColor: "#f5f5f5",
+                            }}
+                          >
+                            <td
+                              colSpan={user.jenisUserId === 4 ? 3 : 2}
+                              className={style["sticky-column-view"]}
+                              style={{ textAlign: "center" }}
+                            >
+                              TOTAL
                             </td>
+
                             <td className="text-center">
                               {total.rm_diterima_puskesmas}
                             </td>
@@ -1246,9 +1203,9 @@ const RL310 = () => {
                         Status
                       </strong>
                       :{" "}
-                      {statusValidasi == 1
+                      {idValidasiSubmited == 1
                         ? "Perlu Perbaikan"
-                        : statusValidasi == 2
+                        : idValidasiSubmited == 2
                           ? "Selesai Diperbaiki"
                           : "Disetujui"}
                     </p>
@@ -1288,7 +1245,7 @@ const RL310 = () => {
                         textAlign: "center",
                       }}
                     >
-                      <strong>Data Belum di Validasi</strong>
+                      <strong>Data Belum Divalidasi</strong>
                     </div>
                   )
                 )}
@@ -1306,7 +1263,7 @@ const RL310 = () => {
                       }}
                     >
                       <div className="text-center">
-                        <strong>Data telah di validasi</strong>
+                        <strong>Data Telah Divalidasi</strong>
                       </div>
                     </div>
                   ) : (
@@ -1322,7 +1279,7 @@ const RL310 = () => {
                             name="statusValidasi"
                             value={statusValidasi}
                             required
-                            onChange={(e) => statusValidasiChangeHandler(e)}
+                            onChange={(e) => statusValidasiChangeHadler(e)}
                           >
                             {user.jenisUserId === 4 ? (
                               <>
@@ -1332,25 +1289,32 @@ const RL310 = () => {
                             ) : (
                               <>
                                 <option value="1">Perlu Perbaikan</option>
-                                <option value="2">Selesai Diperbaiki</option>
                                 <option value="3">Disetujui</option>
                               </>
                             )}
                           </select>
                         </div>
 
-                        <div className={style.validasiFormGroup}>
-                          <label htmlFor="keteranganValidasi">Catatan</label>
-                          <textarea
-                            id="keteranganValidasi"
-                            name="keteranganValidasi"
-                            value={keteranganValidasi}
-                            onChange={(e) => keteranganValidasiChangeHandler(e)}
-                            placeholder="Tambahkan catatan (opsional)"
-                            rows={4}
-                            disabled={user.jenisUserId === 4}
-                          />
-                        </div>
+                        {user.jenisUserId === 3 ? (
+                          <>
+                            <div className={style.validasiFormGroup}>
+                              <label htmlFor="keteranganValidasi">
+                                Catatan
+                              </label>
+                              <textarea
+                                id="keteranganValidasi"
+                                name="keteranganValidasi"
+                                value={keteranganValidasi}
+                                onChange={(e) =>
+                                  keteranganValidasiChangeHadler(e)
+                                }
+                                placeholder="Tambahkan catatan (opsional)"
+                                rows={4}
+                                disabled={user.jenisUserId === 4}
+                              />
+                            </div>
+                          </>
+                        ) : null}
 
                         <button type="submit" className={style.btnPrimary}>
                           <HiSaveAs size={20} /> Simpan

@@ -8,10 +8,6 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
-import Table from "react-bootstrap/Table";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
-import Button from "react-bootstrap/Button";
 import { Link } from "react-router-dom";
 import { Spinner, Modal } from "react-bootstrap";
 import { downloadExcel } from "react-export-table-to-excel";
@@ -37,6 +33,7 @@ const RL314 = () => {
 
   // untuk validasi
   const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
@@ -213,117 +210,6 @@ const RL314 = () => {
     showRumahSakit(rsId);
   };
 
-  const statusValidasiChangeHandler = (e) => {
-    setStatusValidasi(e.target.value);
-  };
-
-  const keteranganValidasiChangeHandler = (e) => {
-    setKeteranganValidasi(e.target.value);
-  };
-
-  const getValidasi = async () => {
-    if (!rumahSakit || !rumahSakit.id) {
-      return;
-    }
-    setSpinner(true);
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(bulan),
-        },
-      };
-      const results = await axiosJWT.get(
-        "/apisirs6v2/rltigatitikduabelasvalidasi",
-        customConfig,
-      );
-
-      if (results.data.data != null && results.data.data.length > 0) {
-        setidValidasi(results.data.data[0].id);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
-        setKeteranganValidasi(results.data.data[0].catatan || "");
-        setTglValidasi(results.data.data[0].modifiedAt);
-        setIsValidated(results.data.data[0].statusValidasiId === 3);
-      } else {
-        setidValidasi("");
-        setStatusValidasi(1);
-        setKeteranganValidasi("");
-        setTglValidasi("");
-        setIsValidated(false);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-    setSpinner(false);
-  };
-
-  const simpanValidasi = async (e) => {
-    e.preventDefault();
-    if (!rumahSakit || !rumahSakit.id) {
-      toast(`Rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-
-    if (statusValidasi === 1 && keteranganValidasi === "") {
-      toast(`Keterangan tidak boleh kosong`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "XSRF-TOKEN": CSRFToken,
-        },
-      };
-
-      if (idValidasi != "") {
-        await axiosJWT.patch(
-          "/apisirs6v2/rltigatitikduabelasvalidasi/" + idValidasi,
-          {
-            statusValidasiId: statusValidasi,
-            catatan: keteranganValidasi,
-          },
-          customConfig,
-        );
-      } else {
-        await axiosJWT.post(
-          "/apisirs6v2/rltigatitikduabelasvalidasi",
-          {
-            rsId: rumahSakit.id,
-            periode: String(tahun).concat("-").concat(bulan),
-            statusValidasiId: statusValidasi,
-            catatan: keteranganValidasi,
-          },
-          customConfig,
-        );
-      }
-      toast("Data Berhasil Disimpan", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      getValidasi();
-      setIsValidated(statusValidasi === 3);
-    } catch (error) {
-      toast(
-        `Data tidak bisa disimpan karena ${
-          error.response?.data?.message || "Terjadi kesalahan"
-        }`,
-        {
-          position: toast.POSITION.TOP_RIGHT,
-        },
-      );
-    }
-  };
-
   const getRumahSakit = async (kabKotaId) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
@@ -354,7 +240,7 @@ const RL314 = () => {
     let date = tahun + "-" + bulan + "-01";
     e.preventDefault();
     if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
+      toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
@@ -439,15 +325,16 @@ const RL314 = () => {
 
         const newData = [...below15Above16, ...restOfData];
         setDataRL(newData);
-        setRumahSakit(null);
+        // setRumahSakit(null);
         handleClose();
         setSpinner(false);
       } else {
         setDataRL(rlTigaTitikEmpatBelasDetails);
-        setRumahSakit(null);
+        // setRumahSakit(null);
         handleClose();
         setSpinner(false);
       }
+      setIsFilterApplied(true);
     } catch (error) {
       console.log(error);
     }
@@ -566,10 +453,118 @@ const RL314 = () => {
     });
   };
 
+  const getValidasi = async () => {
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: tahun,
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rltigatitikempatbelasvalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
+        setStatusValidasi(results.data.data[0].statusValidasiId);
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    setSpinner(true);
+    e.preventDefault();
+    if (rumahSakit == null) {
+      toast(`Rumah sakit harus dipilih`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    if (statusValidasi == 1 && keteranganValidasi == "") {
+      toast(`Keterangan tidak boleh kosong`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+
+      if (idValidasi != "") {
+        await axiosJWT.patch(
+          "/apisirs6v2/rltigatitikempatbelasvalidasi/" + idValidasi,
+          {
+            statusValidasiId: statusValidasi,
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      } else {
+        await axiosJWT.post(
+          "/apisirs6v2/rltigatitikempatbelasvalidasi",
+          {
+            rsId: rumahSakit.id,
+            periode: `${tahun}-12-01`,
+            statusValidasiId: statusValidasi,
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      }
+      toast("Data Berhasil Disimpan", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setIsValidated(statusValidasi == 3);
+      await getValidasi();
+    } catch (error) {
+      toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    }
+    setSpinner(false);
+  };
+
   const [activeTab, setActiveTab] = useState("tab1");
 
   const handleTabClick = (tab) => {
-    if (tab === "tab2" && rumahSakit?.id) {
+    if (tab === "tab2") {
       getValidasi();
     }
     setActiveTab(tab);
@@ -813,7 +808,7 @@ const RL314 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -901,163 +896,132 @@ const RL314 = () => {
                   activeTab === "tab1" ? "show active" : ""
                 }`}
               >
-                <div className={style["table-container"]}>
-                  <table
-                    className={style["table"]}
-                    ref={tableRef}
-                    style={{ width: "100%", tableLayout: "fixed" }}
-                  >
-                    <thead className={style["thead"]}>
-                      <tr className="main-header-row">
-                        <th
-                          className={style["sticky-header-view"]}
-                          style={{ width: "5%" }}
-                        >
-                          No.
-                        </th>
+                <div className={style.tableContainer}>
+                  <table className={`table table-bordered ${style.table}`}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: "5%", textAlign: "center" }}>No</th>
 
-                        <th
-                          className={style["sticky-header-view"]}
-                          style={{ width: "20%" }}
-                        >
+                        <th style={{ width: "15%", textAlign: "center" }}>
                           Aksi
                         </th>
 
-                        <th
-                          className={style["sticky-header-view"]}
-                          style={{ width: "50%" }}
-                        >
-                          Jenis Kegiatan
-                        </th>
+                        <th style={{ textAlign: "center" }}>Jenis Kegiatan</th>
 
-                        <th
-                          className={style["sticky-header-view"]}
-                          style={{ width: "20%" }}
-                        >
-                          Jumlah
-                        </th>
+                        <th style={{ textAlign: "center" }}>Jumlah</th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {dataRL.map((value, index) => {
                         return value.no === "16" ? (
+                          /* ROW KHUSUS (SUMMARY) */
                           <tr
-                            style={{
-                              textAlign: "center",
-                              backgroundColor: "#90C8AC",
-                            }}
                             key={value.jenisKegiatanRLTigaTitikEmpatBelasId}
+                            style={{ backgroundColor: "#90C8AC" }}
                           >
-                            <td
-                              style={{
-                                textAlign: "left",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              {value.no}
-                            </td>
-                            <td colSpan={2}>
-                              {value.namaJenisKegiatan} <br /> (Hasil
-                              Penjumlahan dari Nomor Kegiatan 16.1, 16.2, 16.3,
-                              16.4, 16.5)
-                            </td>
-                            <td>{value.jumlah}</td>
-                          </tr>
-                        ) : (
-                          <tr key={value.jenisKegiatanRLTigaTitikEmpatBelasId}>
-                            <td
-                              style={{
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
+                            <td className={style["sticky-column-view"]}>
                               {value.no}
                             </td>
 
-                            {user.jenisUserId === 4 && (
-                              <td
-                                className={style["sticky-column-view"]}
-                                style={{
-                                  textAlign: "center",
-                                  verticalAlign: "middle",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    alignItems: "center",
-                                    width: "100%",
-                                  }}
-                                >
-                                  <button
-                                    className="btn btn-danger"
-                                    style={{
-                                      margin: "0 5px 0 0",
-                                      backgroundColor: "#FF6663",
-                                      border: "1px solid #FF6663",
-                                    }}
-                                    type="button"
-                                    onClick={(e) => hapus(value.id)}
-                                  >
-                                    Hapus
-                                  </button>
-                                  {value.icd.icd_code != 0 && (
-                                    <Link
-                                      to={`/rl41/ubah/${value.id}`}
-                                      className="btn btn-warning"
-                                      style={{
-                                        margin: "0 5px 0 0",
-                                        backgroundColor: "#CFD35E",
-                                        border: "1px solid #CFD35E",
-                                        color: "#FFFFFF",
-                                      }}
-                                    >
-                                      Ubah
-                                    </Link>
-                                  )}
-                                </div>
-                              </td>
-                            )}
+                            <td></td>
+
                             <td
-                              style={{
-                                textAlign: "left",
-                                verticalAlign: "middle",
-                              }}
+                              style={{ textAlign: "left", fontWeight: "bold" }}
                             >
                               {value.namaJenisKegiatan}
+                              <br />
+                              <small>
+                                (Hasil Penjumlahan dari 16.1 - 16.5)
+                              </small>
                             </td>
+
                             <td
                               style={{
                                 textAlign: "center",
-                                verticalAlign: "middle",
+                                fontWeight: "bold",
                               }}
                             >
                               {value.jumlah}
                             </td>
                           </tr>
+                        ) : (
+                          /* ROW NORMAL */
+                          <tr key={value.jenisKegiatanRLTigaTitikEmpatBelasId}>
+                            {/* NO */}
+                            <td className={style["sticky-column-view"]}>
+                              {value.no}
+                            </td>
+
+                            {/* AKSI */}
+                            <td className={style["sticky-column"]}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <button
+                                  className="btn btn-danger"
+                                  style={{
+                                    margin: "0 5px 0 0",
+                                    backgroundColor: "#FF6663",
+                                    border: "1px solid #FF6663",
+                                  }}
+                                  onClick={() => hapus(value.id)}
+                                >
+                                  Hapus
+                                </button>
+
+                                {value.no != 0 && (
+                                  <Link
+                                    to={`/rl314/ubah/${value.id}`}
+                                    className="btn btn-warning"
+                                    style={{
+                                      margin: "0 5px 0 0",
+                                      backgroundColor: "#CFD35E",
+                                      border: "1px solid #CFD35E",
+                                      color: "#FFFFFF",
+                                    }}
+                                  >
+                                    Ubah
+                                  </Link>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* NAMA */}
+                            <td style={{ textAlign: "left" }}>
+                              {value.namaJenisKegiatan}
+                            </td>
+
+                            {/* JUMLAH */}
+                            <td style={{ textAlign: "center" }}>
+                              {value.jumlah}
+                            </td>
+                          </tr>
                         );
                       })}
-                      <tr
-                        style={{
-                          textAlign: "right",
-                          fontWeight: "bold",
-                          color: "BLACK",
-                        }}
-                      >
-                        <td colSpan={3}>TOTAL : </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          {total}
-                        </td>
-                      </tr>
+
+                      {/* TOTAL */}
+                      {dataRL.length > 0 && (
+                        <tr>
+                          <td
+                            colSpan={3}
+                            style={{ textAlign: "center", fontWeight: "bold" }}
+                          >
+                            TOTAL
+                          </td>
+
+                          <td style={{ textAlign: "center" }}>{total}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
             </div>
+
             <div
               className={`tab-pane fade ${
                 activeTab === "tab2" ? "show active" : ""
@@ -1097,9 +1061,9 @@ const RL314 = () => {
                         Status
                       </strong>
                       :{" "}
-                      {statusValidasi === 1
+                      {idValidasiSubmited == 1
                         ? "Perlu Perbaikan"
-                        : statusValidasi === 2
+                        : idValidasiSubmited == 2
                           ? "Selesai Diperbaiki"
                           : "Disetujui"}
                     </p>
@@ -1139,7 +1103,7 @@ const RL314 = () => {
                         textAlign: "center",
                       }}
                     >
-                      <strong>Data Belum di Validasi</strong>
+                      <strong>Data Belum Divalidasi</strong>
                     </div>
                   )
                 )}
@@ -1157,7 +1121,7 @@ const RL314 = () => {
                       }}
                     >
                       <div className="text-center">
-                        <strong>Data telah di validasi</strong>
+                        <strong>Data Telah Divalidasi</strong>
                       </div>
                     </div>
                   ) : (
@@ -1173,7 +1137,7 @@ const RL314 = () => {
                             name="statusValidasi"
                             value={statusValidasi}
                             required
-                            onChange={(e) => statusValidasiChangeHandler(e)}
+                            onChange={(e) => statusValidasiChangeHadler(e)}
                           >
                             {user.jenisUserId === 4 ? (
                               <>
@@ -1183,25 +1147,32 @@ const RL314 = () => {
                             ) : (
                               <>
                                 <option value="1">Perlu Perbaikan</option>
-                                <option value="2">Selesai Diperbaiki</option>
                                 <option value="3">Disetujui</option>
                               </>
                             )}
                           </select>
                         </div>
 
-                        <div className={style.validasiFormGroup}>
-                          <label htmlFor="keteranganValidasi">Catatan</label>
-                          <textarea
-                            id="keteranganValidasi"
-                            name="keteranganValidasi"
-                            value={keteranganValidasi}
-                            onChange={(e) => keteranganValidasiChangeHandler(e)}
-                            placeholder="Tambahkan catatan (opsional)"
-                            rows={4}
-                            disabled={user.jenisUserId === 4}
-                          />
-                        </div>
+                        {user.jenisUserId === 3 ? (
+                          <>
+                            <div className={style.validasiFormGroup}>
+                              <label htmlFor="keteranganValidasi">
+                                Catatan
+                              </label>
+                              <textarea
+                                id="keteranganValidasi"
+                                name="keteranganValidasi"
+                                value={keteranganValidasi}
+                                onChange={(e) =>
+                                  keteranganValidasiChangeHadler(e)
+                                }
+                                placeholder="Tambahkan catatan (opsional)"
+                                rows={4}
+                                disabled={user.jenisUserId === 4}
+                              />
+                            </div>
+                          </>
+                        ) : null}
 
                         <button type="submit" className={style.btnPrimary}>
                           <HiSaveAs size={20} /> Simpan

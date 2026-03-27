@@ -221,7 +221,7 @@
 .table tbody td.sticky-column:nth-child(2) {
   position: -webkit-sticky; /* For Safari */
   position: sticky;
-  left: 80px;
+  left: 50px;
   z-index: 2;
 }
 

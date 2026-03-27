@@ -10,7 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
-import Table from "react-bootstrap/Table";
+// import Table from "react-bootstrap/Table";
 import { DownloadTableExcel } from "react-export-table-to-excel";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
@@ -28,16 +28,18 @@ const RL311 = () => {
   const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
   const [totalall, settotalall] = useState(0);
+  const [spinner, setSpinner] = useState(false);
   const navigate = useNavigate();
   const tableRef = useRef(null);
   const [namafile, setNamaFile] = useState("");
+
   const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
-  const [spinner, setSpinner] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -310,43 +312,6 @@ const RL311 = () => {
     }
   };
 
-  const getValidasi = async () => {
-    setSpinner(true);
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          rsId: rumahSakit.id,
-          periode: tahun,
-        },
-      };
-      const results = await axiosJWT.get(
-        "/apisirs6v2/rltigatitiksebelasvalidasi",
-        customConfig,
-      );
-
-      if (results.data.data != null && results.data.data.length > 0) {
-        setidValidasi(results.data.data[0].id);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
-        setKeteranganValidasi(results.data.data[0].catatan || "");
-        setTglValidasi(results.data.data[0].modifiedAt);
-        setIsValidated(results.data.data[0].statusValidasiId === 3);
-      } else {
-        setidValidasi("");
-        setStatusValidasi(1);
-        setKeteranganValidasi("");
-        setTglValidasi("");
-        setIsValidated(false);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-    setSpinner(false);
-  };
-
   function handleDownloadExcel() {
     const header = ["No", "Jenis Kegiatan", "Jumlah"];
 
@@ -374,6 +339,44 @@ const RL311 = () => {
     });
   }
 
+  const getValidasi = async () => {
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: tahun,
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiksebelasvalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
+        setStatusValidasi(results.data.data[0].statusValidasiId);
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
   const statusValidasiChangeHadler = (e) => {
     setStatusValidasi(e.target.value);
   };
@@ -389,6 +392,7 @@ const RL311 = () => {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
@@ -396,6 +400,7 @@ const RL311 = () => {
       toast(`Keterangan tidak boleh kosong`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
 
@@ -429,7 +434,6 @@ const RL311 = () => {
           customConfig,
         );
       }
-      setSpinner(false);
       toast("Data Berhasil Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -440,6 +444,7 @@ const RL311 = () => {
         position: toast.POSITION.TOP_RIGHT,
       });
     }
+    setSpinner(false);
   };
 
   const [activeTab, setActiveTab] = useState("tab1");
@@ -450,7 +455,6 @@ const RL311 = () => {
     }
     setActiveTab(tab);
   };
-
   return (
     <div
       className="container"
@@ -664,8 +668,8 @@ const RL311 = () => {
           </Modal.Body>
           <Modal.Footer>
             <div className="mt-3 mb-3">
-              <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              {/* <ToastContainer /> */}
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -728,13 +732,7 @@ const RL311 = () => {
                   Data
                 </button>
               </li>
-              {user.jenisUserId === 1 ||
-              user.jenisUserId === 2 ||
-              user.jenisUserId === 3 ||
-              user.jenisUserId === 4 ? (
-                //   &&
-                // dataRL.length > 0 &&
-                // rumahSakit != null
+              {[1, 2, 3, 4].includes(user.jenisUserId) && (
                 <li className={`nav-item ${style.navItem}`}>
                   <button
                     type="button"
@@ -744,7 +742,7 @@ const RL311 = () => {
                     Validasi
                   </button>
                 </li>
-              ) : null}
+              )}
             </ul>
 
             <div className={`tab-content ${style.tabContent}`}>
@@ -763,9 +761,9 @@ const RL311 = () => {
                       <tr className="main-header-row">
                         <th style={{ width: "5%" }}>No</th>
                         {user.jenisUserId === 4 && (
-                          <th style={{ width: "18%" }}>Aksi</th>
+                          <th style={{ width: "13%" }}>Aksi</th>
                         )}
-                        <th>Jenis Kegiatan</th>
+                        <th style={{ textAlign: "center" }}>Jenis Kegiatan</th>
                         <th style={{ width: "15%" }}>Jumlah</th>
                       </tr>
                     </thead>
@@ -806,7 +804,9 @@ const RL311 = () => {
                             </td>
                           )}
 
-                          <td>{value.nama_jenis_kegiatan}</td>
+                          <td style={{ textAlign: "left" }}>
+                            {value.nama_jenis_kegiatan}
+                          </td>
 
                           <td className="text-center">{value.jumlah}</td>
                         </tr>
@@ -831,7 +831,7 @@ const RL311 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Validasi RL 3.11</h3>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.18</h3>
                   {!isFilterApplied ? (
                     <div
                       style={{
@@ -864,9 +864,9 @@ const RL311 = () => {
                           Status
                         </strong>
                         :{" "}
-                        {statusValidasi == 1
+                        {idValidasiSubmited == 1
                           ? "Perlu Perbaikan"
-                          : statusValidasi == 2
+                          : idValidasiSubmited == 2
                             ? "Selesai Diperbaiki"
                             : "Disetujui"}
                       </p>
@@ -950,27 +950,32 @@ const RL311 = () => {
                               ) : (
                                 <>
                                   <option value="1">Perlu Perbaikan</option>
-                                  <option value="2">Selesai Diperbaiki</option>
                                   <option value="3">Disetujui</option>
                                 </>
                               )}
                             </select>
                           </div>
 
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="keteranganValidasi">Catatan</label>
-                            <textarea
-                              id="keteranganValidasi"
-                              name="keteranganValidasi"
-                              value={keteranganValidasi}
-                              onChange={(e) =>
-                                keteranganValidasiChangeHadler(e)
-                              }
-                              placeholder="Tambahkan catatan (opsional)"
-                              rows={4}
-                              disabled={user.jenisUserId === 4}
-                            />
-                          </div>
+                          {user.jenisUserId === 3 ? (
+                            <>
+                              <div className={style.validasiFormGroup}>
+                                <label htmlFor="keteranganValidasi">
+                                  Catatan
+                                </label>
+                                <textarea
+                                  id="keteranganValidasi"
+                                  name="keteranganValidasi"
+                                  value={keteranganValidasi}
+                                  onChange={(e) =>
+                                    keteranganValidasiChangeHadler(e)
+                                  }
+                                  placeholder="Tambahkan catatan (opsional)"
+                                  rows={4}
+                                  disabled={user.jenisUserId === 4}
+                                />
+                              </div>
+                            </>
+                          ) : null}
 
                           <button type="submit" className={style.btnPrimary}>
                             <HiSaveAs size={20} /> Simpan
