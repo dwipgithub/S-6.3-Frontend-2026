@@ -649,6 +649,7 @@ function TabOne() {
         position: toast.POSITION.TOP_RIGHT,
       });
       setIsValidated(statusValidasi == 3);
+      await getValidasi();
     } catch (error) {
       toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
         position: toast.POSITION.TOP_RIGHT,
