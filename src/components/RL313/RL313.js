@@ -819,12 +819,13 @@ const RL313 = () => {
 
                       {dataRL.length > 0 && (
                         <tr className="table-light fw-bold">
-                          <td className="text-center">99</td>
-                          {user.jenisUserId === 4 && <td></td>}
-                          <td className="text-center" colSpan="2">
-                            Total
+                          <td
+                            colSpan={user.jenisUserId === 4 ? 4 : 3}
+                            className="text-center"
+                          >
+                            TOTAL
                           </td>
-                          <td style={{ textAlign: "center" }}>{totalall}</td>
+                          <td className="text-center">{totalall}</td>
                         </tr>
                       )}
                     </tbody>
