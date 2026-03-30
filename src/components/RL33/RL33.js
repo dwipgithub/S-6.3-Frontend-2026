@@ -943,7 +943,7 @@ const getDataRLTigaTitikTiga = async (e) => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -1034,21 +1034,26 @@ const getDataRLTigaTitikTiga = async (e) => {
                 <thead className={style.thead}>
                 <tr>
                   <th
-                    style={{ width: "4%" }}
+                    style={{ width: "2%" }}
                     rowSpan={2}
                     className={style["sticky-header"]}
                   >
-                    No Pelayanan
+                    No.
                   </th>
-                  <th
+                  {user.jenisUserId === 4
+                   ? <th
                     style={{ width: "7%" }}
                     rowSpan={2}
                     className={style["sticky-header"]}
                   >
                     Aksi
                   </th>
+                  : <>
+                                      
+                                    </>
+                                }
                   <th
-                    style={{ width: "20%" }}
+                    style={{ width: "13%", textAlign: "center" }}
                     rowSpan={2}
                     className={style["sticky-header"]}
                   >
@@ -1090,17 +1095,12 @@ const getDataRLTigaTitikTiga = async (e) => {
                         return (
                           <tr key={value.id}>
                             <td className={style["sticky-column"]}>
-                              <input
-                                type="text"
-                                name="no"
-                                className="form-control"
-                                value={
+                              {
                                   value.jenis_pelayanan_rl_tiga_titik_tiga.no
                                 }
-                                disabled={true}
-                              />
                             </td>
-                            <td
+                            {user.jenisUserId === 4
+                            ? <td
                               className={style["sticky-column"]}
                               style={{
                                 textAlign: "center",
@@ -1142,131 +1142,65 @@ const getDataRLTigaTitikTiga = async (e) => {
                                 ""
                               )}
                             </td>
-                            <td className={style["sticky-column"]}>
-                              <input
-                                type="text"
-                                name="jenisKegiatan"
-                                className="form-control"
-                                value={
+                            : <>
+                                      
+                                    </>
+                                }
+                            <td className={style["sticky-column"]}
+                            style={{ textAlign: "Left" }}
+                            >
+                              {
                                   value.jenis_pelayanan_rl_tiga_titik_tiga.nama
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="total_pasien_rujukan"
-                                className="form-control"
-                                value={value.total_pasien_rujukan}
-                                disabled={true}
-                              />
+                              {value.total_pasien_rujukan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="total_pasien_non_rujukan"
-                                className="form-control"
-                                value={value.total_pasien_non_rujukan}
-                                disabled={true}
-                              />
+                              {value.total_pasien_non_rujukan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="tlp_dirawat"
-                                className="form-control"
-                                value={value.tlp_dirawat}
-                                disabled={true}
-                              />
+                              {value.tlp_dirawat}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="tlp_dirujuk"
-                                className="form-control"
-                                value={value.tlp_dirujuk}
-                                disabled={true}
-                              />
+                              {value.tlp_dirujuk}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="tlp_pulang"
-                                className="form-control"
-                                value={value.tlp_pulang}
-                                disabled={true}
-                              />
+                              {value.tlp_pulang}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="m_igd_laki"
-                                className="form-control"
-                                value={value.m_igd_laki}
-                                disabled={true}
-                              />
+                              {value.m_igd_laki}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="m_igd_perempuan"
-                                className="form-control"
-                                value={value.m_igd_perempuan}
-                                disabled={true}
-                              />
+                              {value.m_igd_perempuan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="doa_laki"
-                                className="form-control"
-                                value={value.doa_laki}
-                                disabled={true}
-                              />
+                              {value.doa_laki}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="doa_perempuan"
-                                className="form-control"
-                                value={value.doa_perempuan}
-                                disabled={true}
-                              />
+                              {value.doa_perempuan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="luka_laki"
-                                className="form-control"
-                                value={value.luka_laki}
-                                disabled={true}
-                              />
+                              {value.luka_laki}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="luka_perempuan"
-                                className="form-control"
-                                value={value.luka_perempuan}
-                                disabled={true}
-                              />
+                              {value.luka_perempuan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="false_emergency"
-                                className="form-control"
-                                value={value.false_emergency}
-                                disabled={true}
-                              />
+                              {value.false_emergency}
                             </td>
                           </tr>
                         );
                       })}
                     <tr className="row-total">
                       <td></td>
+                      {user.jenisUserId === 4
+                        ?
                       <td></td>
+                        : <>
+                                      
+                                    </>
+                                }
                       <td
                         // colSpan={3}
                         style={{ textAlign: "center" }}
@@ -1307,7 +1241,7 @@ const getDataRLTigaTitikTiga = async (e) => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                    <h3 className={style.validasiCardTitle}>Validasi RL 3.2</h3>
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.3</h3>
 
                     {/* =========================
                         1️⃣ DATA RL KOSONG
@@ -1321,7 +1255,7 @@ const getDataRLTigaTitikTiga = async (e) => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Data belum tersedia untuk proses validasi.</strong>
+                        <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
                       </div>
 
                     /* =========================
@@ -1413,7 +1347,7 @@ const getDataRLTigaTitikTiga = async (e) => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Validasi telah disetujui dan tidak dapat diubah.</strong>
+                        <strong>Data telah divalidasi.</strong>
                       </div>
 
                         ) : (

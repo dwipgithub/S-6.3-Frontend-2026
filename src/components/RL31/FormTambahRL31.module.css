@@ -41,6 +41,36 @@
   margin-bottom: 1rem;
 }
 
+.navTabs {
+  border-bottom: 2px solid #e2e8f0;
+  gap: 0;
+}
+
+.navTabs .navItem {
+  margin-bottom: -2px;
+}
+
+.navTabs .navLink {
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: #64748b;
+  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.navTabs .navLink:hover {
+  color: #475569;
+}
+
+.navTabs .navLink.active,
+.navLink.active {
+  color: #475569;
+  border-bottom-color: #00B9AD;
+}
+
 /* ========== Excel-like table container ========== */
 .table-container {
   max-height: 520px;
@@ -51,6 +81,7 @@
   background: #fff;
 }
 
+/* ========== Excel-like table ========== */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -101,41 +132,173 @@
 .table thead th.sticky-header:nth-child(1),
 .table thead th.sticky-header:nth-child(2),
 .table thead th.sticky-header:nth-child(3) {
-  position: -webkit-sticky; /* For Safari */
+  position: -webkit-sticky;
   position: sticky;
   left: 0;
-  z-index: 3; /* Above both header and body content */
+  z-index: 3;
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
 }
 
-.table tbody td {
-  background-color: #fbfefe;
+.table .subheader-row th.sticky-header:nth-child(1),
+.table .subheader-row th.sticky-header:nth-child(2),
+.table .subheader-row th.sticky-header:nth-child(3) {
+  background: #e9edf4;
+}
+
+.table .sticky-header {
   position: -webkit-sticky;
   position: sticky;
   top: 0;
   z-index: 2;
+}
+
+.table tbody td {
+  background-color: #fff;
   text-align: center;
   vertical-align: middle;
+}
+
+.table tbody tr:nth-child(even) td {
+  background-color: #f9fafb;
+}
+
+.table tbody tr:hover td {
+  background-color: #f0f7ff;
 }
 
 .table tbody td.sticky-column:nth-child(1),
 .table tbody td.sticky-column:nth-child(2),
 .table tbody td.sticky-column:nth-child(3) {
-  position: -webkit-sticky; /* For Safari */
+  position: -webkit-sticky;
   position: sticky;
   left: 0;
-  z-index: 3; /* Above both header and body content */
+  z-index: 2;
+  background: #fff;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
 }
 
-.table .sticky-header {
-  position: -webkit-sticky; /* For Safari */
-  position: sticky;
-  top: 0; /* Sticky header */
-  z-index: 2; /* Above table content */
+.table tbody tr:nth-child(even) td.sticky-column:nth-child(1),
+.table tbody tr:nth-child(even) td.sticky-column:nth-child(2),
+.table tbody tr:nth-child(even) td.sticky-column:nth-child(3) {
+  background: #f9fafb;
+}
+
+.table tbody tr:hover td.sticky-column:nth-child(1),
+.table tbody tr:hover td.sticky-column:nth-child(2),
+.table tbody tr:hover td.sticky-column:nth-child(3) {
+  background: #f0f7ff;
 }
 
 .table .sticky-column {
-  position: -webkit-sticky; /* For Safari */
+  position: -webkit-sticky;
   position: sticky;
   left: 0;
-  z-index: 1; /* Ensures sticky column is above other content */
+  z-index: 1;
+}
+
+/* Inputs inside table - Excel-like cells */
+.table .form-control {
+  border: 1px solid #d4d4d4;
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+  min-height: 32px;
+  padding: 4px 6px;
+  background: #fff;
+}
+
+.table .form-control:focus {
+  border-color: #4472c4;
+  box-shadow: 0 0 0 2px rgba(68, 114, 196, 0.2);
+}
+
+.table .form-control:disabled {
+  background: #f2f2f2;
+  color: #333;
+  cursor: default;
+}
+
+/* Tab content area */
+.tabContent {
+  margin-top: 1rem;
+}
+
+/* ========== Form Validasi (tab Validasi) ========== */
+.validasiCard {
+  max-width: 520px;
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  /* font-family: 'Times New Roman', Times, serif; */
+  font-size: 0.95rem;
+}
+
+.validasiCardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #00B9AD;
+}
+
+.validasiFormGroup {
+  margin-bottom: 0.6rem;
+}
+
+.validasiFormGroup label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.25rem;
+}
+
+.validasiFormGroup select,
+.validasiFormGroup textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.95rem;
+  /* font-family: 'Times New Roman', Times, serif; */
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.validasiFormGroup select:focus,
+.validasiFormGroup textarea:focus {
+  outline: none;
+  border-color: #00B9AD;
+  box-shadow: 0 0 0 3px rgba(0, 185, 173, 0.15);
+}
+
+.validasiFormGroup textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.validasiSubmitBtn {
+  margin-top: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(180deg, #60C0D0 0%, #4AA8B8 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.validasiSubmitBtn:hover {
+  background: linear-gradient(180deg, #009a90 0%, #008078 100%);
+  color: #fff;
+  transform: translateY(-1px);
 }

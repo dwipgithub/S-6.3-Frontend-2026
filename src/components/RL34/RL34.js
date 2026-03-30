@@ -34,7 +34,7 @@ const RL34 = () => {
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
-  const [activeTab, setActiveTab] = useState("tab2");
+  const [activeTab, setActiveTab] = useState("tab1");
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -882,7 +882,7 @@ const RL34 = () => {
               </li>
             </ul>
 
-            <div className={`tab-content ${style.tabContent}`}>
+            <div className="tab-content mt-3">
               <div
                 className={`tab-pane fade ${
                   activeTab === "tab1" ? "show active" : ""

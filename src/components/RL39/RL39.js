@@ -61,7 +61,7 @@ export const RL39 = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
+    useEffect(() => {
     if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
       getValidasi();
     }
@@ -75,17 +75,26 @@ export const RL39 = () => {
         },
       };
       const response = await axios.get("/apisirs6v2/token", customConfig);
-      setToken(response.data.accessToken);
-      const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
-      setExpire(decoded.exp);
+      const accessToken = response.data.accessToken;
+      setToken(accessToken);
+      const decoded = jwt_decode(accessToken);
       setUser(decoded);
+      if (decoded.jenisUserId === 2) {
+        getKabKota(decoded.satKerId);
+      } else if (decoded.jenisUserId === 3) {
+        getRumahSakit(decoded.satKerId);
+      } else if (decoded.jenisUserId === 4) {
+        showRumahSakit(decoded.satKerId, accessToken);
+      }
+
+      setExpire(decoded.exp);
     } catch (error) {
       if (error.response) {
         navigate("/");
       }
     }
   };
+
 
   const axiosJWT = axios.create();
   axiosJWT.interceptors.request.use(
@@ -114,39 +123,39 @@ export const RL39 = () => {
     const results = [];
     results.push({
       key: "Januari",
-      value: "1",
+      value: "01",
     });
     results.push({
       key: "Febuari",
-      value: "2",
+      value: "02",
     });
     results.push({
       key: "Maret",
-      value: "3",
+      value: "03",
     });
     results.push({
       key: "April",
-      value: "4",
+      value: "04",
     });
     results.push({
       key: "Mei",
-      value: "5",
+      value: "05",
     });
     results.push({
       key: "Juni",
-      value: "6",
+      value: "06",
     });
     results.push({
       key: "Juli",
-      value: "7",
+      value: "07",
     });
     results.push({
       key: "Agustus",
-      value: "8",
+      value: "08",
     });
     results.push({
       key: "September",
-      value: "9",
+      value: "09",
     });
     results.push({
       key: "Oktober",
@@ -200,11 +209,11 @@ export const RL39 = () => {
     } catch (error) {}
   };
 
-  const showRumahSakit = async (id) => {
+  const showRumahSakit = async (id, tokenOverride) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenOverride || token}`,
         },
       });
 
@@ -222,7 +231,7 @@ export const RL39 = () => {
     }
     const filter = [];
     filter.push("filtered by nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
+    filter.push("periode: ".concat(String(tahun).concat("-").concat(String(bulan).padStart(2, "0"))));
     setFilterLabel(filter);
     setValidasiId(null);
     setStatusValidasi(0);
@@ -236,7 +245,7 @@ export const RL39 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(bulan),
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
         },
       };
       const results = await axiosJWT.get(
@@ -305,7 +314,7 @@ export const RL39 = () => {
       setNamaFile(
         "RL39_" +
           rumahSakit.id +
-          "_".concat(String(tahun).concat("-").concat(bulan).concat("-01"))
+          "_".concat(String(tahun).concat("-").concat(String(bulan).padStart(2, "0")).concat("-01"))
       );
       setSpinner(false);
       handleClose();
@@ -318,7 +327,7 @@ export const RL39 = () => {
           },
           params: {
             rsId: rumahSakit.id,
-            periode: String(tahun).concat("-").concat(bulan),
+            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
           },
         };
         const validasiResponse = await axiosJWT.get(
@@ -370,7 +379,7 @@ export const RL39 = () => {
           },
           params: {
             rsId: rumahSakit.id,
-            periode: String(tahun).concat("-").concat(bulan),
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
           },
         };
         const results = await axiosJWT.get(
@@ -456,7 +465,7 @@ export const RL39 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(bulan),
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
         },
       };
       const response = await axiosJWT.get(
@@ -495,18 +504,21 @@ export const RL39 = () => {
 
   const simpanValidasi = async (e) => {
     e.preventDefault();
+    
     if (!rumahSakit || !rumahSakit.id) {
       toast("Rumah sakit harus dipilih terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
     }
+
     if (parseInt(statusValidasi) === 0) {
       toast("Status harus dipilih terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
     }
+
     try {
       const customConfig = {
         headers: {
@@ -515,36 +527,61 @@ export const RL39 = () => {
           "XSRF-TOKEN": CSRFToken,
         },
       };
+
       const payload = {
         statusValidasiId: parseInt(statusValidasi),
         catatan: keteranganValidasi,
       };
+
+      console.log("Payload yang dikirim:", payload);
+      console.log("ValidasiId:", validasiId);
+
       if (validasiId) {
-        await axiosJWT.patch(
+        // Update existing validation
+        const response = await axiosJWT.patch(
           `/apisirs6v2/rltigatitiksembilanvalidasi/${validasiId}`,
           payload,
           customConfig
         );
-        toast("Data Validasi Berhasil Diperbarui", { position: toast.POSITION.TOP_RIGHT });
+        console.log("Response PATCH:", response.data);
+        toast("Data Validasi Berhasil Diperbarui", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
       } else {
-        const createPayload = {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(bulan),
-          jenisPeriode: 1,
-          ...payload,
-        };
+        // Create new validation
         const response = await axiosJWT.post(
           "/apisirs6v2/rltigatitiksembilanvalidasi",
-          createPayload,
+          {
+            rsId: rumahSakit.id,
+            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+            jenisPeriode: 1,
+            ...payload,
+          },
           customConfig
         );
+        console.log("Response POST:", response.data);
         setValidasiId(response.data.data.id);
-        toast("Data Validasi Berhasil Disimpan", { position: toast.POSITION.TOP_RIGHT });
+        toast("Data Validasi Berhasil Disimpan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        // Refresh validasi data tanpa reload halaman
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
       }
-      setTimeout(() => getValidasi(), 1500);
     } catch (error) {
       console.log(error);
-      toast(`Data tidak bisa disimpan karena: ${error.response?.data?.message || error.message}`, { position: toast.POSITION.TOP_RIGHT });
+      toast(
+        `Data tidak bisa disimpan karena: ${
+          error.response?.data?.message || error.message
+        }`,
+        {
+          position: toast.POSITION.TOP_RIGHT,
+        }
+      );
     }
   };
 
@@ -577,22 +614,22 @@ export const RL39 = () => {
     switch (jenisUserId) {
       case 1:
         getProvinsi();
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       case 2:
         getKabKota(satKerId);
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       case 3:
         getRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       case 4:
         showRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       default:
@@ -1057,9 +1094,13 @@ export const RL39 = () => {
               </div>
             </div>
 
-            <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab2" ? "show active" : ""
+                }`}
+              >
                 <div className={style.validasiCard}>
-                    <h3 className={style.validasiCardTitle}>Validasi RL 3.2</h3>
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.9</h3>
 
                     {/* =========================
                         1️⃣ DATA RL KOSONG
@@ -1073,7 +1114,7 @@ export const RL39 = () => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Data belum tersedia untuk proses validasi.</strong>
+                        <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
                       </div>
 
                     /* =========================
@@ -1165,7 +1206,7 @@ export const RL39 = () => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Validasi telah disetujui dan tidak dapat diubah.</strong>
+                        <strong>Data telah divalidasi.</strong>
                       </div>
 
                         ) : (
@@ -1201,6 +1242,7 @@ export const RL39 = () => {
                                 <textarea
                                   onChange={keteranganValidasiChangeHadler}
                                   rows={4}
+                                  value={keteranganValidasi}
                                 />
                               </div>
                             )}
@@ -1215,7 +1257,7 @@ export const RL39 = () => {
                       </>
                     )}
                   </div>
-            </div>
+              </div>
           </div>
         </div>
       </div>

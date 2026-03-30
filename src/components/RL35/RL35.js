@@ -62,11 +62,19 @@ const RL35 = () => {
         },
       };
       const response = await axios.get("/apisirs6v2/token", customConfig);
-      setToken(response.data.accessToken);
-      const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
-      setExpire(decoded.exp);
+      const accessToken = response.data.accessToken;
+      setToken(accessToken);
+      const decoded = jwt_decode(accessToken);
       setUser(decoded);
+      if (decoded.jenisUserId === 2) {
+        getKabKota(decoded.satKerId);
+      } else if (decoded.jenisUserId === 3) {
+        getRumahSakit(decoded.satKerId);
+      } else if (decoded.jenisUserId === 4) {
+        showRumahSakit(decoded.satKerId, accessToken);
+      }
+
+      setExpire(decoded.exp);
     } catch (error) {
       if (error.response) {
         navigate("/");
@@ -188,11 +196,11 @@ const RL35 = () => {
     } catch (error) {}
   };
 
-  const showRumahSakit = async (id) => {
+  const showRumahSakit = async (id, tokenOverride) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenOverride || token}`,
         },
       });
 
@@ -224,7 +232,7 @@ const RL35 = () => {
     let date = tahun + "-" + bulan + "-01";
     e.preventDefault();
     setSpinner(true);
-    if (rumahSakit == null) {
+    if (!rumahSakit || !rumahSakit.id) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -257,12 +265,24 @@ const RL35 = () => {
         customConfig
       );
 
+      if (!results.data.data || results.data.data.length === 0) {
+        setDataRL([]);
+        setTotalKunjungan(0);
+        setRataKunjungan(0);
+        toast("Data RL tidak ditemukan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setSpinner(false);
+        handleClose();
+        return;
+      }
+
       setDataRL(results.data.data);
-      setNamaFile(
-        "rl35_" +
-          results.data.data[0].rs_id +
-          "_".concat(String(tahun).concat("-").concat(bulan).concat("-01"))
-      );
+      if (results.data.data.length > 0) {
+        setNamaFile(
+          "rl35_" + results.data.data[0].rs_id + "_".concat(String(tahun).concat("-").concat(bulan).concat("-01"))
+        );
+      }
       setSpinner(false);
       handleClose();
       
@@ -390,6 +410,9 @@ const RL35 = () => {
         toast("Data Validasi Berhasil Diperbarui", {
           position: toast.POSITION.TOP_RIGHT,
         });
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
       } else {
         // Create new validation
         const response = await axiosJWT.post(
@@ -397,6 +420,7 @@ const RL35 = () => {
           {
             rsId: rumahSakit.id,
             periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+            jenisPeriode: 1,
             ...payload,
           },
           customConfig
@@ -429,73 +453,55 @@ const RL35 = () => {
   };
 
   const totalPengunjung = () => {
-    // console.log(dataRL)
+    let t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0;
+    let r1 = 0, r2 = 0, r3 = 0, r4 = 0, r5 = 0;
 
-    let total1 = 0;
-    let total2 = 0;
-    let total3 = 0;
-    let total4 = 0;
-    let total5 = 0;
-    let rata1 = 0;
-    let rata2 = 0;
-    let rata3 = 0;
-    let rata4 = 0;
-    let rata5 = 0;
+    // Cari baris pembagi (Jumlah Hari - biasanya ID 34)
+    const divisorRow = dataRL.find(item => item.jenis_kegiatan_id === 34);
 
-    dataRL.map((value, index) => {
-      if (
-        value.jenis_kegiatan_id == 35 ||
-        value.jenis_kegiatan_id == 99 ||
-        value.jenis_kegiatan_id == 66
-      ) {
-        total1 = total1;
-        total2 = total2;
-        total3 = total3;
-        total4 = total4;
-        total5 = total5;
-      } else {
-        total1 = total1 + value.kunjungan_pasien_dalam_kabkota_laki;
-        total2 = total2 + value.kunjungan_pasien_luar_kabkota_laki;
-        total3 = total3 + value.kunjungan_pasien_dalam_kabkota_perempuan;
-        total4 = total4 + value.kunjungan_pasien_luar_kabkota_perempuan;
-        total5 = total5 + value.total_kunjungan;
+    dataRL.forEach((value) => {
+      // Jangan hitung baris Total, Rata-rata, atau baris non-data ke dalam Total
+      if (![35, 99, 66, 77, 34].includes(value.jenis_kegiatan_id)) {
+        t1 += parseInt(value.kunjungan_pasien_dalam_kabkota_laki || 0);
+        t2 += parseInt(value.kunjungan_pasien_luar_kabkota_laki || 0);
+        t3 += parseInt(value.kunjungan_pasien_dalam_kabkota_perempuan || 0);
+        t4 += parseInt(value.kunjungan_pasien_luar_kabkota_perempuan || 0);
+        t5 += parseInt(value.total_kunjungan || 0);
       }
-
-      // if(value.jenis_kegiatan_id == 34){
-      rata1 = Math.ceil(total1 / value.kunjungan_pasien_dalam_kabkota_laki);
-      rata2 = Math.ceil(total2 / value.kunjungan_pasien_luar_kabkota_laki);
-      rata3 = Math.ceil(
-        total3 / value.kunjungan_pasien_dalam_kabkota_perempuan
-      );
-      rata4 = Math.ceil(total4 / value.kunjungan_pasien_luar_kabkota_perempuan);
-      rata5 = Math.ceil(total5 / value.total_kunjungan);
-      // }
     });
+
+    if (divisorRow) {
+      r1 = Math.ceil(t1 / (divisorRow.kunjungan_pasien_dalam_kabkota_laki || 1));
+      r2 = Math.ceil(t2 / (divisorRow.kunjungan_pasien_luar_kabkota_laki || 1));
+      r3 = Math.ceil(t3 / (divisorRow.kunjungan_pasien_dalam_kabkota_perempuan || 1));
+      r4 = Math.ceil(t4 / (divisorRow.kunjungan_pasien_luar_kabkota_perempuan || 1));
+      r5 = Math.ceil(t5 / (divisorRow.total_kunjungan || 1));
+    }
 
     let newData = [
       {
         id: 99,
         jenis_kegiatan_id: 99,
         jenis_kegiatan_nama: "Total",
-        kunjungan_pasien_dalam_kabkota_laki: total1,
-        kunjungan_pasien_luar_kabkota_laki: total2,
-        kunjungan_pasien_dalam_kabkota_perempuan: total3,
-        kunjungan_pasien_luar_kabkota_perempuan: total4,
-        total_kunjungan: total5,
+        kunjungan_pasien_dalam_kabkota_laki: t1,
+        kunjungan_pasien_luar_kabkota_laki: t2,
+        kunjungan_pasien_dalam_kabkota_perempuan: t3,
+        kunjungan_pasien_luar_kabkota_perempuan: t4,
+        total_kunjungan: t5,
       },
       {
         id: 77,
         jenis_kegiatan_id: 77,
         jenis_kegiatan_nama: "Rata-rata kunjungan per hari",
-        kunjungan_pasien_dalam_kabkota_laki: rata1,
-        kunjungan_pasien_luar_kabkota_laki: rata2,
-        kunjungan_pasien_dalam_kabkota_perempuan: rata3,
-        kunjungan_pasien_luar_kabkota_perempuan: rata4,
-        total_kunjungan: rata5,
+        kunjungan_pasien_dalam_kabkota_laki: r1,
+        kunjungan_pasien_luar_kabkota_laki: r2,
+        kunjungan_pasien_dalam_kabkota_perempuan: r3,
+        kunjungan_pasien_luar_kabkota_perempuan: r4,
+        total_kunjungan: r5,
       },
     ];
-    setTotalKunjungan(total5);
-    setRataKunjungan(rata5);
+    setTotalKunjungan(t5);
+    setRataKunjungan(r5);
     setDataCount(newData);
   };
 
@@ -927,12 +933,18 @@ const RL35 = () => {
                   >
                     No.
                   </th>
+                  {user.jenisUserId === 4
+                        ?
                   <th
                     rowSpan={2}
                     style={{ width: "8%", verticalAlign: "middle" }}
                   >
                     Aksi
                   </th>
+                  : <>
+                                      
+                                    </>
+                                }
                   <th
                     rowSpan={2}
                     style={{ width: "12%", verticalAlign: "middle" }}
@@ -965,6 +977,8 @@ const RL35 = () => {
                       >
                         {index + 1}
                       </td>
+                      {user.jenisUserId === 4
+                        ?
                       <td
                         style={{ textAlign: "center", verticalAlign: "middle" }}
                       >
@@ -1006,6 +1020,10 @@ const RL35 = () => {
                           </Link>
                         </div>
                       </td>
+                       : <>
+                                      
+                                    </>
+                                }
                       <td
                         style={{ textAlign: "center", verticalAlign: "middle" }}
                       >
@@ -1135,7 +1153,7 @@ const RL35 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                    <h3 className={style.validasiCardTitle}>Validasi RL 3.2</h3>
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.5</h3>
 
                     {/* =========================
                         1️⃣ DATA RL KOSONG
@@ -1149,7 +1167,7 @@ const RL35 = () => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Data belum tersedia untuk proses validasi.</strong>
+                        <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
                       </div>
 
                     /* =========================
@@ -1241,7 +1259,7 @@ const RL35 = () => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Validasi telah disetujui dan tidak dapat diubah.</strong>
+                        <strong>Data telah divalidasi.</strong>
                       </div>
 
                         ) : (
