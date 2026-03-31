@@ -869,13 +869,12 @@ const RL315 = () => {
                           ))}
 
                           {/* TOTAL */}
-                          <tr>
-                            <td>99</td>
-
-                            {user.jenisUserId === 4 && <td></td>}
-
-                            <td style={{ textAlign: "center" }}>
-                              <strong>TOTAL</strong>
+                          <tr className="table-light fw-bold">
+                            <td
+                              colSpan={user.jenisUserId === 4 ? 3 : 2}
+                              style={{ textAlign: "center" }}
+                            >
+                              TOTAL
                             </td>
 
                             <td style={{ textAlign: "center" }}>

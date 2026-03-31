@@ -902,9 +902,11 @@ const RL314 = () => {
                       <tr>
                         <th style={{ width: "5%", textAlign: "center" }}>No</th>
 
-                        <th style={{ width: "15%", textAlign: "center" }}>
-                          Aksi
-                        </th>
+                        {user.jenisUserId === 4 && (
+                          <th style={{ width: "15%", textAlign: "center" }}>
+                            Aksi
+                          </th>
+                        )}
 
                         <th style={{ textAlign: "center" }}>Jenis Kegiatan</th>
 
@@ -924,7 +926,7 @@ const RL314 = () => {
                               {value.no}
                             </td>
 
-                            <td></td>
+                            {user.jenisUserId === 4 && <td></td>}
 
                             <td
                               style={{ textAlign: "left", fontWeight: "bold" }}
@@ -954,41 +956,43 @@ const RL314 = () => {
                             </td>
 
                             {/* AKSI */}
-                            <td className={style["sticky-column"]}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <button
-                                  className="btn btn-danger"
+                            {user.jenisUserId === 4 && (
+                              <td className={style["sticky-column"]}>
+                                <div
                                   style={{
-                                    margin: "0 5px 0 0",
-                                    backgroundColor: "#FF6663",
-                                    border: "1px solid #FF6663",
+                                    display: "flex",
+                                    justifyContent: "center",
                                   }}
-                                  onClick={() => hapus(value.id)}
                                 >
-                                  Hapus
-                                </button>
-
-                                {value.no != 0 && (
-                                  <Link
-                                    to={`/rl314/ubah/${value.id}`}
-                                    className="btn btn-warning"
+                                  <button
+                                    className="btn btn-danger"
                                     style={{
                                       margin: "0 5px 0 0",
-                                      backgroundColor: "#CFD35E",
-                                      border: "1px solid #CFD35E",
-                                      color: "#FFFFFF",
+                                      backgroundColor: "#FF6663",
+                                      border: "1px solid #FF6663",
                                     }}
+                                    onClick={() => hapus(value.id)}
                                   >
-                                    Ubah
-                                  </Link>
-                                )}
-                              </div>
-                            </td>
+                                    Hapus
+                                  </button>
+
+                                  {value.no != 0 && (
+                                    <Link
+                                      to={`/rl314/ubah/${value.id}`}
+                                      className="btn btn-warning"
+                                      style={{
+                                        margin: "0 5px 0 0",
+                                        backgroundColor: "#CFD35E",
+                                        border: "1px solid #CFD35E",
+                                        color: "#FFFFFF",
+                                      }}
+                                    >
+                                      Ubah
+                                    </Link>
+                                  )}
+                                </div>
+                              </td>
+                            )}
 
                             {/* NAMA */}
                             <td style={{ textAlign: "left" }}>
@@ -1007,7 +1011,7 @@ const RL314 = () => {
                       {dataRL.length > 0 && (
                         <tr>
                           <td
-                            colSpan={3}
+                            colSpan={user.jenisUserId === 4 ? 3 : 2}
                             style={{ textAlign: "center", fontWeight: "bold" }}
                           >
                             TOTAL

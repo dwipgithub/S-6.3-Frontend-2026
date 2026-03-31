@@ -814,9 +814,12 @@ const RL311 = () => {
 
                       {dataRL.length > 0 && (
                         <tr className="table-light fw-bold">
-                          <td className="text-center">99</td>
-                          {user.jenisUserId === 4 && <td></td>}
-                          <td>Total</td>
+                          <td
+                            colSpan={user.jenisUserId === 4 ? 3 : 2}
+                            className="text-center"
+                          >
+                            TOTAL
+                          </td>
                           <td className="text-center">{totalall}</td>
                         </tr>
                       )}

@@ -883,12 +883,12 @@ export const RL318 = () => {
                         );
                       })}
                       {dataRL.length > 0 && (
-                        <tr>
-                          <td>99</td>
-
-                          {user.jenisUserId === 4 && <td></td>}
-                          <td style={{ textAlign: "center" }}>
-                            <center>TOTAL</center>
+                        <tr className="table-light fw-bold">
+                          <td
+                            colSpan={user.jenisUserId === 4 ? 3 : 2}
+                            style={{ textAlign: "center" }}
+                          >
+                            TOTAL
                           </td>
                           <td>
                             <center>{total_rawat_jalan}</center>
