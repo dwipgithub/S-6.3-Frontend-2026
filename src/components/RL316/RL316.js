@@ -427,7 +427,7 @@ const RL316 = () => {
       }
       newDataRL[index].checked = event.target.checked;
     } else if (name === "pelayananKbPaskaPersalinan") {
-      newDataRL[index].Total = event.target.value;
+      newDataRL[index].pelayananKbPaskaPersalinan = event.target.value;
     } else if (name === "pelayananKbPaskaKeguguran") {
       newDataRL[index].pelayananKbPaskaKeguguran = event.target.value;
     } else if (name === "pelayananKbInterval") {
@@ -445,6 +445,30 @@ const RL316 = () => {
     }
     setDataRL(newDataRL);
   };
+
+  const totalData = dataRL.reduce(
+    (acc, item) => {
+      acc.paskaPersalinan += Number(item.pelayanan_kb_paska_persalinan || 0);
+      acc.paskaKeguguran += Number(item.pelayanan_kb_paska_keguguran || 0);
+      acc.interval += Number(item.pelayanan_kb_interval || 0);
+      acc.total += Number(item.pelayanan_kb_total || 0);
+      acc.komplikasi += Number(item.komplikasi_kb || 0);
+      acc.kegagalan += Number(item.kegagalan_kb || 0);
+      acc.efekSamping += Number(item.efek_samping || 0);
+      acc.dropOut += Number(item.drop_out || 0);
+      return acc;
+    },
+    {
+      paskaPersalinan: 0,
+      paskaKeguguran: 0,
+      interval: 0,
+      total: 0,
+      komplikasi: 0,
+      kegagalan: 0,
+      efekSamping: 0,
+      dropOut: 0,
+    },
+  );
 
   const statusValidasiChangeHadler = (e) => {
     setStatusValidasi(e.target.value);
@@ -955,6 +979,38 @@ const RL316 = () => {
                           <td className="text-center">{value.drop_out}</td>
                         </tr>
                       ))}
+
+                      {dataRL.length > 0 && (
+                        <tr className="table-light fw-bold">
+                          <td colSpan={2} style={{ textAlign: "center" }}>
+                            TOTAL
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {totalData.paskaPersalinan}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {totalData.paskaKeguguran}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {totalData.interval}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {totalData.total}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {totalData.komplikasi}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {totalData.kegagalan}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {totalData.efekSamping}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {totalData.dropOut}
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
