@@ -982,7 +982,10 @@ const RL316 = () => {
 
                       {dataRL.length > 0 && (
                         <tr className="table-light fw-bold">
-                          <td colSpan={2} style={{ textAlign: "center" }}>
+                          <td
+                            colSpan={user.jenisUserId === 4 ? 3 : 2}
+                            style={{ textAlign: "center" }}
+                          >
                             TOTAL
                           </td>
                           <td style={{ textAlign: "center" }}>
