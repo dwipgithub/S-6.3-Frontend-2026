@@ -72,11 +72,19 @@ const RL37 = () => {
         },
       };
       const response = await axios.get("/apisirs6v2/token", customConfig);
-      setToken(response.data.accessToken);
-      const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
-      setExpire(decoded.exp);
+      const accessToken = response.data.accessToken;
+      setToken(accessToken);
+      const decoded = jwt_decode(accessToken);
       setUser(decoded);
+      if (decoded.jenisUserId === 2) {
+        getKabKota(decoded.satKerId);
+      } else if (decoded.jenisUserId === 3) {
+        getRumahSakit(decoded.satKerId);
+      } else if (decoded.jenisUserId === 4) {
+        showRumahSakit(decoded.satKerId, accessToken);
+      }
+
+      setExpire(decoded.exp);
     } catch (error) {
       if (error.response) {
         navigate("/");
@@ -198,11 +206,11 @@ const RL37 = () => {
     } catch (error) {}
   };
 
-  const showRumahSakit = async (id) => {
+  const showRumahSakit = async (id, tokenOverride) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenOverride || token}`,
         },
       });
 
@@ -566,7 +574,7 @@ const RL37 = () => {
     let date = tahun + "-" + bulan + "-01";
     e.preventDefault();
     setSpinner(true);
-    if (rumahSakit == null) {
+    if (!rumahSakit || !rumahSakit.id) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -576,6 +584,13 @@ const RL37 = () => {
     filter.push("filtered by nama: ".concat(rumahSakit.nama));
     filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
     setFilterLabel(filter);
+
+    // Reset validation state before fetching new data
+    setValidasiId(null);
+    setStatusValidasi(0);
+    setKeteranganValidasi("");
+    setDataValidasi(null);
+
     try {
       const customConfig = {
         headers: {
@@ -1228,12 +1243,16 @@ const RL37 = () => {
         toast("Data Validasi Berhasil Diperbarui", {
           position: toast.POSITION.TOP_RIGHT,
         });
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
       } else {
         const response = await axiosJWT.post(
           "/apisirs6v2/rltigatitiktujuhvalidasi",
           {
             rsId: rumahSakit.id,
             periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+            jenisPeriode: 1,
             ...payload,
           },
           customConfig
@@ -1401,7 +1420,13 @@ const RL37 = () => {
                       <thead className={style.thead}>
                         <tr className="main-header-row">
                           <th className={style["sticky-header-view"]} style={{ width: "2.5%" }}>No.</th>
+                          {user.jenisUserId === 4
+                            ?
                           <th className={style["sticky-header-view"]} style={{ width: "7%" }}>Aksi</th>
+                          : <>
+                                      
+                                    </>
+                                }
                           <th className={style["sticky-header-view"]} style={{ width: "10%" }}>Jenis Kegiatan</th>
                           <th>Rujukan Medis Rumah Sakit</th>
                           <th>Rujukan Medis Bidan</th>
@@ -1464,6 +1489,8 @@ const RL37 = () => {
                                 {value2.kegiatan.map((value3, index3) => (
                                   <tr key={index3} style={{ textAlign: "center", fontWeight: "bold" }}>
                                     <td className={style["sticky-column-view"]}>{value3.jenisKegiatanNo}</td>
+                                    {user.jenisUserId === 4
+                        ?
                                     <td className={style["sticky-column-view"]}>
                                       <ToastContainer />
                                       <div style={{ display: "flex" }}>
@@ -1475,6 +1502,10 @@ const RL37 = () => {
                                         )}
                                       </div>
                                     </td>
+                                    : <>
+                                      
+                                    </>
+                                }
                                     <td className={style["sticky-column-view"]}>{value3.jenisKegiatanNama}</td>
                                     <td>{value3.rmRumahSakit}</td>
                                     <td>{value3.rmBidan}</td>
@@ -1504,7 +1535,7 @@ const RL37 = () => {
 
               <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
                                 <div className={style.validasiCard}>
-                    <h3 className={style.validasiCardTitle}>Validasi RL 3.2</h3>
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.7</h3>
 
                     {/* =========================
                         1️⃣ DATA RL KOSONG
@@ -1518,7 +1549,7 @@ const RL37 = () => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Data belum tersedia untuk proses validasi.</strong>
+                        <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
                       </div>
 
                     /* =========================
@@ -1568,18 +1599,14 @@ const RL37 = () => {
                                 </div>
 
                                 {/* CATATAN */}
-                                {(dataValidasi.keteranganValidasi ||
-                                  dataValidasi.catatan ||
-                                  dataValidasi.keterangan) && (
+                                {(dataValidasi.catatan || dataValidasi.keterangan) && (
                                   <div style={{ display: "flex", marginBottom: "4px" }}>
                                     <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
                                       Catatan
                                     </div>
                                     <div style={{ width: "10px" }}>:</div>
                                     <div>
-                                      {dataValidasi.keteranganValidasi ||
-                                        dataValidasi.catatan ||
-                                        dataValidasi.keterangan}
+                                      {dataValidasi.catatan || dataValidasi.keterangan}
                                     </div>
                                   </div>
                                 )}
@@ -1610,7 +1637,7 @@ const RL37 = () => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Validasi telah disetujui dan tidak dapat diubah.</strong>
+                        <strong>Data telah divalidasi.</strong>
                       </div>
 
                         ) : (
@@ -1646,6 +1673,8 @@ const RL37 = () => {
                                 <textarea
                                   onChange={keteranganValidasiChangeHadler}
                                   rows={4}
+                                  value={keteranganValidasi}
+                                  placeholder="Tambahkan catatan jika perlu perbaikan..."
                                 />
                               </div>
                             )}
@@ -1670,5 +1699,3 @@ const RL37 = () => {
 };
 
 export default RL37;
-
-

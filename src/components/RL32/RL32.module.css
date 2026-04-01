@@ -83,7 +83,7 @@
 
 /* ========== Excel-like table ========== */
 .table {
-  width: 150%;
+  width: 200%;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 13px;
@@ -114,13 +114,13 @@
 }
 
 .table .subheader-row th {
-  background: #e9edf4;
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
   color: #333;
-  font-weight: 500;
-  font-size: 12px;
+  font-weight: 600;
+  font-size: 13px;
   position: -webkit-sticky;
   position: sticky;
-  top: 40px;
+  top: 29px;
   z-index: 1;
   text-align: center;
   vertical-align: middle;
@@ -129,9 +129,8 @@
   line-height: 1.3;
 }
 
-.table thead th.sticky-header:nth-child(1),
-.table thead th.sticky-header:nth-child(2),
-.table thead th.sticky-header:nth-child(3) {
+/* Sticky Header Columns */
+.table thead th.sticky-header:nth-child(1) {
   position: -webkit-sticky;
   position: sticky;
   left: 0;
@@ -140,10 +139,22 @@
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
 }
 
-.table .subheader-row th.sticky-header:nth-child(1),
-.table .subheader-row th.sticky-header:nth-child(2),
-.table .subheader-row th.sticky-header:nth-child(3) {
-  background: #e9edf4;
+.table thead th.sticky-header:nth-child(3) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 240px; /* Width of 1st (80) + 2nd (160) columns */
+  z-index: 3;
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
+}
+
+.table thead th.sticky-header:nth-child(2) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 35px; /* Width of 1st column */
+  z-index: 3;
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
 }
 
 .table .sticky-header {
@@ -165,36 +176,6 @@
 
 .table tbody tr:hover td {
   background-color: #f0f7ff;
-}
-
-.table tbody td.sticky-column:nth-child(1),
-.table tbody td.sticky-column:nth-child(2),
-.table tbody td.sticky-column:nth-child(3) {
-  position: -webkit-sticky;
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: #fff;
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
-}
-
-.table tbody tr:nth-child(even) td.sticky-column:nth-child(1),
-.table tbody tr:nth-child(even) td.sticky-column:nth-child(2),
-.table tbody tr:nth-child(even) td.sticky-column:nth-child(3) {
-  background: #f9fafb;
-}
-
-.table tbody tr:hover td.sticky-column:nth-child(1),
-.table tbody tr:hover td.sticky-column:nth-child(2),
-.table tbody tr:hover td.sticky-column:nth-child(3) {
-  background: #f0f7ff;
-}
-
-.table .sticky-column {
-  position: -webkit-sticky;
-  position: sticky;
-  left: 0;
-  z-index: 1;
 }
 
 /* Inputs inside table - Excel-like cells */
@@ -222,6 +203,42 @@
 /* Tab content area */
 .tabContent {
   margin-top: 1rem;
+}
+
+/* Sticky Body Columns */
+.table tbody td.sticky-column:nth-child(1) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.table tbody td.sticky-column:nth-child(2) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 30px;
+  z-index: 2;
+}
+
+.table tbody td.sticky-column:nth-child(3) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 240px;
+  z-index: 2;
+}
+
+.table .sticky-header {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  top: 0; /* Sticky header */
+  z-index: 2; /* Above table content */
+}
+
+.table .sticky-column {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  z-index: 1; /* Ensures sticky column is above other content */
 }
 
 /* ========== Form Validasi (tab Validasi) ========== */
@@ -301,4 +318,38 @@
   background: linear-gradient(180deg, #009a90 0%, #008078 100%);
   color: #fff;
   transform: translateY(-1px);
+}
+
+.table tbody tr:last-child td:first-child {
+  /* position: sticky; */
+  left: 0;
+  /* z-index: 5; */
+}
+
+.table tbody tr:last-child td:nth-child(2) {
+  /* position: sticky; */
+  left:30px;
+  /* z-index: 5; */
+}
+
+/* new css ZUL */
+.tableContainer {
+  width: 100%;
+  overflow-x: hidden; /* HILANGKAN SCROLL */
+}
+
+.table {
+  width: 100%;
+  table-layout: auto; /* Jangan fixed */
+}
+
+.table th,
+.table td {
+  vertical-align: middle;
+  text-align: center;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  text-align: left; /* Golongan Obat rata kiri */
 }

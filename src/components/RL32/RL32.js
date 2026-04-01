@@ -992,7 +992,7 @@ const RL32 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -1074,17 +1074,23 @@ const RL32 = () => {
                         <th
                           className={style["sticky-header"]}
                           rowSpan="2"
-                          style={{ width: "2%" }}
+                          style={{ width: "3%" }}
                         >
                           No.
                         </th>
-                        <th
+                        {user.jenisUserId === 4
+                        ? <th
                           className={style["sticky-header"]}
                           rowSpan="2"
                           style={{ width: "7%" }}
                         >
                           Aksi
                         </th>
+                                  : <>
+                                      
+                                    </>
+                                }
+                        
                         <th
                           className={style["sticky-header"]}
                           rowSpan="2"
@@ -1147,15 +1153,10 @@ const RL32 = () => {
                         return (
                           <tr key={value.id}>
                             <td className={style["sticky-column"]}>
-                              <input
-                                type="text"
-                                name="id"
-                                className="form-control"
-                                value={index + 1}
-                                disabled={true}
-                              />
+                                {index + 1}
                             </td>
-                            <td
+                            {user.jenisUserId === 4
+                        ? <td
                               className={style["sticky-column"]}
                               style={{
                                 textAlign: "center",
@@ -1197,200 +1198,85 @@ const RL32 = () => {
                                 <></>
                               )}
                             </td>
+                                  : <>
+                                      
+                                    </>
+                                }
+                            
                             <td
                               className={style["sticky-column"]}
-                              style={{ background: "white" }}
+                              style={{ background: "white", textAlign: "Left" }}
                             >
-                              <input
-                                type="text"
-                                name="jenisPelayanan"
-                                className="form-control"
-                                value={value.nama_jenis_pelayanan}
-                                disabled={true}
-                              />
+                              {value.nama_jenis_pelayanan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="pasienAwalBulan"
-                                className="form-control"
-                                value={value.pasien_awal_bulan}
-                                disabled={true}
-                              />
+                              {value.pasien_awal_bulan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="pasienMasuk"
-                                className="form-control"
-                                value={value.pasien_masuk}
-                                disabled={true}
-                              />
+                              {value.pasien_masuk}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="pasienPindahan"
-                                className="form-control"
-                                value={value.pasien_pindahan}
-                                disabled={true}
-                              />
+                              {value.pasien_pindahan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="pasienDipindahkan"
-                                className="form-control"
-                                value={value.pasien_dipindahkan}
-                                disabled={true}
-                              />
+                              {value.pasien_dipindahkan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="pasienKeluarHidup"
-                                className="form-control"
-                                value={value.pasien_keluar_hidup}
-                                disabled={true}
-                              />
+                              {value.pasien_keluar_hidup}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="kurangDari48Jam"
-                                className="form-control"
-                                value={
+                              {
                                   value.pasien_keluar_mati_kurang_dari_48_jam
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="lebihDariAtauSamaDengan48Jam"
-                                className="form-control"
-                                value={
+                              {
                                   value.pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="wanitaKurangDari48Jam"
-                                className="form-control"
-                                value={
+                              {
                                   value.pasien_wanita_keluar_mati_kurang_dari_48_jam
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="wanitaLebihDariAtauSamaDengan48Jam"
-                                className="form-control"
-                                value={
+                              {
                                   value.pasien_wanita_keluar_mati_lebih_dari_atau_sama_dengan_48_jam
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="jumlahLamaDirawat"
-                                className="form-control"
-                                value={value.jumlah_lama_dirawat}
-                                disabled={true}
-                              />
+                              {value.jumlah_lama_dirawat}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="pasienAkhirBulan"
-                                className="form-control"
-                                value={hitungPasienAkhirBulan(index)}
-                                disabled={true}
-                              />
+                              {hitungPasienAkhirBulan(index)}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="jumlahHariPerawatan"
-                                className="form-control"
-                                value={hitungJumlahHariPerawatan(index)}
-                                disabled={true}
-                              />
+                              {hitungJumlahHariPerawatan(index)}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="kelasVVIP"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_VVIP}
-                                disabled={true}
-                              />
+                              {value.rincian_hari_perawatan_kelas_VVIP}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="kelasVIP"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_VIP}
-                                disabled={true}
-                              />
+                              {value.rincian_hari_perawatan_kelas_VIP}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="kelas1"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_1}
-                                disabled={true}
-                              />
+                              {value.rincian_hari_perawatan_kelas_1}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="kelas2"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_2}
-                                disabled={true}
-                              />
+                              {value.rincian_hari_perawatan_kelas_2}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="kelas3"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_3}
-                                disabled={true}
-                              />
+                              {value.rincian_hari_perawatan_kelas_3}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="kelasKhusus"
-                                className="form-control"
-                                value={
+                              {
                                   value.rincian_hari_perawatan_kelas_khusus
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="jumlahAlokasiTTAwalBulan"
-                                className="form-control"
-                                value={
+                              {
                                   value.jumlah_alokasi_tempat_tidur_awal_bulan
                                 }
-                                disabled={true}
-                              />
                             </td>
                           </tr>
                         );
@@ -1399,191 +1285,84 @@ const RL32 = () => {
                         <>
                           <tr>
                             <td className={style["sticky-column"]}></td>
-                            <td className={style["sticky-column"]}></td>
+                            {user.jenisUserId === 4
+                        ?
+                            <td className={style["sticky-column"]}></td>: <>
+                                      
+                                    </>
+                                }
+                            
                             <td
                               className={style["sticky-column"]}
-                              style={{ background: "white" }}
+                              style={{ background: "white", textAlign: "Left" }}
                             >
                               Total
                             </td>
+                               
                             <td>
-                              <input
-                                type="text"
-                                name="totalJenisPelayanan"
-                                className="form-control"
-                                value={totalPasienAwalBulan}
-                                disabled={true}
-                              />
+                              {totalPasienAwalBulan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalPasienMasuk"
-                                className="form-control"
-                                value={totalPasienMasuk}
-                                disabled={true}
-                              />
+                             {totalPasienMasuk}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalPasienPindahan"
-                                className="form-control"
-                                value={totalPasienPindahan}
-                                disabled={true}
-                              />
+                              {totalPasienPindahan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalPasienDipindahkan"
-                                className="form-control"
-                                value={totalPasienDipindahkan}
-                                disabled={true}
-                              />
+                              {totalPasienDipindahkan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalPasienKeluarHidup"
-                                className="form-control"
-                                value={totalPasienKeluarHidup}
-                                disabled={true}
-                              />
+                                {totalPasienKeluarHidup}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalPasienKeluarMatiKurangDari48Jam"
-                                className="form-control"
-                                value={totalPasienKeluarMatiKurangDari48Jam}
-                                disabled={true}
-                              />
+                              {totalPasienKeluarMatiKurangDari48Jam}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam"
-                                className="form-control"
-                                value={
+                              {
                                   totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalPasienWanitaKeluarMatiKurangDari48Jam"
-                                className="form-control"
-                                value={
+                              {
                                   totalPasienWanitaKeluarMatiKurangDari48Jam
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam"
-                                className="form-control"
-                                value={
+                              {
                                   totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalJumlahDirawat"
-                                className="form-control"
-                                value={totalJumlahDirawat}
-                                disabled={true}
-                              />
+                              {totalJumlahDirawat}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalPasienAkhirBulan"
-                                className="form-control"
-                                value={totalPasienAkhirBulan}
-                                disabled={true}
-                              />
+                              {totalPasienAkhirBulan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalHariPerawatan"
-                                className="form-control"
-                                value={totalHariPerawatan}
-                                disabled={true}
-                              />
+                              {totalHariPerawatan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalKelasVVIP"
-                                className="form-control"
-                                value={totalKelasVVIP}
-                                disabled={true}
-                              />
+                              {totalKelasVVIP}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalKelasVIP"
-                                className="form-control"
-                                value={totalKelasVIP}
-                                disabled={true}
-                              />
+                              {totalKelasVIP}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalKelas1"
-                                className="form-control"
-                                value={totalKelas1}
-                                disabled={true}
-                              />
+                              {totalKelas1}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalKelas2"
-                                className="form-control"
-                                value={totalKelas2}
-                                disabled={true}
-                              />
+                              {totalKelas2}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalKelas3"
-                                className="form-control"
-                                value={totalKelas3}
-                                disabled={true}
-                              />
+                              {totalKelas3}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalKelasKhusus"
-                                className="form-control"
-                                value={totalKelasKhusus}
-                                disabled={true}
-                              />
+                              {totalKelasKhusus}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="totalJumlahAlokasiTTAwalBulan"
-                                className="form-control"
-                                value={
+                              {
                                   totalTotalJumlahAlokasiTempatTidurAwalBulan
                                 }
-                                disabled={true}
-                              />
                             </td>
                           </tr>
                         </>
@@ -1615,7 +1394,7 @@ const RL32 = () => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Data belum tersedia untuk proses validasi.</strong>
+                        <strong>Silahkan pilih filter terlebih dahulu untuk menampilkan data. </strong>
                       </div>
 
                     /* =========================
@@ -1649,8 +1428,9 @@ const RL32 = () => {
 
                                 {/* STATUS */}
                                 <div style={{ display: "flex", marginBottom: "4px" }}>
-                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px" }}><strong>
                                     Status
+                                    </strong>
                                   </div>
                                   <div style={{ width: "10px" }}>:</div>
                                   <div>
@@ -1669,8 +1449,8 @@ const RL32 = () => {
                                   dataValidasi.catatan ||
                                   dataValidasi.keterangan) && (
                                   <div style={{ display: "flex", marginBottom: "4px" }}>
-                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
-                                      Catatan
+                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px" }}><strong>
+                                      Catatan</strong>
                                     </div>
                                     <div style={{ width: "10px" }}>:</div>
                                     <div>
@@ -1683,8 +1463,8 @@ const RL32 = () => {
 
                                 {/* DIBUAT */}
                                 <div style={{ display: "flex" }}>
-                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
-                                    Dibuat
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px" }}><strong>
+                                    Dibuat</strong>
                                   </div>
                                   <div style={{ width: "10px" }}>:</div>
                                   <div>
@@ -1707,7 +1487,7 @@ const RL32 = () => {
                         borderRadius: "4px",
                         textAlign: "center"
                       }}>
-                        <strong>Validasi telah disetujui dan tidak dapat diubah.</strong>
+                        <strong>Data telah divalidasi.</strong>
                       </div>
 
                         ) : (
