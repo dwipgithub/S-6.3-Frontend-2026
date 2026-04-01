@@ -1,4 +1,4 @@
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, Navigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Login from "./components/Login/Login";
 import { CSRFTokenProvider } from "./components/Context/CSRFTokenContext.js";
@@ -222,8 +222,13 @@ function App() {
             <Route path="/rl43" element={<RL43 />} />
 
             <Route path="/MENURL51" element={<RL51danSatuSehat />} />
-            <Route path="/RL51" element={<RL51 />} />
-            <Route path="/RL51SATUSEHAT" element={<RL51SATUSEHAT />} />
+            {/* <Route path="/RL51" element={<RL51 />} />
+            <Route path="/RL51SATUSEHAT" element={<RL51SATUSEHAT />} /> */}
+            <Route path="/RL51" element={<Navigate to="/MENURL51" replace />} />
+            <Route
+              path="/RL51SATUSEHAT"
+              element={<Navigate to="/MENURL51" replace />}
+            />
             <Route path="/rl51/tambah" element={<FormTambahRL51 />} />
             <Route path="/rl51/edit/:id" element={<FormEditRL51 />} />
             <Route path="/rl52" element={<RL52 />} />

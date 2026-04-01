@@ -87,7 +87,6 @@ const FormTambahRL319 = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      console.log(id);
       setNamaRS(response.data.data.nama);
       setAlamatRS(response.data.data.alamat);
       setNamaPropinsi(response.data.data.provinsi_nama);
@@ -478,9 +477,9 @@ const FormTambahRL319 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h2>RL. 3.19</h2>
+      <h2>RL 3.19 - Cara Bayar</h2>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -616,7 +615,9 @@ const FormTambahRL319 = () => {
                     >
                       No.
                     </th>
-                    <th style={{ width: "3%" }} rowSpan={2}></th>
+                    <th style={{ width: "3%" }} rowSpan={2}>
+                      <small>input</small>
+                    </th>
                     <th
                       className={style["sticky-header"]}
                       style={{ width: "4%" }}
@@ -661,7 +662,10 @@ const FormTambahRL319 = () => {
                             disabled={true}
                           />
                         </td>
-                        <td className={style["sticky-column"]}>
+                        <td
+                          className={style["sticky-column"]}
+                          style={{ textAlign: "center" }}
+                        >
                           <input
                             type="checkbox"
                             name="check"
@@ -786,7 +790,7 @@ const FormTambahRL319 = () => {
           <ToastContainer />
           <button
             type="submit"
-            className="btn btn-outline-success"
+            className={style.btnPrimary}
             disabled={buttonStatus}
           >
             <HiSaveAs /> Simpan

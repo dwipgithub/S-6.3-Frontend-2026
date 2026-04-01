@@ -79,7 +79,7 @@ export const FormUbahRL319 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getDataRS = async (id) => {
@@ -135,7 +135,7 @@ export const FormUbahRL319 = () => {
         const updateParent = await axiosJWT.patch(
           "/apisirs6v2/rltigatitiksembilanbelasdetail/" + parent.id,
           parentData,
-          customConfig
+          customConfig,
         );
       }
 
@@ -149,7 +149,7 @@ export const FormUbahRL319 = () => {
           rajal_radiologi: parseInt(rajalRadiologi),
           rajal_lain_lain: parseInt(rajalLainLain),
         },
-        customConfig
+        customConfig,
       );
 
       if (result.status === 201) {
@@ -180,7 +180,7 @@ export const FormUbahRL319 = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     const newResponse = await axiosJWT.get(
@@ -193,14 +193,14 @@ export const FormUbahRL319 = () => {
         params: {
           tahun: tahun,
         },
-      }
+      },
     );
 
     let dataRLTigaTitikSembilanBelasDetails = [];
     const rlTigaTitikSembilanBelasDetails = newResponse.data.data.map(
       (value) => {
         return value.rl_tiga_titik_sembilan_belas_details;
-      }
+      },
     );
 
     rlTigaTitikSembilanBelasDetails.forEach((element) => {
@@ -244,7 +244,7 @@ export const FormUbahRL319 = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     setTahun(response.data.data.tahun);
@@ -277,7 +277,7 @@ export const FormUbahRL319 = () => {
     if (object.target.value.length > object.target.maxLength) {
       object.target.value = object.target.value.slice(
         0,
-        object.target.maxLength
+        object.target.maxLength,
       );
     }
   };
@@ -344,8 +344,11 @@ export const FormUbahRL319 = () => {
   };
 
   return (
-    <div className="container" style={{ marginTop: "70px" }}>
-      <h2>RL. 3.19</h2>
+    <div
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
+    >
+      <h2>RL 3.19 - Cara Bayar</h2>
       <form onSubmit={updateDataRLTigaTitikSembilanBelas}>
         <div className="row">
           <div className="col-md-6">
@@ -586,7 +589,7 @@ export const FormUbahRL319 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button type="submit" className="btn btn-outline-success">
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Update
           </button>
         </div>

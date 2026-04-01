@@ -476,8 +476,8 @@ const FormTambahRL51 = () => {
 
   return (
     <div
-      className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      className="container-fluid"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <div className="row">
         <div className="col-md-6">
@@ -545,7 +545,7 @@ const FormTambahRL51 = () => {
         <div className="col-md-6">
           <div className="pb-2">
             <Link
-              to={`/rl51/`}
+              to={`/MENURL51/`}
               className="btn btn-info"
               style={{
                 fontSize: "18px",
@@ -584,7 +584,7 @@ const FormTambahRL51 = () => {
                   </label>
                 </div>
                 <div className="mt-3 mb-3">
-                  <button type="submit" className="btn btn-outline-success">
+                  <button type="submit" className={style.btnPrimary}>
                     <HiSaveAs /> Cari
                   </button>
                 </div>
@@ -827,7 +827,7 @@ const FormTambahRL51 = () => {
                     <ToastContainer />
                     <button
                       type="submit"
-                      className="btn btn-outline-success"
+                      className={style.btnPrimary}
                       disabled={buttonStatus}
                     >
                       <HiSaveAs /> Simpan

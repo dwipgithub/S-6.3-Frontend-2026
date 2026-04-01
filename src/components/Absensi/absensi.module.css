@@ -1,166 +1,205 @@
+.btnPrimary {
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #00b9ad;
+  /* background: linear-gradient(180deg, #5a8a8c 0%, #4a7a7c 100%); */
+  color: #fff;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+}
+
+.btnPrimary:hover {
+  background: linear-gradient(180deg, #00968f 0%, #007a75 100%);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btnPrimary:active {
+  transform: translateY(0);
+}
+
 .table-container {
-    max-height: 500px;
-    /* Adjust the height as needed */
-    overflow-y: auto;
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid #d4d4d4;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: #fff;
 }
 
 .table {
-    width: 1000%;
-    border-collapse: collapse;
-    table-layout: fixed;
-    font-size: 15px;
-    font-family: 'Times New Roman', Times, serif; /* Set font family */
-    /* Ensures column widths are consistent */
+  width: 1000%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+  /* background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%); */
+  background: white;
 }
 
 .table th,
 .table td {
-    padding: 8px;
-    border: 1px solid #ddd;
+  padding: 6px 8px;
+  border: 1px solid #d4d4d4;
+  box-sizing: border-box;
 }
 
 .table thead th {
-    background-color: #779D9E;
-    color: white;
-    position: -webkit-sticky;
-    /* For Safari */
-    position: sticky;
-    top: 0;
-    /* Keeps the main header at the top */
-    z-index: 2;
-    /* Ensures the main header is above other content */
-    text-align: center;
-    vertical-align: middle;
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
+  color: #333;
+  font-weight: 600;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.3;
 }
 
 .table .subheader-row th {
-    background-color: #779D9E;
-    color: white;
-    position: -webkit-sticky;
-    /* For Safari */
-    position: sticky;
-    top: 40px;
-    /* Adjust this to the height of the main header row */
-    z-index: 1;
-    /* Ensures the subheader is below the main header */
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
+  color: #333;
+  font-weight: 600;
+  font-size: 13px;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 29px;
+  z-index: 1;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.3;
 }
 
-.table thead th.sticky-header:nth-child(1)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 4; /* Above both header and body content */
+.table thead th.sticky-header:nth-child(1) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  z-index: 10; /* Above both header and body content */
 }
-.table thead th.sticky-header:nth-child(2)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 60px;
-    z-index: 4; /* Above both header and body content */
+.table thead th.sticky-header:nth-child(2) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 60px;
+  z-index: 10; /* Above both header and body content */
 }
 .table thead th.sticky-header:nth-child(3) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 160px;
-    z-index: 4; /* Above both header and body content */
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 160px;
+  z-index: 10; /* Above both header and body content */
+}
+.table thead th.sticky-header:nth-child(4) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 460px;
+  z-index: 10; /* Above both header and body content */
 }
 
-.table tbody tr td.sticky-column:nth-child(1)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 3; /* Above both header and body content */
+.table tbody tr td.sticky-column:nth-child(1) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  z-index: 3; /* Above both header and body content */
 }
-.table tbody tr td.sticky-column:nth-child(2)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 60px;
-    z-index: 3; /* Above both header and body content */
+.table tbody tr td.sticky-column:nth-child(2) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 60px;
+  z-index: 3; /* Above both header and body content */
 }
 .table tbody tr td.sticky-column:nth-child(3) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 160px;
-    z-index: 3; /* Above both header and body content */
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 160px;
+  z-index: 3; /* Above both header and body content */
+}
+.table tbody tr td.sticky-column:nth-child(4) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 460px;
+  z-index: 3; /* Above both header and body content */
 }
 
 .table .sticky-header {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    top: 0; /* Sticky header */
-    z-index: 2; /* Above table content */
-    background-color: #779D9E;
-    color: white;
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  top: 0; /* Sticky header */
+  z-index: 10; /* Above table content */
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
+  color: black;
 }
 
 .table .sticky-column {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 1; /* Ensures sticky column is above other content */
-    background-color: #fbfefe;
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  z-index: 1; /* Ensures sticky column is above other content */
+  /* background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%); */
+  background: white;
 }
-
 
 /* view */
-.table thead th.sticky-header-view:nth-child(1)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 4; /* Above both header and body content */
+.table thead th.sticky-header-view:nth-child(1) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  z-index: 4; /* Above both header and body content */
 }
-.table thead th.sticky-header-view:nth-child(2)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 50px;
-    z-index: 4; /* Above both header and body content */
+.table thead th.sticky-header-view:nth-child(2) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 50px;
+  z-index: 4; /* Above both header and body content */
 }
 .table thead th.sticky-header-view:nth-child(3) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 200px;
-    z-index: 4; /* Above both header and body content */
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 200px;
+  z-index: 4; /* Above both header and body content */
 }
 
-.table tbody tr td.sticky-column-view:nth-child(1)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 3; /* Above both header and body content */
+.table tbody tr td.sticky-column-view:nth-child(1) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  z-index: 3; /* Above both header and body content */
 }
-.table tbody tr td.sticky-column-view:nth-child(2)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 50px;
-    z-index: 3; /* Above both header and body content */
+.table tbody tr td.sticky-column-view:nth-child(2) {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 50px;
+  z-index: 3; /* Above both header and body content */
 }
 .table tbody tr td.sticky-column-view:nth-child(3) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 200px;
-    z-index: 3; /* Above both header and body content */
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 200px;
+  z-index: 3; /* Above both header and body content */
 }
 
 .table .sticky-header-view {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    top: 0; /* Sticky header */
-    z-index: 2; /* Above table content */
-    background-color: #779D9E;
-    color: white;
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  top: 0; /* Sticky header */
+  z-index: 2; /* Above table content */
+  background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
+  color: white;
 }
 
 .table .sticky-column-view {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 0; /* Ensures sticky column is above other content */
-    background-color: #fbfefe;
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  left: 0;
+  z-index: 0; /* Ensures sticky column is above other content */
+  /* background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%); */
+  background: white;
 }
