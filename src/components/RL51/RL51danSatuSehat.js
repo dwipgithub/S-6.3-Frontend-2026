@@ -184,6 +184,7 @@ function TabOne() {
   const [idValidasiSubmited, setidValidasiSubmited] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [KeteranganValidasiDb, setKeteranganValidasiDb] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
@@ -402,14 +403,22 @@ function TabOne() {
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
+        if (user.jenisUserId === 3) {
+          setStatusValidasi(1);
+        } else if (user.jenisUserId === 4) {
+          setStatusValidasi(2);
+        } else {
+          setStatusValidasi("");
+        }
         setKeteranganValidasi(results.data.data[0].catatan || "");
+        setKeteranganValidasiDb(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
       } else {
         setidValidasi("");
         setStatusValidasi(1);
         setKeteranganValidasi("");
+        setKeteranganValidasiDb("");
         setTglValidasi("");
         setIsValidated(false);
       }
@@ -2310,6 +2319,7 @@ function TabOne() {
               <div className={style.validasiCard}>
                 <h3 className={style.validasiCardTitle}>Validasi RL 5.1</h3>
                 {!isFilterApplied ? (
+                  // 🔸 BELUM FILTER
                   <div
                     style={{
                       backgroundColor: "#fff3cd",
@@ -2324,6 +2334,20 @@ function TabOne() {
                       Silakan pilih filter terlebih dahulu untuk menampilkan
                       data.
                     </strong>
+                  </div>
+                ) : dataRL.length === 0 ? (
+                  // 🔸 DATA KOSONG
+                  <div
+                    style={{
+                      backgroundColor: "#fff3cd",
+                      border: "1px solid #ffc107",
+                      color: "#856404",
+                      padding: "15px",
+                      borderRadius: "4px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <strong>Tidak ada data untuk proses validasi</strong>
                   </div>
                 ) : idValidasi ? (
                   <div
@@ -2353,7 +2377,7 @@ function TabOne() {
                       >
                         Catatan
                       </strong>
-                      : {keteranganValidasi || "-"}
+                      : {KeteranganValidasiDb || "-"}
                     </p>
                     <p style={{ margin: "0" }}>
                       <strong
@@ -2372,6 +2396,7 @@ function TabOne() {
                     </p>
                   </div>
                 ) : (
+                  dataRL.length > 0 &&
                   user.jenisUserId !== 3 && (
                     <div
                       style={{
@@ -2387,6 +2412,8 @@ function TabOne() {
                     </div>
                   )
                 )}
+
+                {/* 🔽 FORM VALIDASI */}
                 {dataRL.length > 0 && rumahSakit?.id ? (
                   isValidated ? (
                     <div
@@ -2399,9 +2426,7 @@ function TabOne() {
                         textAlign: "center",
                       }}
                     >
-                      <div className="text-center">
-                        <strong>Data telah di validasi</strong>
-                      </div>
+                      <strong>Data telah di validasi</strong>
                     </div>
                   ) : (
                     (user.jenisUserId === 3 ||
@@ -2432,26 +2457,21 @@ function TabOne() {
                           </select>
                         </div>
 
-                        {user.jenisUserId === 3 ? (
-                          <>
-                            <div className={style.validasiFormGroup}>
-                              <label htmlFor="keteranganValidasi">
-                                Catatan
-                              </label>
-                              <textarea
-                                id="keteranganValidasi"
-                                name="keteranganValidasi"
-                                value={keteranganValidasi}
-                                onChange={(e) =>
-                                  keteranganValidasiChangeHadler(e)
-                                }
-                                placeholder="Tambahkan catatan (opsional)"
-                                rows={4}
-                                disabled={user.jenisUserId === 4}
-                              />
-                            </div>
-                          </>
-                        ) : null}
+                        {user.jenisUserId === 3 && (
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="keteranganValidasi">Catatan</label>
+                            <textarea
+                              id="keteranganValidasi"
+                              name="keteranganValidasi"
+                              value={keteranganValidasi}
+                              onChange={(e) =>
+                                keteranganValidasiChangeHadler(e)
+                              }
+                              placeholder="Tambahkan catatan (opsional)"
+                              rows={4}
+                            />
+                          </div>
+                        )}
 
                         <button type="submit" className={style.btnPrimary}>
                           <HiSaveAs size={20} /> Simpan
