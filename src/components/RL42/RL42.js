@@ -853,6 +853,7 @@ const RL42 = () => {
                       Info : Validasi RL 4.2 ini berdasarkan validasi RL 4.1
                     </p>
                   </div>
+
                   {!isFilterApplied ? (
                     <div
                       style={{
@@ -868,6 +869,19 @@ const RL42 = () => {
                         Silakan pilih filter terlebih dahulu untuk menampilkan
                         data.
                       </strong>
+                    </div>
+                  ) : dataRL.length === 0 ? (
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>Tidak ada data untuk proses validasi</strong>
                     </div>
                   ) : idValidasi ? (
                     <div

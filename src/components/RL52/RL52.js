@@ -848,6 +848,19 @@ const RL52 = () => {
                         data.
                       </strong>
                     </div>
+                  ) : dataRL.length === 0 ? (
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>Tidak ada data untuk proses validasi</strong>
+                    </div>
                   ) : idValidasi ? (
                     <div
                       style={{
