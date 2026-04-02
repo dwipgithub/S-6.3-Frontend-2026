@@ -16,7 +16,8 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 const RL312 = () => {
   // const [tahun, setTahun] = useState("");
   const [bulan, setBulan] = useState(1);
-  const [tahun, setTahun] = useState("2025");
+  // const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [filterLabel, setFilterLabel] = useState([]);
   const [rumahSakit, setRumahSakit] = useState(null);

@@ -26,7 +26,8 @@ export const RL318 = () => {
   // const [token, setToken] = useState('')
   // const [expire, setExpire] = useState('')
   // const [dataRL, setDataRL] = useState([]);
-  const [tahun, setTahun] = useState("2025");
+  // const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [filterLabel, setFilterLabel] = useState([]);
   // const [daftarBulan, setDaftarBulan] = useState([])
   const [rumahSakit, setRumahSakit] = useState(null);

@@ -11,7 +11,8 @@ import Spinner from "react-bootstrap/esm/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const FormTambahRL318 = () => {
-  const [tahun, setTahun] = useState("2025");
+  // const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
   const [namaPropinsi, setNamaPropinsi] = useState("");

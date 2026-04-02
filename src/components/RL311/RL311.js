@@ -16,7 +16,7 @@ import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL311 = () => {
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [filterLabel, setFilterLabel] = useState([]);
   const [rumahSakit, setRumahSakit] = useState("");
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
@@ -208,18 +208,34 @@ const RL311 = () => {
         "XSRF-TOKEN": CSRFToken,
       },
     };
+
     try {
       await axiosJWT.delete(
         `/apisirs6v2/rltigatitiksebelas/${id}`,
         customConfig,
       );
+
       toast("Data Berhasil Dihapus", {
         position: toast.POSITION.TOP_RIGHT,
       });
-      setDataRL((current) => current.filter((value) => value.id !== id));
+
+      // 🔥 UPDATE STATE + TOTAL SEKALIGUS
+      setDataRL((prev) => {
+        const newData = prev.filter((item) => item.id !== id);
+
+        // hitung ulang total
+        const newTotal = newData.reduce(
+          (sum, item) => sum + Number(item.jumlah),
+          0,
+        );
+
+        settotalall(newTotal); // 🔥 update total
+
+        return newData;
+      });
     } catch (error) {
       console.log(error);
-      toast("Data Gagal Disimpan", {
+      toast("Data Gagal Dihapus", {
         position: toast.POSITION.TOP_RIGHT,
       });
     }
@@ -834,7 +850,7 @@ const RL311 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Validasi RL 3.18</h3>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.11</h3>
                   {!isFilterApplied ? (
                     <div
                       style={{

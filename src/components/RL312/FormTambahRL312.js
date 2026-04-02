@@ -16,7 +16,8 @@ const FormTambahRL312 = () => {
   const [namaKabKota, setNamaKabKota] = useState("");
   // const [tahun, setTahun] = useState("");
   const [bulan, setBulan] = useState(1);
-  const [tahun, setTahun] = useState("2025");
+  // const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [dataRL, setDataRL] = useState([]);
   const [token, setToken] = useState("");
