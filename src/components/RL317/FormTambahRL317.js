@@ -12,7 +12,8 @@ import Spinner from "react-bootstrap/esm/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const FormTambahRL317 = () => {
-  const [tahun, setTahun] = useState("2025");
+  // const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
   const [namaPropinsi, setNamaPropinsi] = useState("");
@@ -249,6 +250,7 @@ const FormTambahRL317 = () => {
       e.preventDefault();
     }
   };
+
   const maxLengthCheck = (object) => {
     if (object.target.value.length > object.target.maxLength) {
       object.target.value = object.target.value.slice(
@@ -261,7 +263,7 @@ const FormTambahRL317 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <form onSubmit={Simpan}>
         <div className="row">

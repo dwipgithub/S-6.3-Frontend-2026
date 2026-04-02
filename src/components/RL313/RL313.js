@@ -15,7 +15,8 @@ import { DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL313 = () => {
-  const [tahun, setTahun] = useState("2025");
+  // const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [filterLabel, setFilterLabel] = useState([]);
   const [rumahSakit, setRumahSakit] = useState(null);
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);

@@ -10,7 +10,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const FormTambahRL315 = () => {
-  const [tahun, setTahun] = useState("");
+  // const [tahun, setTahun] = useState("");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
   const [namaPropinsi, setNamaPropinsi] = useState("");
