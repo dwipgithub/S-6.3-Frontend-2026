@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { Link, useNavigate } from "react-router-dom";
-import style from "./FormTambahRL314.module.css";
+// import style from "./FormTambahRL314.module.css";
+import style from "./RL314.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { IoArrowBack } from "react-icons/io5";
 import { ToastContainer, toast } from "react-toastify";
@@ -245,7 +246,7 @@ const FormTambahRL314 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <form onSubmit={Simpan}>
         <div className="row">
@@ -385,128 +386,167 @@ const FormTambahRL314 = () => {
         </div>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl314/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>
-              Kembali RL 3.14 Pelayanan Khusus
-            </span>
-            <table className={style.rlTable}>
-              <thead>
-                <tr>
-                  <th style={{ width: "4%" }}>No</th>
-                  <th style={{ width: "3%" }}></th>
-                  <th style={{ width: "30%" }}>Jenis Kegiatan</th>
-                  <th>Jumlah</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dataRL.map((value, index) => {
-                  if (value.no == 0) {
-                    return (
-                      <tr key={value.id}>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          {value.no}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            name="check"
-                            className="form-check-input"
-                            onChange={(e) => changeHandler(e, index)}
-                            checked={value.checked}
-                          />
-                        </td>
-                        <td style={{ textAlign: "left" }}>
-                          {value.jenisKegiatan}
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="jumlah"
-                            className="form-control"
-                            value={value.jumlah}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={true}
-                            min={0}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  } else {
-                    return (
-                      <tr key={value.id}>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          {value.no}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            name="check"
-                            className="form-check-input"
-                            onChange={(e) => changeHandler(e, index)}
-                            checked={value.checked}
-                          />
-                        </td>
-                        <td style={{ textAlign: "left" }}>
-                          {value.jenisKegiatan}
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="jumlah"
-                            className="form-control"
-                            value={value.jumlah}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            min={0}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  }
-                })}
-              </tbody>
-            </table>
+            <div className={style.headerAction}>
+              <Link to="/rl314">
+                <button type="button" className={style.btnPrimary}>
+                  <IoArrowBack />
+                </button>
+              </Link>
+
+              <h4 className={style.pageHeader}>RL 3.14 Pelayanan Khusus</h4>
+            </div>
+
+            <div className={style["table-container"]}>
+              <table
+                className={style["table"]}
+                style={{ width: "100%", tableLayout: "fixed" }}
+              >
+                <thead className={style["thead"]}>
+                  <tr className="main-header-row">
+                    <th style={{ width: "4%" }}>No</th>
+                    <th style={{ width: "5%" }}>Pilih</th>
+                    <th style={{ width: "30%" }}>Jenis Kegiatan</th>
+                    <th>Jumlah</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dataRL.map((value, index) => {
+                    if (value.no == 0) {
+                      return (
+                        <tr key={value.id}>
+                          <td
+                            style={{
+                              textAlign: "center",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            {value.no}
+                          </td>
+                          <td
+                            style={{
+                              textAlign: "center",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              name="check"
+                              className="form-check-input"
+                              onChange={(e) => changeHandler(e, index)}
+                              checked={value.checked}
+                            />
+                          </td>
+                          <td style={{ textAlign: "left" }}>
+                            {value.jenisKegiatan}
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              name="jumlah"
+                              className="form-control"
+                              value={value.jumlah}
+                              onChange={(e) => changeHandler(e, index)}
+                              disabled={true}
+                              min={0}
+                              onPaste={preventPasteNegative}
+                              onKeyPress={preventMinus}
+                              onFocus={handleFocus}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                textAlign: "center",
+                                border: "none",
+                                outline: "none",
+                                boxShadow: "none",
+                                margin: 0,
+                                padding: "8px 4px",
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    } else {
+                      return (
+                        <tr key={value.id}>
+                          <td
+                            style={{
+                              textAlign: "center",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            {value.no}
+                          </td>
+                          <td
+                            style={{
+                              textAlign: "center",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              name="check"
+                              className="form-check-input"
+                              onChange={(e) => changeHandler(e, index)}
+                              checked={value.checked}
+                            />
+                          </td>
+                          <td style={{ textAlign: "left" }}>
+                            {value.jenisKegiatan}
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              name="jumlah"
+                              className="form-control"
+                              value={value.jumlah}
+                              onChange={(e) => changeHandler(e, index)}
+                              disabled={value.disabledInput}
+                              min={0}
+                              onPaste={preventPasteNegative}
+                              onKeyPress={preventMinus}
+                              onFocus={handleFocus}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                textAlign: "center",
+                                backgroundColor:
+                                  value.id === 88 || value.disabledInput
+                                    ? "#e0e0e0"
+                                    : "#ffffff",
+                                border: "none",
+                                outline: "none",
+                                boxShadow: "none",
+                                margin: 0,
+                                padding: "8px 4px",
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    }
+                  })}
+                  {/* TOTAL */}
+                  {dataRL.length > 0 && (
+                    <tr className="table-light fw-bold">
+                      <td colSpan={3} className="text-center">
+                        TOTAL
+                      </td>
+                      <td className="text-center">
+                        {dataRL.reduce(
+                          (acc, item) => acc + Number(item.jumlah || 0),
+                          0,
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button type="submit" className="btn btn-outline-success">
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Simpan
           </button>
         </div>

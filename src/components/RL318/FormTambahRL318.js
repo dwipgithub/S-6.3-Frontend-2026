@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
-import style from "./FormTambahRL318.module.css"; // Pastikan file ini ada
+import style from "./RL318.module.css"; // Pastikan file ini ada
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Table from "react-bootstrap/esm/Table";
 import Spinner from "react-bootstrap/esm/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import { IoArrowBack } from "react-icons/io5";
 
 const FormTambahRL318 = () => {
   // const [tahun, setTahun] = useState("2025");
@@ -161,19 +162,54 @@ const FormTambahRL318 = () => {
     }
   };
 
+  const preventPasteNegative = (e) => {
+    const clipboardData = e.clipboardData || window.clipboardData;
+    const pastedData = parseFloat(clipboardData.getData("text"));
+
+    if (pastedData < 0) {
+      e.preventDefault();
+    }
+  };
+
+  const preventMinus = (e) => {
+    if (e.code === "Minus") {
+      e.preventDefault();
+    }
+  };
+
+  const maxLengthCheck = (object) => {
+    if (object.target.value.length > object.target.maxLength) {
+      object.target.value = object.target.value.slice(
+        0,
+        object.target.maxLength,
+      );
+    }
+  };
+
+  const totalRawatJalan = dataRL.reduce(
+    (acc, item) => acc + Number(item.rawatJalan || 0),
+    0,
+  );
+
+  const totalIGD = dataRL.reduce((acc, item) => acc + Number(item.igd || 0), 0);
+
+  const totalRawatInap = dataRL.reduce(
+    (acc, item) => acc + Number(item.rawatInap || 0),
+    0,
+  );
+
   return (
     <div
       className="container"
-      style={{ marginTop: "80px", marginBottom: "50px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <form onSubmit={Simpan}>
         <div className="row g-3">
           <div className="col-md-6">
-            <div className="card shadow-sm border-0">
+            <div className="card">
               <div className="card-body">
-                <h6 className="fw-bold mb-3 text-secondary">
-                  Profile Fasyankes
-                </h6>
+                <h5 className="card-title">Profile Fasyankes</h5>
+
                 <div className="form-floating mb-2">
                   <input
                     type="text"
@@ -183,6 +219,7 @@ const FormTambahRL318 = () => {
                   />
                   <label>Nama Rumah Sakit</label>
                 </div>
+
                 <div className="form-floating">
                   <input
                     type="text"
@@ -195,10 +232,11 @@ const FormTambahRL318 = () => {
               </div>
             </div>
           </div>
+
           <div className="col-md-6">
-            <div className="card shadow-sm border-0">
+            <div className="card">
               <div className="card-body">
-                <h6 className="fw-bold mb-3 text-secondary">Periode Laporan</h6>
+                <h6 className="card-title h5">Periode Laporan</h6>
                 <div className="form-floating">
                   <select
                     className="form-select"
@@ -221,87 +259,101 @@ const FormTambahRL318 = () => {
 
         <div className="row mt-4">
           <div className="col-md-12">
-            <div className="d-flex align-items-center mb-3">
-              <Link to="/rl318" className="btn btn-light shadow-sm me-3">
-                &larr;
+            <div className={style.headerAction}>
+              <Link to="/rl318">
+                <button type="button" className={style.btnPrimary}>
+                  ←
+                </button>
               </Link>
-              <h5 className="mb-0 text-dark">RL 3.18 Farmasi Resep</h5>
+
+              <h4 className={style.pageHeader}>RL 3.18 Farmasi Resep</h4>
             </div>
 
-            {spinner && (
-              <div className="text-center my-3">
-                <Spinner animation="border" variant="primary" />
-              </div>
-            )}
-
             <div className={style["table-container"]}>
-              <Table className={style.table}>
-                <thead>
+              <table className={style.table}>
+                <thead className={style.thead}>
                   <tr>
-                    <th style={{ width: "80px" }}>No</th>
-                    <th style={{ width: "50px" }}>Pilih</th>
+                    <th style={{ width: "5%" }}>No</th>
+                    <th style={{ width: "5%" }}>Pilih</th>
                     <th>Golongan Obat</th>
-                    <th>Rawat Jalan</th>
-                    <th>IGD</th>
-                    <th>Rawat Inap</th>
+                    <th style={{ width: "15%" }}>Rawat Jalan</th>
+                    <th style={{ width: "15%" }}>IGD</th>
+                    <th style={{ width: "15%" }}>Rawat Inap</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {dataRL.map((value, index) => (
                     <tr key={value.id}>
-                      <td className="text-center">{value.no}</td>
-                      <td className="text-center">
+                      {/* NO */}
+                      <td className={style.center}>{value.no}</td>
+
+                      {/* CHECKBOX */}
+                      <td className={style.center}>
                         <input
                           type="checkbox"
                           name="check"
-                          className="form-check-input"
                           onChange={(e) => changeHandler(e, index)}
                           checked={value.checked}
                         />
                       </td>
-                      <td className={style["sticky-column"]}>
-                        {value.golonganObat}
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          name="rawatJalan"
-                          className="form-control text-center"
-                          value={value.rawatJalan}
-                          onChange={(e) => changeHandler(e, index)}
-                          disabled={
-                            value.no === "0" ? true : value.disabledInput
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          name="igd"
-                          className="form-control text-center"
-                          value={value.igd}
-                          onChange={(e) => changeHandler(e, index)}
-                          disabled={
-                            value.no === "0" ? true : value.disabledInput
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          name="rawatInap"
-                          className="form-control text-center"
-                          value={value.rawatInap}
-                          onChange={(e) => changeHandler(e, index)}
-                          disabled={
-                            value.no === "0" ? true : value.disabledInput
-                          }
-                        />
-                      </td>
+
+                      {/* NAMA */}
+                      <td className={style.left}>{value.golonganObat}</td>
+
+                      {/* INPUT */}
+                      {["rawatJalan", "igd", "rawatInap"].map((field) => (
+                        <td key={field} className={style.inputCell}>
+                          <input
+                            type="number"
+                            name={field}
+                            min={0}
+                            maxLength={15}
+                            onInput={(e) => maxLengthCheck(e)}
+                            onPaste={preventPasteNegative}
+                            onKeyPress={preventMinus}
+                            value={value[field]}
+                            onChange={(e) => changeHandler(e, index)}
+                            disabled={value.no === "0" || value.disabledInput}
+                            className={style.inputExcel}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              textAlign: "center",
+                              backgroundColor:
+                                value.id === 88 || value.disabledInput
+                                  ? "#e0e0e0"
+                                  : "#ffffff",
+                              border: "none",
+                              outline: "none",
+                              boxShadow: "none",
+                              margin: 0,
+                              padding: "8px 4px",
+                            }}
+                          />
+                        </td>
+                      ))}
                     </tr>
                   ))}
+                  {/* TOTAL */}
+                  {dataRL.length > 0 && (
+                    <tr className={style.totalRow}>
+                      <td colSpan={3} className={style.center}>
+                        <strong>TOTAL</strong>
+                      </td>
+                      <td className={style.center}>
+                        <strong>{totalRawatJalan}</strong>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <strong>{totalIGD}</strong>
+                      </td>
+                      <td className={style.center}>
+                        <strong>{totalRawatInap}</strong>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
-              </Table>
+              </table>
             </div>
           </div>
         </div>
@@ -310,10 +362,10 @@ const FormTambahRL318 = () => {
           <ToastContainer />
           <button
             type="submit"
-            className="btn btn-success px-4 py-2"
+            className={style.btnPrimary}
             disabled={buttonStatus}
           >
-            <HiSaveAs className="me-2" /> Simpan Data
+            <HiSaveAs /> Simpan
           </button>
         </div>
       </form>
