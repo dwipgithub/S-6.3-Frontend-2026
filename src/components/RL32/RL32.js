@@ -40,7 +40,7 @@ const RL32 = () => {
     getBulan();
     const getLastYear = async () => {
       const date = new Date();
-      setTahun("2025");
+      setTahun("2026");
       return date.getFullYear();
     };
     getLastYear().then((results) => {});
@@ -746,6 +746,8 @@ const RL32 = () => {
     );
   };
 
+  const isAksi = user.jenisUserId === 4;
+
   const totalPasienAwalBulan = calculateTotalPasienAwalBulan(dataRL);
   const totalPasienMasuk = calculateTotalPasienMasuk(dataRL);
   const totalPasienPindahan = calculateTotalPasienPindahan(dataRL);
@@ -1068,309 +1070,138 @@ const RL32 = () => {
                 }`}
               >
                 <div className={style["table-container"]}>
-                  <table className={style.table}>
-                    <thead className={style.thead}>
-                      <tr className="">
-                        <th
-                          className={style["sticky-header"]}
-                          rowSpan="2"
-                          style={{ width: "3%" }}
-                        >
-                          No.
-                        </th>
-                        {user.jenisUserId === 4
-                        ? <th
-                          className={style["sticky-header"]}
-                          rowSpan="2"
-                          style={{ width: "7%" }}
-                        >
-                          Aksi
-                        </th>
-                                  : <>
-                                      
-                                    </>
-                                }
-                        
-                        <th
-                          className={style["sticky-header"]}
-                          rowSpan="2"
-                          style={{ width: "8%" }}
-                        >
-                          Jenis Pelayanan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Awal Bulan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Masuk
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Pindahan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Dipindahkan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Keluar Hidup
-                        </th>
-                        <th colSpan="2" style={{ width: "8%" }}>
-                          Pasien Pria Keluar Mati
-                        </th>
-                        <th colSpan="2" style={{ width: "8%" }}>
-                          Pasien Wanita Keluar Mati
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Jumlah Lama Dirawat
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Akhir Bulan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Jumlah Hari Perawatan
-                        </th>
-                        <th colSpan="6" style={{ width: "20%" }}>
-                          Rincian Hari Perawatan Per Kelas
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Jumlah Alokasi TT Awal Bulan
-                        </th>
-                      </tr>
-                      <tr className={style["subheader-row"]}>
-                        <th style={{ width: "5%" }}>{"< 48 jam"}</th>
-                        <th style={{ width: "5%" }}>{">= 48 jam"}</th>
-                        <th style={{ width: "5%" }}>{"< 48 jam"}</th>
-                        <th style={{ width: "5%" }}>{">= 48 jam"}</th>
-                        <th style={{ width: "5%" }}>VVIP</th>
-                        <th style={{ width: "5%" }}>VIP</th>
-                        <th style={{ width: "5%" }}>1</th>
-                        <th style={{ width: "5%" }}>2</th>
-                        <th style={{ width: "5%" }}>3</th>
-                        <th style={{ width: "5%" }}>Khusus</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dataRL.map((value, index) => {
-                        return (
+                  
+
+                    <table className={style.table}>
+                      <thead className={style.thead}>
+                        <tr>
+                          <th rowSpan="2">No.</th>
+
+                          {/* ✅ kolom SELALU ADA */}
+                          <th rowSpan="2">Aksi</th>
+
+                          <th rowSpan="2">Jenis Pelayanan</th>
+                          <th rowSpan="2">Pasien Awal Bulan</th>
+                          <th rowSpan="2">Pasien Masuk</th>
+                          <th rowSpan="2">Pasien Pindahan</th>
+                          <th rowSpan="2">Pasien Dipindahkan</th>
+                          <th rowSpan="2">Pasien Keluar Hidup</th>
+
+                          <th colSpan="2">Pasien Pria Keluar Mati</th>
+                          <th colSpan="2">Pasien Wanita Keluar Mati</th>
+
+                          <th rowSpan="2">Jumlah Lama Dirawat</th>
+                          <th rowSpan="2">Pasien Akhir Bulan</th>
+                          <th rowSpan="2">Jumlah Hari Perawatan</th>
+
+                          <th colSpan="6">Rincian Hari Perawatan</th>
+                          <th rowSpan="2">TT Awal</th>
+                        </tr>
+
+                        <tr>
+                          <th>{"<48 jam"}</th>
+                          <th>{">=48 jam"}</th>
+                          <th>{"<48 jam"}</th>
+                          <th>{">=48 jam"}</th>
+
+                          <th>VVIP</th>
+                          <th>VIP</th>
+                          <th>1</th>
+                          <th>2</th>
+                          <th>3</th>
+                          <th>Khusus</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {dataRL.map((value, index) => (
                           <tr key={value.id}>
-                            <td className={style["sticky-column"]}>
-                                {index + 1}
-                            </td>
-                            {user.jenisUserId === 4
-                        ? <td
-                              className={style["sticky-column"]}
-                              style={{
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              <ToastContainer />
-                              {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
-                              {user.jenisUserId === 4 ? (
+                            <td>{index + 1}</td>
+
+                            {/* ✅ kolom tetap ada */}
+                            <td>
+                              {isAksi && (
                                 <div style={{ display: "flex" }}>
                                   <button
                                     className="btn btn-danger"
-                                    style={{
-                                      margin: "0 5px 0 0",
-                                      backgroundColor: "#FF6663",
-                                      border: "1px solid #FF6663",
-                                    }}
-                                    type="button"
-                                    onClick={(e) =>
-                                      deleteConfirmation(value.id)
-                                    }
+                                    onClick={() => deleteConfirmation(value.id)}
                                   >
                                     Hapus
                                   </button>
+
                                   <Link
                                     to={`/rl32/ubah/${value.id}`}
                                     className="btn btn-warning"
-                                    style={{
-                                      margin: "0 5px 0 0",
-                                      backgroundColor: "#CFD35E",
-                                      border: "1px solid #CFD35E",
-                                      color: "#FFFFFF",
-                                    }}
                                   >
                                     Ubah
                                   </Link>
                                 </div>
-                              ) : (
-                                <></>
                               )}
                             </td>
-                                  : <>
-                                      
-                                    </>
-                                }
-                            
-                            <td
-                              className={style["sticky-column"]}
-                              style={{ background: "white", textAlign: "Left" }}
-                            >
-                              {value.nama_jenis_pelayanan}
-                            </td>
-                            <td>
-                              {value.pasien_awal_bulan}
-                            </td>
-                            <td>
-                              {value.pasien_masuk}
-                            </td>
-                            <td>
-                              {value.pasien_pindahan}
-                            </td>
-                            <td>
-                              {value.pasien_dipindahkan}
-                            </td>
-                            <td>
-                              {value.pasien_keluar_hidup}
-                            </td>
-                            <td>
-                              {
-                                  value.pasien_keluar_mati_kurang_dari_48_jam
-                                }
-                            </td>
-                            <td>
-                              {
-                                  value.pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam
-                                }
-                            </td>
-                            <td>
-                              {
-                                  value.pasien_wanita_keluar_mati_kurang_dari_48_jam
-                                }
-                            </td>
-                            <td>
-                              {
-                                  value.pasien_wanita_keluar_mati_lebih_dari_atau_sama_dengan_48_jam
-                                }
-                            </td>
-                            <td>
-                              {value.jumlah_lama_dirawat}
-                            </td>
-                            <td>
-                              {hitungPasienAkhirBulan(index)}
-                            </td>
-                            <td>
-                              {hitungJumlahHariPerawatan(index)}
-                            </td>
-                            <td>
-                              {value.rincian_hari_perawatan_kelas_VVIP}
-                            </td>
-                            <td>
-                              {value.rincian_hari_perawatan_kelas_VIP}
-                            </td>
-                            <td>
-                              {value.rincian_hari_perawatan_kelas_1}
-                            </td>
-                            <td>
-                              {value.rincian_hari_perawatan_kelas_2}
-                            </td>
-                            <td>
-                              {value.rincian_hari_perawatan_kelas_3}
-                            </td>
-                            <td>
-                              {
-                                  value.rincian_hari_perawatan_kelas_khusus
-                                }
-                            </td>
-                            <td>
-                              {
-                                  value.jumlah_alokasi_tempat_tidur_awal_bulan
-                                }
-                            </td>
+
+                            <td>{value.nama_jenis_pelayanan}</td>
+                            <td>{value.pasien_awal_bulan}</td>
+                            <td>{value.pasien_masuk}</td>
+                            <td>{value.pasien_pindahan}</td>
+                            <td>{value.pasien_dipindahkan}</td>
+                            <td>{value.pasien_keluar_hidup}</td>
+
+                            <td>{value.pasien_keluar_mati_kurang_dari_48_jam}</td>
+                            <td>{value.pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam}</td>
+                            <td>{value.pasien_wanita_keluar_mati_kurang_dari_48_jam}</td>
+                            <td>{value.pasien_wanita_keluar_mati_lebih_dari_atau_sama_dengan_48_jam}</td>
+
+                            <td>{value.jumlah_lama_dirawat}</td>
+                            <td>{hitungPasienAkhirBulan(index)}</td>
+                            <td>{hitungJumlahHariPerawatan(index)}</td>
+
+                            <td>{value.rincian_hari_perawatan_kelas_VVIP}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_VIP}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_1}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_2}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_3}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_khusus}</td>
+
+                            <td>{value.jumlah_alokasi_tempat_tidur_awal_bulan}</td>
                           </tr>
-                        );
-                      })}
-                      {dataRL.length > 0 ? (
-                        <>
+                        ))}
+
+                        {dataRL.length > 0 && (
                           <tr>
-                            <td className={style["sticky-column"]}></td>
-                            {user.jenisUserId === 4
-                        ?
-                            <td className={style["sticky-column"]}></td>: <>
-                                      
-                                    </>
-                                }
-                            
-                            <td
-                              className={style["sticky-column"]}
-                              style={{ background: "white", textAlign: "Left" }}
-                            >
-                              Total
-                            </td>
-                               
-                            <td>
-                              {totalPasienAwalBulan}
-                            </td>
-                            <td>
-                             {totalPasienMasuk}
-                            </td>
-                            <td>
-                              {totalPasienPindahan}
-                            </td>
-                            <td>
-                              {totalPasienDipindahkan}
-                            </td>
-                            <td>
-                                {totalPasienKeluarHidup}
-                            </td>
-                            <td>
-                              {totalPasienKeluarMatiKurangDari48Jam}
-                            </td>
-                            <td>
-                              {
-                                  totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam
-                                }
-                            </td>
-                            <td>
-                              {
-                                  totalPasienWanitaKeluarMatiKurangDari48Jam
-                                }
-                            </td>
-                            <td>
-                              {
-                                  totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam
-                                }
-                            </td>
-                            <td>
-                              {totalJumlahDirawat}
-                            </td>
-                            <td>
-                              {totalPasienAkhirBulan}
-                            </td>
-                            <td>
-                              {totalHariPerawatan}
-                            </td>
-                            <td>
-                              {totalKelasVVIP}
-                            </td>
-                            <td>
-                              {totalKelasVIP}
-                            </td>
-                            <td>
-                              {totalKelas1}
-                            </td>
-                            <td>
-                              {totalKelas2}
-                            </td>
-                            <td>
-                              {totalKelas3}
-                            </td>
-                            <td>
-                              {totalKelasKhusus}
-                            </td>
-                            <td>
-                              {
-                                  totalTotalJumlahAlokasiTempatTidurAwalBulan
-                                }
-                            </td>
+                            <td></td>
+
+                            {/* ✅ tetap ada */}
+                            <td></td>
+
+                            <td>Total</td>
+
+                            <td>{totalPasienAwalBulan}</td>
+                            <td>{totalPasienMasuk}</td>
+                            <td>{totalPasienPindahan}</td>
+                            <td>{totalPasienDipindahkan}</td>
+                            <td>{totalPasienKeluarHidup}</td>
+
+                            <td>{totalPasienKeluarMatiKurangDari48Jam}</td>
+                            <td>{totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
+                            <td>{totalPasienWanitaKeluarMatiKurangDari48Jam}</td>
+                            <td>{totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
+
+                            <td>{totalJumlahDirawat}</td>
+                            <td>{totalPasienAkhirBulan}</td>
+                            <td>{totalHariPerawatan}</td>
+
+                            <td>{totalKelasVVIP}</td>
+                            <td>{totalKelasVIP}</td>
+                            <td>{totalKelas1}</td>
+                            <td>{totalKelas2}</td>
+                            <td>{totalKelas3}</td>
+                            <td>{totalKelasKhusus}</td>
+
+                            <td>{totalTotalJumlahAlokasiTempatTidurAwalBulan}</td>
                           </tr>
-                        </>
-                      ) : (
-                        <></>
-                      )}
-                    </tbody>
-                  </table>
+                        )}
+                      </tbody>
+                    </table>
                 </div>
               </div>
 

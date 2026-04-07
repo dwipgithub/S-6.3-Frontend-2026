@@ -43,8 +43,11 @@ export const FormUbahRL33 = () => {
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
-    refreshToken();
-    getRLTigaTitikTigaById();
+    const initialize = async () => {
+      await refreshToken();
+      await getRLTigaTitikTigaById();
+    };
+    initialize();
   }, []);
 
   const refreshToken = async () => {
@@ -95,8 +98,14 @@ export const FormUbahRL33 = () => {
     }
   };
 
+  const parseIntOrZero = (value) => {
+    const parsed = parseInt(value, 10);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  };
+
   const updateDataRLTigaTitikTiga = async (e) => {
     e.preventDefault();
+    setButtonStatus(true);
     try {
       const customConfig = {
         headers: {
@@ -108,28 +117,28 @@ export const FormUbahRL33 = () => {
 
       let parent;
 
-      if (no.includes("1.")) {
+      if (no.startsWith("1.")) {
         parent = await getParent(1);
-      } else if (no.includes("2.")) {
+      } else if (no.startsWith("2.")) {
         parent = await getParent(2);
       }
 
       if (parent) {
         const parentData = {
           total_pasien_rujukan:
-            parent.total_pasien_rujukan + parseInt(pasienRujukan),
+            parent.total_pasien_rujukan + parseIntOrZero(pasienRujukan),
           total_pasien_non_rujukan:
-            parent.total_pasien_non_rujukan + parseInt(pasienNonRujukan),
-          tlp_dirawat: parent.tlp_dirawat + parseInt(tlpDirawat),
-          tlp_dirujuk: parent.tlp_dirujuk + parseInt(tlpDirujuk),
-          tlp_pulang: parent.tlp_pulang + parseInt(tlpPulang),
-          m_igd_laki: parent.m_igd_laki + parseInt(igdLaki),
-          m_igd_perempuan: parent.m_igd_perempuan + parseInt(igdPerempuan),
-          doa_laki: parent.doa_laki + parseInt(doaLaki),
-          doa_perempuan: parent.doa_perempuan + parseInt(doaPerempuan),
-          luka_laki: parent.luka_laki + parseInt(lukaLaki),
-          luka_perempuan: parent.luka_perempuan + parseInt(lukaPerempuan),
-          false_emergency: parent.false_emergency + parseInt(falseEmergency),
+            parent.total_pasien_non_rujukan + parseIntOrZero(pasienNonRujukan),
+          tlp_dirawat: parent.tlp_dirawat + parseIntOrZero(tlpDirawat),
+          tlp_dirujuk: parent.tlp_dirujuk + parseIntOrZero(tlpDirujuk),
+          tlp_pulang: parent.tlp_pulang + parseIntOrZero(tlpPulang),
+          m_igd_laki: parent.m_igd_laki + parseIntOrZero(igdLaki),
+          m_igd_perempuan: parent.m_igd_perempuan + parseIntOrZero(igdPerempuan),
+          doa_laki: parent.doa_laki + parseIntOrZero(doaLaki),
+          doa_perempuan: parent.doa_perempuan + parseIntOrZero(doaPerempuan),
+          luka_laki: parent.luka_laki + parseIntOrZero(lukaLaki),
+          luka_perempuan: parent.luka_perempuan + parseIntOrZero(lukaPerempuan),
+          false_emergency: parent.false_emergency + parseIntOrZero(falseEmergency),
         };
 
         const updateParent = await axiosJWT.patch(
@@ -142,24 +151,24 @@ export const FormUbahRL33 = () => {
       const result = await axiosJWT.patch(
         "/apisirs6v2/rltigatitiktigadetail/" + id,
         {
-          total_pasien_rujukan: parseInt(pasienRujukan),
-          total_pasien_non_rujukan: parseInt(pasienNonRujukan),
-          tlp_dirawat: parseInt(tlpDirawat),
-          tlp_dirujuk: parseInt(tlpDirujuk),
-          tlp_pulang: parseInt(tlpPulang),
-          m_igd_laki: parseInt(igdLaki),
-          m_igd_perempuan: parseInt(igdPerempuan),
-          doa_laki: parseInt(doaLaki),
-          doa_perempuan: parseInt(doaPerempuan),
-          luka_laki: parseInt(lukaLaki),
-          luka_perempuan: parseInt(lukaPerempuan),
-          false_emergency: parseInt(falseEmergency),
+          total_pasien_rujukan: parseIntOrZero(pasienRujukan),
+          total_pasien_non_rujukan: parseIntOrZero(pasienNonRujukan),
+          tlp_dirawat: parseIntOrZero(tlpDirawat),
+          tlp_dirujuk: parseIntOrZero(tlpDirujuk),
+          tlp_pulang: parseIntOrZero(tlpPulang),
+          m_igd_laki: parseIntOrZero(igdLaki),
+          m_igd_perempuan: parseIntOrZero(igdPerempuan),
+          doa_laki: parseIntOrZero(doaLaki),
+          doa_perempuan: parseIntOrZero(doaPerempuan),
+          luka_laki: parseIntOrZero(lukaLaki),
+          luka_perempuan: parseIntOrZero(lukaPerempuan),
+          false_emergency: parseIntOrZero(falseEmergency),
         },
         customConfig
       );
 
-      if (result.status === 201) {
-        toast("Data Berhasil Diperbaharui", {
+      if (result.data && result.data.status === true) {
+        toast(result.data.message || "Data Berhasil Diperbaharui", {
           position: toast.POSITION.TOP_RIGHT,
         });
 
@@ -167,15 +176,24 @@ export const FormUbahRL33 = () => {
           navigate("/rl33");
         }, 2000);
       } else {
-        toast(`Data Gagal Diperbaharui, ${result.data.message}`, {
+        const message = result.data?.message || "Data Gagal Diperbaharui";
+        toast(`Data Gagal Diperbaharui, ${message}`, {
           position: toast.POSITION.TOP_RIGHT,
         });
+        setButtonStatus(false);
       }
     } catch (error) {
       console.log(error);
-      toast("Data Gagal Diupdate", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
+      if (error.response?.data) {
+        console.error(error.response.data);
+        toast(`Data Gagal Diupdate, ${error.response.data.message}`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+      } else {
+        toast("Data Gagal Diupdate", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+      }
       setButtonStatus(false);
     }
   };
@@ -213,7 +231,11 @@ export const FormUbahRL33 = () => {
 
     const parent = dataRLTigaTitikTigaDetails
       .filter((value) => {
-        return value.jenis_pelayanan_rl_tiga_titik_tiga.no == filter;
+        const noValue = value.jenis_pelayanan_rl_tiga_titik_tiga.no;
+        return (
+          noValue === `${filter}.` ||
+          noValue === String(filter)
+        );
       })
       .map((value) => {
         return {
@@ -372,11 +394,11 @@ export const FormUbahRL33 = () => {
           <div className="col-md-12">
             <Link
               to={`/rl33/`}
-              className="btn btn-info"
+              className={style.btnPrimary}
               style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
+                textDecoration: "none",
+                display: "inline-block",
+                color: "#FFF",
               }}
             >
               &lt;
@@ -665,11 +687,7 @@ export const FormUbahRL33 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button
-            type="submit"
-            className="btn btn-outline-success"
-            disabled={buttonStatus}
-          >
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Update
           </button>
         </div>

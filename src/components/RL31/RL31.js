@@ -604,7 +604,7 @@ const getRL = async (e) => {
            <table className={style.table}>
             <thead>
               <tr>
-                <th>No.</th>
+                <th style={{ width: "5%" }}>No.</th>
                 {user.jenisUserId === 2 && (
                   <>
                     <th>rs_id</th>
@@ -643,8 +643,7 @@ const getRL = async (e) => {
               ))}
               {user.jenisUserId !== 2 && dataRL.length > 0 && (
                 <tr>
-                  <td></td>
-                  <td>Rata - Rata</td>
+                  <td colspan="2">Rata - Rata</td>
                   <td style={{ textAlign: "right" }}>{aveBOR.toFixed(2)}</td>
                   <td style={{ textAlign: "right" }}>{aveALOS.toFixed(2)}</td>
                   <td style={{ textAlign: "right" }}>{aveBTO.toFixed(2)}</td>

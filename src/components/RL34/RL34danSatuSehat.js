@@ -931,9 +931,12 @@ function TabOne() {
                 <Link
                   className={style.btnPrimary}
                   to={`/rl34/tambah/`}
-                  style={{ marginRight: "5px", fontSize: "18px" }}
+                  style={{textDecoration: "none",
+                          display: "inline-block",
+                          color: "#FFF",
+                          marginRight: "5px"}}
                 >
-                  +
+                  Tambah
                 </Link>
               </>
             ) : (
@@ -941,14 +944,14 @@ function TabOne() {
             )}
             <button
               className={style.btnPrimary}
-              style={{ fontSize: "18px" }}
+              style={{ fontSize: "18px", marginRight: "5px" }}
               onClick={handleShow}
             >
               Filter
             </button>
             <button
               className={style.btnPrimary}
-              style={{ fontSize: "18px", marginLeft: "5px" }}
+              style={{ fontSize: "18px", marginRight: "5px" }}
               onClick={handleDownloadExcel}
             >
               Download
@@ -1029,8 +1032,12 @@ function TabOne() {
                       <div style={{ display: "flex" }}>
                         {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
                         <button
-                          className={style.btnPrimary}
-                          style={{ margin: "0 5px 0 0" }}
+                          className="btn btn-danger"
+                          style={{
+                            margin: "0 5px 0 0",
+                            backgroundColor: "#FF6663",
+                            border: "1px solid #FF6663",
+                          }}
                           type="button"
                           onClick={(e) => hapus(value.id)}
                         >
@@ -1038,8 +1045,13 @@ function TabOne() {
                         </button>
                         <Link
                           to={`/rl34/ubah/${value.id}`}
-                          className={style.btnPrimary}
-                          style={{ margin: "0 5px 0 0" }}
+                          className="btn btn-warning"
+                          style={{
+                            margin: "0 5px 0 0",
+                            backgroundColor: "#CFD35E",
+                            border: "1px solid #CFD35E",
+                            color: "#FFFFFF",
+                          }}
                         >
                           Ubah
                         </Link>
