@@ -818,7 +818,7 @@ const RL34 = () => {
                 to={`/rl34/tambah/`}
                 type="button"
                 className={style.btnPrimary}
-                style={{ textDecoration: "none" }}
+                style={{ textDecoration: "none", marginRight: "5px" }}
               >
                 Tambah
               </Link>
@@ -829,6 +829,7 @@ const RL34 = () => {
               type="button"
               className={style.btnPrimary}
               onClick={handleShow}
+              style={{ marginRight: "5px" }}
             >
               Filter
             </button>
@@ -836,6 +837,7 @@ const RL34 = () => {
               type="button"
               className={style.btnPrimary}
               onClick={handleDownloadExcel}
+              style={{ marginRight: "5px" }}
             >
               Download
             </button>
@@ -858,9 +860,6 @@ const RL34 = () => {
           </div>
 
             <div>
-              <div style={{ color: "#d63031", fontWeight: 600, marginBottom: "6px" }}>
-                Debug: jenisUserId = {user && user.jenisUserId ? user.jenisUserId : "(undefined)"} | activeTab = {activeTab}
-              </div>
             <ul className="nav nav-tabs mb-3">
               <li className="nav-item">
                 <button

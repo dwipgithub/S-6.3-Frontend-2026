@@ -286,10 +286,10 @@ const getDataRLTigaTitikTiga = async (e) => {
       let parent;
       const currentData = await getRLTigaTitikTigaById(id);
 
-      if (currentData.jenis_pelayanan_rl_tiga_titik_tiga.no.includes("1.")) {
+      if (currentData.jenis_pelayanan_rl_tiga_titik_tiga.no.startsWith("1.")) {
         parent = await getParent(1, id);
       } else if (
-        currentData.jenis_pelayanan_rl_tiga_titik_tiga.no.includes("2.")
+        currentData.jenis_pelayanan_rl_tiga_titik_tiga.no.startsWith("2.")
       ) {
         parent = await getParent(2, id);
       }
@@ -308,11 +308,21 @@ const getDataRLTigaTitikTiga = async (e) => {
 
       toast("Data Berhasil Dihapus", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       });
     } catch (error) {
       console.log(error);
       toast("Data Gagal Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       });
     }
   };
@@ -368,7 +378,11 @@ const getDataRLTigaTitikTiga = async (e) => {
 
     const parent = dataRLTigaTitikTigaDetails
       .filter((value) => {
-        return value.jenis_pelayanan_rl_tiga_titik_tiga.no == filter;
+        const no = value.jenis_pelayanan_rl_tiga_titik_tiga.no;
+        return (
+          no === `${filter}.` ||
+          no === String(filter)
+        );
       })
       .map((value) => {
         return {
@@ -942,7 +956,6 @@ const getDataRLTigaTitikTiga = async (e) => {
           </Modal.Body>
           <Modal.Footer>
             <div className="mt-3 mb-3">
-              <ToastContainer />
               <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
@@ -1107,7 +1120,6 @@ const getDataRLTigaTitikTiga = async (e) => {
                                 verticalAlign: "middle",
                               }}
                             >
-                              <ToastContainer />
                               {value.jenis_pelayanan_rl_tiga_titik_tiga.no !=
                                 1 &&
                               value.jenis_pelayanan_rl_tiga_titik_tiga.no !=
@@ -1193,19 +1205,7 @@ const getDataRLTigaTitikTiga = async (e) => {
                         );
                       })}
                     <tr className="row-total">
-                      <td></td>
-                      {user.jenisUserId === 4
-                        ?
-                      <td></td>
-                        : <>
-                                      
-                                    </>
-                                }
-                      <td
-                        // colSpan={3}
-                        style={{ textAlign: "center" }}
-                        className={style["sticky-column"]}
-                      >
+                      <td colSpan={user.jenisUserId === 4 ? 3 : 2} style={{ textAlign: "center" }} className={style["sticky-column"]}>
                         <strong>Total</strong>
                       </td>
                       <td className="text-center">
@@ -1402,6 +1402,7 @@ const getDataRLTigaTitikTiga = async (e) => {
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

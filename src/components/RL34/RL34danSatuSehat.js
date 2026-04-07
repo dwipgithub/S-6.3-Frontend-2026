@@ -153,7 +153,7 @@ export default function TabMenu34() {
   );
 }
 function TabOne() {
-  const [bulan, setBulan] = useState(1);
+  const [bulan, setBulan] = useState("01");
   const [tahun, setTahun] = useState("");
   const [filterLabel, setFilterLabel] = useState([]);
   const [daftarBulan, setDaftarBulan] = useState([]);
@@ -207,9 +207,16 @@ function TabOne() {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
-      setExpire(decoded.exp);
       setUser(decoded);
+      if (decoded.jenisUserId === 2) {
+        getKabKota(decoded.satKerId);
+      } else if (decoded.jenisUserId === 3) {
+        getRumahSakit(decoded.satKerId);
+      } else if (decoded.jenisUserId === 4) {
+        showRumahSakit(decoded.satKerId, response.data.accessToken);
+      }
+
+      setExpire(decoded.exp);
     } catch (error) {
       if (error.response) {
         navigate("/");
@@ -331,11 +338,11 @@ function TabOne() {
     } catch (error) {}
   };
 
-  const showRumahSakit = async (id) => {
+  const showRumahSakit = async (id, tokenOverride) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenOverride || token}`,
         },
       });
 
@@ -364,18 +371,24 @@ function TabOne() {
   };
 
   const getRL = async (e) => {
-    let date = tahun + "-" + bulan + "-01";
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSpinner(true);
-    if (rumahSakit == null) {
+
+    if (!rumahSakit || !rumahSakit.id) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
+
     const filter = [];
     filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
+    filter.push(
+      "periode: ".concat(
+        String(tahun).concat("-").concat(String(bulan).padStart(2, "0"))
+      )
+    );
     setFilterLabel(filter);
 
     setValidasiId(null);
@@ -384,6 +397,7 @@ function TabOne() {
     setDataValidasi(null);
 
     try {
+      const date = String(tahun).concat("-").concat(String(bulan).padStart(2, "0")).concat("-01");
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
@@ -394,25 +408,34 @@ function TabOne() {
           tahun: date,
         },
       };
+
       const results = await axiosJWT.get(
         "/apisirs6v2/rltigatitikempat",
         customConfig
       );
 
-      const rlTigaTitikEmpatDetails = results.data.data.map((value) => {
-        return value.rl_tiga_titik_empat_details;
-      });
-
-      let dataRLTigaTitikEmpatDetails = [];
-      rlTigaTitikEmpatDetails.forEach((element) => {
-        element.forEach((value) => {
-          dataRLTigaTitikEmpatDetails.push(value);
+      const apiData = results.data.data;
+      if (!apiData || apiData.length === 0) {
+        setDataRL([]);
+        toast("Data RL 3.4 tidak ditemukan", {
+          position: toast.POSITION.TOP_RIGHT,
         });
+        setSpinner(false);
+        handleClose();
+        return;
+      }
+
+      const dataRLTigaTitikEmpatDetails = [];
+      apiData.forEach((value) => {
+        if (value.rl_tiga_titik_empat_details && Array.isArray(value.rl_tiga_titik_empat_details)) {
+          value.rl_tiga_titik_empat_details.forEach((item) => {
+            dataRLTigaTitikEmpatDetails.push(item);
+          });
+        }
       });
 
       setDataRL(dataRLTigaTitikEmpatDetails);
       setSpinner(false);
-      // totalPengunjung()
       handleClose();
 
       // Load validasi data setelah filter diterapkan
@@ -439,9 +462,14 @@ function TabOne() {
           setKeteranganValidasi(validasi.catatan || "");
           setDataValidasi(validasi);
         }
-      } catch (error) {}
+      } catch (error) {
+        console.log(error);
+      }
     } catch (error) {
       console.log(error);
+      toast("Gagal mengambil data RL 3.4", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
       setSpinner(false);
     }
   };
@@ -485,7 +513,7 @@ function TabOne() {
 
   const simpanValidasi = async (e) => {
     e.preventDefault();
-    if (!rumahSakit || !rumahSakit.id) {
+    if (!rumahSakit || (!rumahSakit.id && user.jenisUserId === 4)) {
       toast("Rumah sakit harus dipilih terlebih dahulu", { position: toast.POSITION.TOP_RIGHT });
       return;
     }
@@ -581,22 +609,22 @@ function TabOne() {
     switch (jenisUserId) {
       case 1:
         getProvinsi();
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       case 2:
         getKabKota(satKerId);
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       case 3:
         getRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       case 4:
         showRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       default:
@@ -671,6 +699,7 @@ function TabOne() {
 
   return (
     <div className="container">
+      <ToastContainer />
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>
@@ -850,6 +879,7 @@ function TabOne() {
               <select
                 typeof="select"
                 className="form-control"
+                value={bulan}
                 onChange={bulanChangeHandler}
               >
                 {daftarBulan.map((bulan) => {
@@ -886,7 +916,7 @@ function TabOne() {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -899,40 +929,29 @@ function TabOne() {
             {user.jenisUserId === 4 ? (
               <>
                 <Link
-                  className="btn"
+                  className={style.btnPrimary}
                   to={`/rl34/tambah/`}
-                  style={{
-                    marginRight: "5px",
-                    fontSize: "18px",
-                    backgroundColor: "#779D9E",
-                    color: "#FFFFFF",
-                  }}
+                  style={{textDecoration: "none",
+                          display: "inline-block",
+                          color: "#FFF",
+                          marginRight: "5px"}}
                 >
-                  +
+                  Tambah
                 </Link>
               </>
             ) : (
               <></>
             )}
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              className={style.btnPrimary}
+              style={{ fontSize: "18px", marginRight: "5px" }}
               onClick={handleShow}
             >
               Filter
             </button>
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                marginLeft: "5px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              className={style.btnPrimary}
+              style={{ fontSize: "18px", marginRight: "5px" }}
               onClick={handleDownloadExcel}
             >
               Download
@@ -981,15 +1000,17 @@ function TabOne() {
 
             <div className="tab-content mt-3">
               <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
-          <Table className={style.rlTable}>
-            <thead>
-              <tr>
-                <th style={{ width: "5%" }}>No.</th>
-                <th style={{ width: "5%" }}>Aksi</th>
-                <th style={{ width: "40%" }}>Jenis Pengunjung</th>
-                <th>Jumlah</th>
-              </tr>
-            </thead>
+                <div className={style.tableContainer}>
+                  <div className="table-responsive">
+                    <Table className={style.rlTable}>
+                      <thead>
+                        <tr>
+                          <th style={{ width: "5%" }}>No.</th>
+                          <th style={{ width: "5%" }}>Aksi</th>
+                          <th style={{ width: "40%" }}>Jenis Pengunjung</th>
+                          <th>Jumlah</th>
+                        </tr>
+                      </thead>
             <tbody>
               {dataRL.map((value, index) => {
                 // setTotal(total + value.jumlah);
@@ -1075,50 +1096,121 @@ function TabOne() {
               )}
             </tbody>
           </Table>
+                  </div>
+                </div>
               </div>
 
               <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
                 <div className={style.validasiCard}>
                   <h3 className={style.validasiCardTitle}>Validasi RL 3.4</h3>
                   {dataRL.length === 0 ? (
-                    <div className="alert alert-warning text-center">
-                      <strong>Data belum tersedia untuk proses validasi.</strong>
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
                     </div>
                   ) : (!dataValidasi && user.jenisUserId === 4) ? (
-                    <div className="alert alert-warning text-center">
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
                       <strong>Data Belum di Validasi</strong>
                     </div>
                   ) : (
                     <>
                       {dataValidasi && (
-                        <div style={{ backgroundColor: "#f0f0f0", padding: "12px", borderRadius: "4px", marginBottom: "15px" }}>
+                        <div
+                          style={{
+                            backgroundColor: "#f0f0f0",
+                            padding: "12px",
+                            borderRadius: "4px",
+                            marginBottom: "15px",
+                          }}
+                        >
                           <div style={{ display: "flex", marginBottom: "4px" }}>
-                            <div style={{ width: "90px", fontWeight: "600" }}>Status</div>
+                            <div
+                              style={{
+                                width: "90px",
+                                textAlign: "left",
+                                paddingRight: "8px",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Status
+                            </div>
                             <div style={{ width: "10px" }}>:</div>
                             <div>
-                              {dataValidasi.statusValidasiId === 1 ? "Perlu Perbaikan" :
-                               dataValidasi.statusValidasiId === 2 ? "Selesai Diperbaiki" :
-                               dataValidasi.statusValidasiId === 3 ? "Disetujui" : "-"}
+                              {dataValidasi.statusValidasiId === 1
+                                ? "Perlu Perbaikan"
+                                : dataValidasi.statusValidasiId === 2
+                                ? "Selesai Diperbaiki"
+                                : dataValidasi.statusValidasiId === 3
+                                ? "Disetujui"
+                                : "-"}
                             </div>
                           </div>
                           {(dataValidasi.catatan || dataValidasi.keterangan) && (
                             <div style={{ display: "flex", marginBottom: "4px" }}>
-                              <div style={{ width: "90px", fontWeight: "600" }}>Catatan</div>
+                              <div
+                                style={{
+                                  width: "90px",
+                                  textAlign: "left",
+                                  paddingRight: "8px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                Catatan
+                              </div>
                               <div style={{ width: "10px" }}>:</div>
-                              <div>{dataValidasi.catatan || dataValidasi.keterangan}</div>
+                              <div>
+                                {dataValidasi.catatan || dataValidasi.keterangan}
+                              </div>
                             </div>
                           )}
                           <div style={{ display: "flex" }}>
-                            <div style={{ width: "90px", fontWeight: "600" }}>Dibuat</div>
+                            <div
+                              style={{
+                                width: "90px",
+                                textAlign: "left",
+                                paddingRight: "8px",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Dibuat
+                            </div>
                             <div style={{ width: "10px" }}>:</div>
-                            <div>{new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}</div>
+                            <div>
+                              {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                            </div>
                           </div>
                         </div>
                       )}
 
                       {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
-                        <div className="alert alert-success text-center">
-                          <strong>Validasi telah disetujui dan tidak dapat diubah.</strong>
+                        <div
+                          style={{
+                            backgroundColor: "#fff3cd",
+                            border: "1px solid #ffc107",
+                            color: "#856404",
+                            padding: "15px",
+                            borderRadius: "4px",
+                            textAlign: "center",
+                          }}
+                        >
+                          <strong>Data telah divalidasi.</strong>
                         </div>
                       ) : (
                         <form onSubmit={simpanValidasi}>
@@ -1259,9 +1351,16 @@ function TabTwo() {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
-      setExpire(decoded.exp);
       setUser(decoded);
+      if (decoded.jenisUserId === 2) {
+        getKabKota(decoded.satKerId);
+      } else if (decoded.jenisUserId === 3) {
+        getRumahSakit(decoded.satKerId);
+      } else if (decoded.jenisUserId === 4) {
+        showRumahSakit(decoded.satKerId, response.data.accessToken);
+      }
+
+      setExpire(decoded.exp);
     } catch (error) {
       if (error.response) {
         navigate("/");
@@ -1296,39 +1395,39 @@ function TabTwo() {
     const results = [];
     results.push({
       key: "Januari",
-      value: "1",
+      value: "01",
     });
     results.push({
       key: "Febuari",
-      value: "2",
+      value: "02",
     });
     results.push({
       key: "Maret",
-      value: "3",
+      value: "03",
     });
     results.push({
       key: "April",
-      value: "4",
+      value: "04",
     });
     results.push({
       key: "Mei",
-      value: "5",
+      value: "05",
     });
     results.push({
       key: "Juni",
-      value: "6",
+      value: "06",
     });
     results.push({
       key: "Juli",
-      value: "7",
+      value: "07",
     });
     results.push({
       key: "Agustus",
-      value: "8",
+      value: "08",
     });
     results.push({
       key: "September",
-      value: "9",
+      value: "09",
     });
     results.push({
       key: "Oktober",
@@ -1383,11 +1482,11 @@ function TabTwo() {
     } catch (error) {}
   };
 
-  const showRumahSakit = async (id) => {
+  const showRumahSakit = async (id, tokenOverride) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenOverride || token}`,
         },
       });
 
@@ -1412,57 +1511,6 @@ function TabTwo() {
       } else if (event.target.checked === false) {
         // console.log('hello2')
       }
-    }
-  };
-
-  const getRL = async (e) => {
-    let date = tahun + "-" + bulan + "-01";
-    e.preventDefault();
-    setSpinner(true);
-    if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-    const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
-    setFilterLabel(filter);
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          rsId: rumahSakit.id,
-          tahun: date,
-        },
-      };
-      const results = await axiosJWT.get(
-        "/apisirs6v2/rltigatitikempat",
-        customConfig
-      );
-
-      const rlTigaTitikEmpatDetails = results.data.data.map((value) => {
-        return value.rl_tiga_titik_empat_details;
-      });
-
-      let dataRLTigaTitikEmpatDetails = [];
-      rlTigaTitikEmpatDetails.forEach((element) => {
-        element.forEach((value) => {
-          dataRLTigaTitikEmpatDetails.push(value);
-        });
-      });
-
-      setDataRL(dataRLTigaTitikEmpatDetails);
-      setSpinner(false);
-      // totalPengunjung()
-      handleClose();
-    } catch (error) {
-      console.log(error);
-      setSpinner(false);
     }
   };
 
@@ -1520,22 +1568,22 @@ function TabTwo() {
     switch (jenisUserId) {
       case 1:
         getProvinsi();
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       case 2:
         getKabKota(satKerId);
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       case 3:
         getRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       case 4:
         showRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("01");
         setShow(true);
         break;
       default:
@@ -1661,7 +1709,7 @@ function TabTwo() {
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <button className="btn btn-primary" type="submit">
+            <button className={style.btnPrimary} type="submit">
               Tampilkan
             </button>
           </Modal.Footer>
@@ -1672,14 +1720,9 @@ function TabTwo() {
           <div style={{ marginBottom: "10px" }}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
+                className={style.btnPrimary}
                 to={`/satusehatrl34/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                style={{ marginRight: "5px", fontSize: "18px" }}
               >
                 Update SatuSehat
               </Link>
@@ -1688,24 +1731,15 @@ function TabTwo() {
             )}
 
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              className={style.btnPrimary}
+              style={{ fontSize: "18px" }}
               onClick={() => setShow(true)}
             >
               Filter
             </button>
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                marginLeft: "5px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              className={style.btnPrimary}
+              style={{ fontSize: "18px", marginLeft: "5px" }}
               onClick={handleDownloadExcel}
             >
               Download
