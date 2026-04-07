@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { Link, useNavigate } from "react-router-dom";
-import style from "./FormTambahRL313.module.css";
+// import style from "./FormTambahRL313.module.css";
+import style from "./RL313.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Table from "react-bootstrap/Table";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import { IoArrowBack } from "react-icons/io5";
 
 const FormTambahRL313 = () => {
   const [namaRS, setNamaRS] = useState("");
@@ -231,7 +233,7 @@ const FormTambahRL313 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <form onSubmit={Simpan}>
         <div className="row">
@@ -337,163 +339,115 @@ const FormTambahRL313 = () => {
         </div>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl313/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>
-              Kembali RL 3.13 Rehabilitasi Medik
-            </span>
-            <table className={style.rlTable}>
-              <thead>
-                <tr>
-                  <th style={{ width: "4%" }}>No.</th>
-                  <th style={{ width: "3%" }}></th>
-                  <th style={{ width: "4%" }}>No Kegiatan</th>
-                  <th style={{ width: "20%" }}>Jenis Tindakan</th>
-                  <th>Jumlah</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dataRL.map((value, index) => {
-                  if (value.no == 88) {
-                    return (
-                      <tr key={value.id}>
-                        <td>
-                          <input
-                            type="text"
-                            name="id"
-                            className="form-control"
-                            value={index + 1}
-                            disabled={true}
-                          />
-                        </td>
-                        <td
+            <div className={style.headerAction}>
+              <Link to="/rl313">
+                <button type="button" className={style.btnPrimary}>
+                  <IoArrowBack />
+                </button>
+              </Link>
+
+              <h4 className={style.pageHeader}>RL 3.13 Rehabilitasi Medik</h4>
+            </div>
+
+            <div className={style["table-container"]}>
+              <table
+                className={style["table"]}
+                style={{ width: "100%", tableLayout: "fixed" }}
+              >
+                <thead className={style["thead"]}>
+                  <tr className="main-header-row">
+                    <th style={{ width: "5%" }}>No</th>
+                    <th style={{ width: "5%" }}>Pilih</th>
+                    <th className={style.center} style={{ width: "8%" }}>
+                      No Kegiatan
+                    </th>
+                    <th style={{ width: "32%" }}>Jenis Tindakan</th>
+                    <th className={style.center} style={{ width: "50%" }}>
+                      Jumlah
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {dataRL.map((value, index) => (
+                    <tr key={value.id}>
+                      {/* NO */}
+                      <td className={style.center}>{index + 1}</td>
+
+                      {/* CHECKBOX */}
+                      <td className={style.center}>
+                        <input
+                          type="checkbox"
+                          name="check"
+                          onChange={(e) => changeHandler(e, index)}
+                          checked={value.checked}
+                        />
+                      </td>
+
+                      {/* NO KEGIATAN */}
+                      <td className={style.center}>{value.no}</td>
+
+                      {/* JENIS TINDAKAN */}
+                      <td style={{ textAlign: "left" }}>
+                        {value.jenisTindakan}
+                      </td>
+
+                      {/* JUMLAH */}
+                      <td className="text-center" style={{ padding: 0 }}>
+                        <input
+                          type="number"
+                          name="jumlah"
+                          min="0"
+                          maxLength={15}
+                          onInput={(e) => maxLengthCheck(e)}
+                          onPaste={preventPasteNegative}
+                          onKeyPress={preventMinus}
+                          value={value.jumlah}
+                          onChange={(e) => changeHandler(e, index)}
+                          disabled={
+                            value.id === 88 ? true : value.disabledInput
+                          }
+                          className={style.inputExcel}
                           style={{
+                            width: "100%",
+                            height: "100%",
                             textAlign: "center",
-                            verticalAlign: "middle",
+                            backgroundColor:
+                              value.id === 88 || value.disabledInput
+                                ? "#e0e0e0"
+                                : "#ffffff",
+                            border: "none",
+                            outline: "none",
+                            boxShadow: "none",
+                            margin: 0,
+                            padding: "8px 4px",
                           }}
-                        >
-                          <input
-                            type="checkbox"
-                            name="check"
-                            className="form-check-input"
-                            onChange={(e) => changeHandler(e, index)}
-                            checked={value.checked}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="no"
-                            className="form-control"
-                            value={value.no}
-                            disabled={true}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="jenisTindakan"
-                            className="form-control"
-                            value={value.jenisTindakan}
-                            disabled={true}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            name="jumlah"
-                            className="form-control"
-                            value={value.jumlah}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={true}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  } else {
-                    return (
-                      <tr key={value.id}>
-                        <td>
-                          <input
-                            type="text"
-                            name="id"
-                            className="form-control"
-                            value={index + 1}
-                            disabled={true}
-                          />
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            name="check"
-                            className="form-check-input"
-                            onChange={(e) => changeHandler(e, index)}
-                            checked={value.checked}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="no"
-                            className="form-control"
-                            value={value.no}
-                            disabled={true}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="jenisTindakan"
-                            className="form-control"
-                            value={value.jenisTindakan}
-                            disabled={true}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            name="jumlah"
-                            className="form-control"
-                            value={value.jumlah}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  }
-                })}
-              </tbody>
-            </table>
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                  {/* TOTAL */}
+                  {dataRL.length > 0 && (
+                    <tr className="table-light fw-bold">
+                      <td colSpan={4} className="text-center">
+                        TOTAL
+                      </td>
+                      <td className="text-center">
+                        {dataRL.reduce(
+                          (acc, item) => acc + Number(item.jumlah || 0),
+                          0,
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button type="submit" className="btn btn-outline-success">
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Simpan
           </button>
         </div>

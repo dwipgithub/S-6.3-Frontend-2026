@@ -1005,7 +1005,7 @@ return [
                                     </button>
 
                                     <Link
-                                      to={`/rl318/ubah/${value.id}`}
+                                      to={`/rl312/ubah/${value.id}`}
                                       className="btn btn-warning"
                                       style={{
                                         margin: "0 5px 0 0",

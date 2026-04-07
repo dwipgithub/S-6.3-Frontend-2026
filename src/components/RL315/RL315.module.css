@@ -369,3 +369,16 @@
 .table td:nth-child(3) {
   text-align: left; /* Golongan Obat rata kiri */
 }
+
+/* form tambah */
+.headerAction {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px; /* JARAK KE TABEL */
+}
+
+.backText {
+  color: gray;
+  font-size: 16px;
+}

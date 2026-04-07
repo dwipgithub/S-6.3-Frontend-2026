@@ -9,7 +9,6 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Table from "react-bootstrap/Table";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
-// import { IoArrowBack } from "react-icons/io5";
 //import { Link } from 'react-router-dom'
 import { IoArrowBack } from "react-icons/io5";
 
@@ -363,7 +362,7 @@ const FormTambahRL311 = () => {
                     <th style={{ width: "5%" }}>No</th>
                     <th style={{ width: "10%" }}>Pilih</th>
                     <th>Jenis Kegiatan</th>
-                    <th style={{ width: "15%" }}>Jumlah</th>
+                    <th style={{ width: "50%" }}>Jumlah</th>
                   </tr>
                 </thead>
 
@@ -405,8 +404,8 @@ const FormTambahRL311 = () => {
                           }
                           className={style.inputExcel}
                           style={{
-                            width: "100%", // ⬅️ full lebar
-                            height: "100%", // ⬅️ full tinggi
+                            width: "100%",
+                            height: "100%",
                             textAlign: "center",
                             backgroundColor:
                               value.id === 88 || value.disabledInput
@@ -416,7 +415,7 @@ const FormTambahRL311 = () => {
                             outline: "none",
                             boxShadow: "none",
                             margin: 0,
-                            padding: "8px 4px", // ⬅️ biar tetap enak dilihat
+                            padding: "8px 4px",
                           }}
                         />
                       </td>
