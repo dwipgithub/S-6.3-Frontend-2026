@@ -12,7 +12,7 @@ import { Spinner } from "react-bootstrap";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const FormTambahRL41 = () => {
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState("");
   const [bulan, setBulan] = useState("00");
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
@@ -30,16 +30,29 @@ const FormTambahRL41 = () => {
   const { CSRFToken } = useCSRFTokenContext();
 
   const startYear = 2025;
-  const currentYear = new Date().getFullYear(); // sekarang 2026
 
+  const today = new Date();
+  const currentYear = today.getFullYear();
+
+  // batas: 31 Maret
+  const batasTanggal = new Date(currentYear, 2, 31); // bulan 0-based → 2 = Maret
+
+  // kalau hari ini lewat 31 Maret → hanya boleh current year
+  const maxYear = today > batasTanggal ? currentYear : currentYear;
+
+  const minYear = today > batasTanggal ? currentYear : currentYear - 1;
+
+  // generate list tahun
   const years = [];
-  for (let y = startYear; y <= currentYear; y++) {
-    years.push(y);
+  for (let y = startYear; y <= maxYear; y++) {
+    if (y >= minYear) {
+      years.push(y);
+    }
   }
 
   useEffect(() => {
     refreshToken();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setTahun(String(years[0] || "")); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datainput]);
 
   const refreshToken = async () => {
@@ -161,7 +174,7 @@ const FormTambahRL41 = () => {
       const DetailPenyakitTemplate = response.data.data.map((value) => {
         return {
           id: value.id,
-          namaPenyakit: value.nama,
+          namaPenyakit: `${value.icd_code} - ${value.description_code}`,
           statusLaki: value.status_laki,
           statusPerempuan: value.status_perempuan,
           label: [
@@ -529,21 +542,19 @@ const FormTambahRL41 = () => {
       </div>
       <div className="row mt-3">
         <div className="col-md-6">
-          <Link
-            to={`/rl41/`}
-            className="btn btn-info"
-            style={{
-              fontSize: "18px",
-              backgroundColor: "#779D9E",
-              color: "#FFFFFF",
-            }}
-          >
-            {/* <IoArrowBack size={30} style={{ color: "gray", cursor: "pointer" }} /> */}
-            &lt;
-          </Link>
-          <span style={{ color: "gray" }}>
-            Kembali RL 41 Penyakit Rawat Inap
-          </span>
+          <div className={style.headerAction}>
+            <Link to="/rl41/">
+              <button type="button" className={style.btnPrimary}>
+                <IoArrowBack />
+              </button>
+            </Link>
+            <span className={style.backText}>
+              <h4 className={style.pageHeader}>
+                Kembali ke - RL 41 Penyakit Rawat Inap
+              </h4>
+            </span>
+          </div>
+
           <div className="card">
             <div className="card-body">
               <h5 className="card-title h5">Search Nama Penyakit</h5>
@@ -567,7 +578,7 @@ const FormTambahRL41 = () => {
                 </div>
                 <div className="mt-3 mb-3">
                   <button type="submit" className={style.btnPrimary}>
-                    <HiSaveAs /> Cari
+                    Cari
                   </button>
                 </div>
               </form>
@@ -596,17 +607,17 @@ const FormTambahRL41 = () => {
                 <table className={style["table"]} style={{ width: "100%" }}>
                   <thead className={style["thead"]}>
                     <tr className="main-header-row">
-                      <th style={{ width: "5%" }}>No.</th>
-                      <th style={{ width: "10%" }}>Code ICD 10</th>
+                      <th style={{ width: "10%" }}>No.</th>
+                      <th style={{ width: "15%" }}>Code ICD 10</th>
                       <th style={{ width: "40%" }}>Deskripsi ICD 10</th>
-                      <th style={{ width: "10%" }}>Action</th>
+                      <th style={{ width: "15%" }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dataPenyakit.map((value, index) => {
                       return (
                         <tr key={value.id}>
-                          <td>{index + 1}</td>
+                          <td style={{ textAlign: "center" }}>{index + 1}</td>
                           <td style={{ textAlign: "center" }}>
                             {value.icd_code}
                           </td>
@@ -636,10 +647,11 @@ const FormTambahRL41 = () => {
               <div className="card-body">
                 <form onSubmit={Simpan}>
                   <div className="container">
-                    <h5 className="card-title h5">Periode Laporan</h5>
                     <h5 className="card-title h5">
                       Tambah Data Penyakit {datainput[0].namaPenyakit}
                     </h5>
+
+                    <h5 className="card-title h5">Periode Laporan</h5>
                     <div
                       className="form-floating"
                       style={{ width: "100%", display: "inline-block" }}
@@ -752,7 +764,9 @@ const FormTambahRL41 = () => {
                               const isLakiDisabled = value.statusLaki === 0;
                               return (
                                 <tr key={no}>
-                                  <td>{no + 1}</td>
+                                  <td style={{ textAlign: "center" }}>
+                                    {no + 1}
+                                  </td>
                                   <td style={{ textAlign: "left" }}>
                                     <label>{test.label}</label>
                                   </td>

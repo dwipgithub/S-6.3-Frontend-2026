@@ -20,7 +20,7 @@ const RL41 = () => {
   // const [alamatRS, setAlamatRS] = useState("");
   // const [namaPropinsi, setNamaPropinsi] = useState("");
   // const [namaKabKota, setNamaKabKota] = useState("");
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear());
   const [bulan, setBulan] = useState("01");
   const [dataRL, setDataRL] = useState([]);
   const [token, setToken] = useState("");
@@ -51,6 +51,7 @@ const RL41 = () => {
   const [spinner, setSpinner] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -236,9 +237,12 @@ const RL41 = () => {
   const handleSelectRumahSakit = (e) => {
     const id = e.target.value;
     const selected = daftarRumahSakit.find((item) => item.id == id);
+
     if (selected) {
+      setSelectedRsID(selected.id);
       setRumahSakit(selected);
     } else {
+      setSelectedRsID(null);
       setRumahSakit(null);
     }
   };
@@ -322,11 +326,14 @@ const RL41 = () => {
 
   const getRL = async (e) => {
     e.preventDefault();
-    if (!rumahSakit) {
-      toast("rumah sakit harus dipilih", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
+
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
     }
 
     const filter = [];
@@ -798,6 +805,7 @@ const RL41 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
+                    value={selectedRsID || ""}
                     onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
@@ -853,6 +861,7 @@ const RL41 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
+                    value={selectedRsID || ""}
                     onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
@@ -883,6 +892,7 @@ const RL41 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
+                    value={selectedRsID || ""}
                     onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
@@ -1475,35 +1485,37 @@ const RL41 = () => {
                     </tbody>
                   </table>
                 </div>
-                <div
-                  style={{
-                    bottom: 0,
-                    background: "#fff",
-                    padding: "12px 0",
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: 12,
-                    borderTop: "1px solid #ddd",
-                  }}
-                >
-                  <button
-                    disabled={page === 1}
-                    onClick={() => fetchRL(page - 1)}
+                {totalPages > 1 && (
+                  <div
+                    style={{
+                      bottom: 0,
+                      background: "#fff",
+                      padding: "12px 0",
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 12,
+                      borderTop: "1px solid #ddd",
+                    }}
                   >
-                    ◀ Prev
-                  </button>
+                    <button
+                      disabled={page === 1}
+                      onClick={() => fetchRL(page - 1)}
+                    >
+                      ◀ Prev
+                    </button>
 
-                  <span>
-                    Halaman {page} / {totalPages}
-                  </span>
+                    <span>
+                      Halaman {page} / {totalPages}
+                    </span>
 
-                  <button
-                    disabled={page === totalPages}
-                    onClick={() => fetchRL(page + 1)}
-                  >
-                    Next ▶
-                  </button>
-                </div>
+                    <button
+                      disabled={page === totalPages}
+                      onClick={() => fetchRL(page + 1)}
+                    >
+                      Next ▶
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div

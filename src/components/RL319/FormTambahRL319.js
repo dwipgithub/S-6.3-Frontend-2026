@@ -8,6 +8,7 @@ import { ToastContainer, toast } from "react-toastify";
 // import Table from "react-bootstrap/Table";
 import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import { IoArrowBack } from "react-icons/io5";
 
 const FormTambahRL319 = () => {
   const [tahun, setTahun] = useState("");
@@ -23,18 +24,31 @@ const FormTambahRL319 = () => {
   const { CSRFToken } = useCSRFTokenContext();
 
   const startYear = 2025;
-  const currentYear = new Date().getFullYear(); // sekarang 2026
 
+  const today = new Date();
+  const currentYear = today.getFullYear();
+
+  // batas: 31 Maret
+  const batasTanggal = new Date(currentYear, 2, 31); // bulan 0-based → 2 = Maret
+
+  // kalau hari ini lewat 31 Maret → hanya boleh current year
+  const maxYear = today > batasTanggal ? currentYear : currentYear;
+
+  const minYear = today > batasTanggal ? currentYear : currentYear - 1;
+
+  // generate list tahun
   const years = [];
-  for (let y = startYear; y <= currentYear; y++) {
-    years.push(y);
+  for (let y = startYear; y <= maxYear; y++) {
+    if (y >= minYear) {
+      years.push(y);
+    }
   }
 
   useEffect(() => {
     refreshToken();
     getRLTigaTitikSembilanBelasTemplate();
     const date = new Date();
-    setTahun("2025");
+    setTahun(years);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -256,7 +270,20 @@ const FormTambahRL319 = () => {
   const Simpan = async (e) => {
     e.preventDefault();
     setButtonStatus(true);
+
     try {
+      // 🔴 FILTER DATA YANG DICENTANG
+      const selectedData = dataRL.filter((value) => value.checked === true);
+
+      // ❌ JIKA TIDAK ADA YANG DICENTANG → STOP
+      if (selectedData.length === 0) {
+        toast("Pilih minimal 1 data untuk disimpan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setButtonStatus(false);
+        return;
+      }
+
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
@@ -265,156 +292,144 @@ const FormTambahRL319 = () => {
         },
       };
 
-      const dataRLArray = dataRL
-        .filter((value) => {
-          return value.checked === true;
-        })
-        .map((value, index) => {
-          return {
-            golonganObatTigaTitikSembilanBelasId: parseInt(value.id),
-            ranap_pasien_keluar: parseInt(value.ranap_pasien_keluar),
-            ranap_lama_dirawat: parseInt(value.ranap_lama_dirawat),
-            jumlah_pasien_rajal: parseInt(value.jumlah_pasien_rajal),
-            rajal_lab: parseInt(value.rajal_lab),
-            rajal_lain_lain: parseInt(value.rajal_lain_lain),
-            rajal_radiologi: parseInt(value.rajal_radiologi),
-          };
-        });
+      // // 🔵 DATA UTAMA
+      let dataRLArray = selectedData.map((value) => ({
+        golonganObatTigaTitikSembilanBelasId: parseInt(value.id),
+        ranap_pasien_keluar: parseInt(value.ranap_pasien_keluar),
+        ranap_lama_dirawat: parseInt(value.ranap_lama_dirawat),
+        jumlah_pasien_rajal: parseInt(value.jumlah_pasien_rajal),
+        rajal_lab: parseInt(value.rajal_lab),
+        rajal_lain_lain: parseInt(value.rajal_lain_lain),
+        rajal_radiologi: parseInt(value.rajal_radiologi),
+      }));
 
-      let asuransiData = {
-        ranap_pasien_keluar: 0,
-        ranap_lama_dirawat: 0,
-        jumlah_pasien_rajal: 0,
-        rajal_lab: 0,
-        rajal_radiologi: 0,
-        rajal_lain_lain: 0,
-      };
+      // // ==============================
+      // // 🔵 ASURANSI (NO ;
 
-      const getAsuransiData = await axiosJWT.get(
-        "/apisirs6v2/cekrltigatitiksembilanbelasdetail",
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            tahun: parseInt(tahun),
-            specificId: 2,
-          },
-        },
-      );
+      // // ==============================
+      // // 🔵 ASURANSI (NO 2)
+      // // ==============================
+      // const asuransiSelected = selectedData.filter((v) => v.no.includes("2."));
 
-      dataRL
-        .filter((value) => {
-          return value.checked === true && value.no.includes("2.");
-        })
-        .map((value, index) => {
-          asuransiData.ranap_pasien_keluar += parseInt(
-            value.ranap_pasien_keluar,
-          );
-          asuransiData.ranap_lama_dirawat += parseInt(value.ranap_lama_dirawat);
-          asuransiData.jumlah_pasien_rajal += parseInt(
-            value.jumlah_pasien_rajal,
-          );
-          asuransiData.rajal_lab += parseInt(value.rajal_lab);
-          asuransiData.rajal_radiologi += parseInt(value.rajal_radiologi);
-          asuransiData.rajal_lain_lain += parseInt(value.rajal_lain_lain);
-        });
+      // if (asuransiSelected.length > 0) {
+      //   let asuransiData = {
+      //     ranap_pasien_keluar: 0,
+      //     ranap_lama_dirawat: 0,
+      //     jumlah_pasien_rajal: 0,
+      //     rajal_lab: 0,
+      //     rajal_radiologi: 0,
+      //     rajal_lain_lain: 0,
+      //   };
 
-      if (getAsuransiData.data.data != null) {
-        asuransiData.ranap_pasien_keluar += parseInt(
-          getAsuransiData.data.data.ranap_pasien_keluar,
-        );
-        asuransiData.ranap_lama_dirawat += parseInt(
-          getAsuransiData.data.data.ranap_lama_dirawat,
-        );
-        asuransiData.jumlah_pasien_rajal += parseInt(
-          getAsuransiData.data.data.jumlah_pasien_rajal,
-        );
-        asuransiData.rajal_lab += parseInt(getAsuransiData.data.data.rajal_lab);
-        asuransiData.rajal_radiologi += parseInt(
-          getAsuransiData.data.data.rajal_radiologi,
-        );
-        asuransiData.rajal_lain_lain += parseInt(
-          getAsuransiData.data.data.rajal_lain_lain,
-        );
+      //   const getAsuransiData = await axiosJWT.get(
+      //     "/apisirs6v2/cekrltigatitiksembilanbelasdetail",
+      //     {
+      //       headers: {
+      //         Authorization: `Bearer ${token}`,
+      //       },
+      //       params: {
+      //         tahun: parseInt(tahun),
+      //         specificId: 2,
+      //       },
+      //     },
+      //   );
 
-        await axiosJWT.patch(
-          "/apisirs6v2/rltigatitiksembilanbelasdetail/" +
-            getAsuransiData.data.data.id,
-          asuransiData,
-          customConfig,
-        );
-      } else {
-        asuransiData.golonganObatTigaTitikSembilanBelasId = 2;
-        dataRLArray.push(asuransiData);
-      }
+      //   // akumulasi dari checkbox
+      //   asuransiSelected.forEach((value) => {
+      //     asuransiData.ranap_pasien_keluar += parseInt(
+      //       value.ranap_pasien_keluar,
+      //     );
+      //     asuransiData.ranap_lama_dirawat += parseInt(value.ranap_lama_dirawat);
+      //     asuransiData.jumlah_pasien_rajal += parseInt(
+      //       value.jumlah_pasien_rajal,
+      //     );
+      //     asuransiData.rajal_lab += parseInt(value.rajal_lab);
+      //     asuransiData.rajal_radiologi += parseInt(value.rajal_radiologi);
+      //     asuransiData.rajal_lain_lain += parseInt(value.rajal_lain_lain);
+      //   });
 
-      let gratisData = {
-        ranap_pasien_keluar: 0,
-        ranap_lama_dirawat: 0,
-        jumlah_pasien_rajal: 0,
-        rajal_lab: 0,
-        rajal_radiologi: 0,
-        rajal_lain_lain: 0,
-      };
+      //   if (getAsuransiData.data.data) {
+      //     const db = getAsuransiData.data.data;
 
-      const getGratisData = await axiosJWT.get(
-        "/apisirs6v2/cekrltigatitiksembilanbelasdetail",
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            tahun: parseInt(tahun),
-            specificId: 8,
-          },
-        },
-      );
+      //     asuransiData.ranap_pasien_keluar += parseInt(db.ranap_pasien_keluar);
+      //     asuransiData.ranap_lama_dirawat += parseInt(db.ranap_lama_dirawat);
+      //     asuransiData.jumlah_pasien_rajal += parseInt(db.jumlah_pasien_rajal);
+      //     asuransiData.rajal_lab += parseInt(db.rajal_lab);
+      //     asuransiData.rajal_radiologi += parseInt(db.rajal_radiologi);
+      //     asuransiData.rajal_lain_lain += parseInt(db.rajal_lain_lain);
 
-      dataRL
-        .filter((value) => {
-          return value.checked === true && value.no.includes("4.");
-        })
-        .map((value, index) => {
-          gratisData.ranap_pasien_keluar += parseInt(value.ranap_pasien_keluar);
-          gratisData.ranap_lama_dirawat += parseInt(value.ranap_lama_dirawat);
-          gratisData.jumlah_pasien_rajal += parseInt(value.jumlah_pasien_rajal);
-          gratisData.rajal_lab += parseInt(value.rajal_lab);
-          gratisData.rajal_radiologi += parseInt(value.rajal_radiologi);
-          gratisData.rajal_lain_lain += parseInt(value.rajal_lain_lain);
-        });
+      //     await axiosJWT.patch(
+      //       `/apisirs6v2/rltigatitiksembilanbelasdetail/${db.id}`,
+      //       asuransiData,
+      //       customConfig,
+      //     );
+      //   } else {
+      //     asuransiData.golonganObatTigaTitikSembilanBelasId = 2;
+      //     dataRLArray.push(asuransiData);
+      //   }
+      // }
 
-      if (getGratisData.data.data != null) {
-        gratisData.ranap_pasien_keluar += parseInt(
-          getGratisData.data.data.ranap_pasien_keluar,
-        );
-        gratisData.ranap_lama_dirawat += parseInt(
-          getGratisData.data.data.ranap_lama_dirawat,
-        );
-        gratisData.jumlah_pasien_rajal += parseInt(
-          getGratisData.data.data.jumlah_pasien_rajal,
-        );
-        gratisData.rajal_lab += parseInt(getGratisData.data.data.rajal_lab);
-        gratisData.rajal_radiologi += parseInt(
-          getGratisData.data.data.rajal_radiologi,
-        );
-        gratisData.rajal_lain_lain += parseInt(
-          getGratisData.data.data.rajal_lain_lain,
-        );
+      // // ==============================
+      // // 🔵 GRATIS (NO 4)
+      // // ==============================
+      // const gratisSelected = selectedData.filter((v) => v.no.includes("4."));
 
-        await axiosJWT.patch(
-          "/apisirs6v2/rltigatitiksembilanbelasdetail/" +
-            getGratisData.data.data.id,
-          gratisData,
-          customConfig,
-        );
-      } else {
-        gratisData.golonganObatTigaTitikSembilanBelasId = 8;
-        dataRLArray.push(gratisData);
-      }
+      // if (gratisSelected.length > 0) {
+      //   let gratisData = {
+      //     ranap_pasien_keluar: 0,
+      //     ranap_lama_dirawat: 0,
+      //     jumlah_pasien_rajal: 0,
+      //     rajal_lab: 0,
+      //     rajal_radiologi: 0,
+      //     rajal_lain_lain: 0,
+      //   };
 
+      //   const getGratisData = await axiosJWT.get(
+      //     "/apisirs6v2/cekrltigatitiksembilanbelasdetail",
+      //     {
+      //       headers: {
+      //         Authorization: `Bearer ${token}`,
+      //       },
+      //       params: {
+      //         tahun: parseInt(tahun),
+      //         specificId: 8,
+      //       },
+      //     },
+      //   );
+
+      //   gratisSelected.forEach((value) => {
+      //     gratisData.ranap_pasien_keluar += parseInt(value.ranap_pasien_keluar);
+      //     gratisData.ranap_lama_dirawat += parseInt(value.ranap_lama_dirawat);
+      //     gratisData.jumlah_pasien_rajal += parseInt(value.jumlah_pasien_rajal);
+      //     gratisData.rajal_lab += parseInt(value.rajal_lab);
+      //     gratisData.rajal_radiologi += parseInt(value.rajal_radiologi);
+      //     gratisData.rajal_lain_lain += parseInt(value.rajal_lain_lain);
+      //   });
+
+      //   if (getGratisData.data.data) {
+      //     const db = getGratisData.data.data;
+
+      //     gratisData.ranap_pasien_keluar += parseInt(db.ranap_pasien_keluar);
+      //     gratisData.ranap_lama_dirawat += parseInt(db.ranap_lama_dirawat);
+      //     gratisData.jumlah_pasien_rajal += parseInt(db.jumlah_pasien_rajal);
+      //     gratisData.rajal_lab += parseInt(db.rajal_lab);
+      //     gratisData.rajal_radiologi += parseInt(db.rajal_radiologi);
+      //     gratisData.rajal_lain_lain += parseInt(db.rajal_lain_lain);
+
+      //     await axiosJWT.patch(
+      //       `/apisirs6v2/rltigatitiksembilanbelasdetail/${db.id}`,
+      //       gratisData,
+      //       customConfig,
+      //     );
+      //   } else {
+      //     gratisData.golonganObatTigaTitikSembilanBelasId = 8;
+      //     dataRLArray.push(gratisData);
+      //   }
+      // }
+
+      // // ==============================
+      // // 🔵 FINAL SUBMIT
+      // // ==============================
       const result = await axiosJWT.post(
         "/apisirs6v2/rltigatitiksembilanbelas",
         {
@@ -432,20 +447,12 @@ const FormTambahRL319 = () => {
         setTimeout(() => {
           navigate("/rl319");
         }, 2000);
-      } else {
-        toast(`Data Gagal Disimpan, ${result.data.message}`, {
-          position: toast.POSITION.TOP_RIGHT,
-        });
-        setButtonStatus(false);
       }
     } catch (error) {
       console.log(error);
-      toast(
-        `Data tidak bisa disimpan karena ,${error.response.data.message.name}`,
-        {
-          position: toast.POSITION.TOP_RIGHT,
-        },
-      );
+      toast(`Gagal simpan data`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
       setButtonStatus(false);
     }
   };
@@ -479,7 +486,6 @@ const FormTambahRL319 = () => {
       className="container"
       style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h2>RL 3.19 - Cara Bayar</h2>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -591,18 +597,16 @@ const FormTambahRL319 = () => {
 
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl319/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>Kembali RL 3.19 Cara Bayar</span>
+            <div className={style.headerAction}>
+              <Link to="/rl319">
+                <button type="button" className={style.btnPrimary}>
+                  <IoArrowBack />
+                </button>
+              </Link>
+              <span className={style.backText}>
+                <h4 className={style.pageHeader}>RL 3.19 - Cara Bayar</h4>
+              </span>
+            </div>
 
             <div className={`${style["table-container"]} mt-2 mb-1 pb-2 `}>
               <table className={style.table}>
@@ -653,14 +657,19 @@ const FormTambahRL319 = () => {
                   {dataRL.map((value, index) => {
                     return (
                       <tr key={value.id}>
-                        <td className={style["sticky-column"]}>
-                          <input
+                        <td
+                          className={style["sticky-column"]}
+                          style={{ textAlign: "center" }}
+                        >
+                          {/* <input
                             type="text"
                             name="id"
                             className="form-control"
-                            value={index + 1}
+                            value={//index + 1}
                             disabled={true}
-                          />
+                          /> */}
+
+                          {index + 1}
                         </td>
                         <td
                           className={style["sticky-column"]}
@@ -674,23 +683,28 @@ const FormTambahRL319 = () => {
                             checked={value.checked}
                           />
                         </td>
-                        <td className={style["sticky-column"]}>
-                          <input
+                        <td
+                          className={style["sticky-column"]}
+                          style={{ textAlign: "center" }}
+                        >
+                          {/* <input
                             type="text"
                             name="no"
                             className="form-control"
                             value={value.no}
                             disabled={true}
-                          />
+                          /> */}
+                          {value.no}
                         </td>
                         <td className={style["sticky-column"]}>
-                          <input
+                          {/* <input
                             type="text"
                             name="golonganObat"
                             className="form-control"
                             value={value.golonganObat}
                             disabled={true}
-                          />
+                          /> */}
+                          {value.golonganObat}
                         </td>
                         <td>
                           <input

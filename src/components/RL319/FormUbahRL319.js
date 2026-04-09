@@ -8,6 +8,7 @@ import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import { IoArrowBack } from "react-icons/io5";
 
 export const FormUbahRL319 = () => {
   const navigate = useNavigate();
@@ -108,36 +109,6 @@ export const FormUbahRL319 = () => {
           "XSRF-TOKEN": CSRFToken,
         },
       };
-
-      let parent;
-
-      if (no.includes("4.")) {
-        parent = await getParent(4);
-      } else if (no.includes("2.")) {
-        parent = await getParent(2);
-      }
-
-      if (parent) {
-        const parentData = {
-          ranap_pasien_keluar:
-            parent.data.ranap_pasien_keluar + parseInt(ranapPasienKeluar),
-          ranap_lama_dirawat:
-            parent.data.ranap_lama_dirawat + parseInt(ranapLamaDirawat),
-          jumlah_pasien_rajal:
-            parent.data.jumlah_pasien_rajal + parseInt(jumlahPasienRajal),
-          rajal_lab: parent.data.rajal_lab + parseInt(rajalLab),
-          rajal_radiologi:
-            parent.data.rajal_radiologi + parseInt(rajalRadiologi),
-          rajal_lain_lain:
-            parent.data.rajal_lain_lain + parseInt(rajalLainLain),
-        };
-
-        const updateParent = await axiosJWT.patch(
-          "/apisirs6v2/rltigatitiksembilanbelasdetail/" + parent.id,
-          parentData,
-          customConfig,
-        );
-      }
 
       const result = await axiosJWT.patch(
         "/apisirs6v2/rltigatitiksembilanbelasdetail/" + id,
@@ -348,7 +319,6 @@ export const FormUbahRL319 = () => {
       className="container"
       style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h2>RL 3.19 - Cara Bayar</h2>
       <form onSubmit={updateDataRLTigaTitikSembilanBelas}>
         <div className="row">
           <div className="col-md-6">
@@ -410,23 +380,41 @@ export const FormUbahRL319 = () => {
               </div>
             </div>
           </div>
+          <div className="col-md-6">
+            <div className="card">
+              <div className="card-body">
+                <h5 className="card-title h5">Periode Laporan</h5>
+
+                <div className="form-floating" style={{ width: "100%" }}>
+                  <select
+                    name="tahun"
+                    className="form-select"
+                    id="tahun"
+                    value={tahun}
+                    disabled
+                  >
+                    <option value="">{tahun}</option>
+                  </select>
+
+                  <label htmlFor="tahun">Tahun</label>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl319/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>Kembali RL 3.19 Cara Bayar</span>
-
+            <div className={style.headerAction}>
+              <Link to="/rl319">
+                <button type="button" className={style.btnPrimary}>
+                  <IoArrowBack />
+                </button>
+              </Link>
+              <span className={style.backText}>
+                <h4 className={style.pageHeader}>RL 3.19 - Cara Bayar</h4>
+              </span>
+            </div>
             <div className={`${style["table-container"]} mt-2 mb-1 pb-2 `}>
               <table responsive className={style.table}>
                 <thead className={style.thead}>
@@ -464,8 +452,11 @@ export const FormUbahRL319 = () => {
                 </thead>
                 <tbody>
                   <tr>
-                    <td className={style["sticky-column"]}>
-                      <input
+                    <td
+                      className={style["sticky-column"]}
+                      style={{ textAlign: "center" }}
+                    >
+                      {/* <input
                         name="no"
                         type="text"
                         className="form-control"
@@ -473,10 +464,11 @@ export const FormUbahRL319 = () => {
                         placeholder="No"
                         value={no}
                         disabled={true}
-                      />
+                      /> */}
+                      {no}
                     </td>
                     <td className={style["sticky-column"]}>
-                      <input
+                      {/* <input
                         name="nama"
                         type="text"
                         className="form-control"
@@ -484,7 +476,9 @@ export const FormUbahRL319 = () => {
                         placeholder="Kegiatan"
                         value={nama}
                         disabled={true}
-                      />
+                      /> */}
+
+                      {nama}
                     </td>
                     <td>
                       <div className="control">
@@ -530,6 +524,7 @@ export const FormUbahRL319 = () => {
                           value={jumlahPasienRajal}
                           placeholder="JumlahPasienRajal"
                           readOnly={true}
+                          disabled={true}
                         />
                       </div>
                     </td>

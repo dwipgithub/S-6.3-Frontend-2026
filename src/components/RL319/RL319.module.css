@@ -88,9 +88,9 @@
 
 /* ========== Excel-like table ========== */
 .table {
-  width: 200%;
+  width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
   font-size: 13px;
   font-family: Calibri, "Segoe UI", Arial, sans-serif;
   background: #fff;
