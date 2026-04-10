@@ -221,3 +221,16 @@
 .tabContent {
   margin-top: 1rem;
 }
+
+/* form tambah */
+.headerAction {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px; /* JARAK KE TABEL */
+}
+
+.backText {
+  color: gray;
+  font-size: 16px;
+}

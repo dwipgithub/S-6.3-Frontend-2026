@@ -15,7 +15,7 @@ import Spinner from "react-bootstrap/Spinner";
 
 const RL53 = () => {
   const [bulan, setBulan] = useState("01");
-  const [tahun, setTahun] = useState(2025);
+  const [tahun, setTahun] = useState(new Date().getFullYear());
   const [filterLabel, setFilterLabel] = useState([]);
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [rumahSakit, setRumahSakit] = useState("");
@@ -37,6 +37,7 @@ const RL53 = () => {
   const [loadingRS, setLoadingRS] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [spinner, setSpinner] = useState(false);
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -206,6 +207,19 @@ const RL53 = () => {
     } catch (error) {}
   };
 
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
+  };
+
   const getValidasi = async () => {
     setSpinner(true);
     try {
@@ -246,11 +260,14 @@ const RL53 = () => {
   const getRL = async (e) => {
     setSpinner(true);
     e.preventDefault();
-    if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setSpinner(false);
+        return;
+      }
     }
     const filter = [];
     filter.push("nama: ".concat(rumahSakit.nama));
@@ -499,7 +516,8 @@ const RL53 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       Pilih
@@ -554,7 +572,8 @@ const RL53 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       Pilih
@@ -584,7 +603,8 @@ const RL53 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       Pilih

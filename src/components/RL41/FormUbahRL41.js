@@ -25,6 +25,8 @@ export const FormUbahRL41 = () => {
 
   const [datainput, setDataInput] = useState(null);
   const { CSRFToken } = useCSRFTokenContext();
+  const [tahun, setTahun] = useState("");
+  const [bulan, setBulan] = useState("");
 
   // const [no, setNo] = useState("");
   // const [nodtd, setNoDTD] = useState("");
@@ -120,6 +122,12 @@ export const FormUbahRL41 = () => {
       })
       .then((response) => {
         setDataInput(response.data.data);
+        const periode = response.data.data.periode;
+
+        const [tahun, bulan] = periode.split("-");
+
+        setTahun(tahun); // "2026"
+        setBulan(bulan); // "01"
       })
       .catch((error) => {
         console.error("Error fetching data:", error);
@@ -345,30 +353,72 @@ export const FormUbahRL41 = () => {
               </div>
             </div>
           </div>
+
+          <div className="col-md-6">
+            <div className="card">
+              <div className="card-body">
+                <h5 className="card-title h5">Periode Laporan</h5>
+
+                <div className="form-floating" style={{ width: "100%" }}>
+                  <select
+                    name="tahun"
+                    className="form-select"
+                    id="tahun"
+                    value={tahun}
+                    disabled
+                  >
+                    <option value="">{tahun}</option>
+                  </select>
+
+                  <label htmlFor="tahun">Tahun</label>
+                </div>
+                <div
+                  className="form-floating"
+                  style={{ width: "100%", display: "inline-block" }}
+                >
+                  <select
+                    name="bulan"
+                    className="form-control"
+                    id="bulan"
+                    disabled
+                    value={bulan}
+                  >
+                    <option value="01">Januari</option>
+                    <option value="02">Februari</option>
+                    <option value="03">Maret</option>
+                    <option value="04">April</option>
+                    <option value="05">Mei</option>
+                    <option value="06">Juni</option>
+                    <option value="07">Juli</option>
+                    <option value="08">Agustus</option>
+                    <option value="09">September</option>
+                    <option value="10">Oktober</option>
+                    <option value="11">November</option>
+                    <option value="12">Desember</option>
+                  </select>
+                  <label htmlFor="bulan">Bulan</label>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         {datainput ? (
           <div className="row mt-3 mb-3">
             <div className="col-md-12">
-              <Link
-                to={`/rl41/`}
-                className="btn btn-info"
-                style={{
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
-              >
-                {/* <IoArrowBack
-                size={30}
-                style={{ color: "gray", cursor: "pointer" }}
-              /> */}
-                &lt;
-              </Link>
-              <span style={{ color: "gray" }}>
-                {" "}
-                Kembali RL 41 Penyakit Rawat Inap
-              </span>
-              <h6>Detail Penyakit :</h6>
+              <div className={style.headerAction}>
+                <Link to="/rl41/">
+                  <button type="button" className={style.btnPrimary}>
+                    <IoArrowBack />
+                  </button>
+                </Link>
+                <span className={style.backText}>
+                  <h4 className={style.pageHeader}>
+                    Kembali ke - RL 41 Penyakit Rawat Inap
+                  </h4>
+                </span>
+              </div>
+
+              <h6>Detail Penyakit</h6>
               <h6>Kode ICD : {datainput.icd.icd_code}</h6>
               <h6>Deskripsi ICD : {datainput.icd.description_code}</h6>
               <div className="container" style={{ textAlign: "center" }}>

@@ -14,7 +14,7 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 const FormTambahRL51 = () => {
   // const [tahun, setTahun] = useState(new Date().getFullYear() - 1);
   // const [tahun, setTahun] = useState(new Date().getFullYear());
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState("");
   const [bulan, setBulan] = useState("00");
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
@@ -30,17 +30,31 @@ const FormTambahRL51 = () => {
   const [spinner, setSpinner] = useState(false);
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
-
   const startYear = 2025;
-  const currentYear = new Date().getFullYear(); // sekarang 2026
 
+  const today = new Date();
+  const currentYear = today.getFullYear();
+
+  // batas: 31 Maret
+  const batasTanggal = new Date(currentYear, 2, 31); // bulan 0-based → 2 = Maret
+
+  // kalau hari ini lewat 31 Maret → hanya boleh current year
+  const maxYear = today > batasTanggal ? currentYear : currentYear;
+
+  const minYear = today > batasTanggal ? currentYear : currentYear - 1;
+
+  // generate list tahun
   const years = [];
-  for (let y = startYear; y <= currentYear; y++) {
-    years.push(y);
+  for (let y = startYear; y <= maxYear; y++) {
+    if (y >= minYear) {
+      years.push(y);
+    }
   }
 
   useEffect(() => {
     refreshToken();
+    setTahun(String(years[0] || "")); // eslint-disable-next-line react-hooks/exhaustive-deps
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datainput]);
 
@@ -167,7 +181,7 @@ const FormTambahRL51 = () => {
       const DetailPenyakitTemplate = response.data.data.map((value) => {
         return {
           id: value.id,
-          namaPenyakit: value.description_code,
+          namaPenyakit: `${value.icd_code} - ${value.description_code}`,
           statusLaki: value.status_laki,
           statusPerempuan: value.status_perempuan,
           label: [
@@ -543,21 +557,16 @@ const FormTambahRL51 = () => {
 
       <div className="row mt-3">
         <div className="col-md-6">
-          <div className="pb-2">
-            <Link
-              to={`/MENURL51/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              {/* <IoArrowBack size={30} style={{ color: "gray", cursor: "pointer" }} /> */}
-              &lt;
+          <div className={style.headerAction}>
+            <Link to="/rl51/">
+              <button type="button" className={style.btnPrimary}>
+                <IoArrowBack />
+              </button>
             </Link>
-            <span style={{ color: "gray" }}>
-              Kembali RL 51 Mobiditas Pasien Rawat Jalan
+            <span className={style.backText}>
+              <h4 className={style.pageHeader}>
+                Kembali RL 51 Mobiditas Pasien Rawat Jalan
+              </h4>
             </span>
           </div>
 
@@ -618,10 +627,10 @@ const FormTambahRL51 = () => {
                 >
                   <thead className={style["thead"]}>
                     <tr className="main-header-row">
-                      <th style={{ width: "8%" }}>No.</th>
-                      <th style={{ width: "20%" }}>Code ICD 10</th>
+                      <th style={{ width: "10%" }}>No.</th>
+                      <th style={{ width: "15%" }}>Code ICD 10</th>
                       <th style={{ width: "40%" }}>Deskripsi ICD 10</th>
-                      <th style={{ width: "12%" }}>Action</th>
+                      <th style={{ width: "15%" }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -631,7 +640,6 @@ const FormTambahRL51 = () => {
                           <td
                             style={{
                               textAlign: "center",
-                              verticalAlign: "middle",
                             }}
                           >
                             {index + 1}
@@ -666,10 +674,10 @@ const FormTambahRL51 = () => {
               <div className="card-body">
                 <form onSubmit={Simpan}>
                   <div className="container">
-                    <h5 className="card-title h5">Periode Laporan</h5>
                     <h5 className="card-title h5">
                       Tambah Data Penyakit {datainput[0].namaPenyakit}
                     </h5>
+                    <h5 className="card-title h5">Periode Laporan</h5>
                     <div
                       className="form-floating"
                       style={{ width: "100%", display: "inline-block" }}
@@ -779,7 +787,9 @@ const FormTambahRL51 = () => {
                               const isLakiDisabled = value.statusLaki === 0;
                               return (
                                 <tr key={no}>
-                                  <td>{no + 1}</td>
+                                  <td style={{ textAlign: "center" }}>
+                                    {no + 1}
+                                  </td>{" "}
                                   <td style={{ textAlign: "left" }}>
                                     <label>{test.label}</label>
                                   </td>

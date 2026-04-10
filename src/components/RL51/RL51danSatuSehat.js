@@ -161,7 +161,7 @@ export default function TabMenu() {
 
 function TabOne() {
   const [bulan, setBulan] = useState("01");
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear());
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [filterLabel, setFilterLabel] = useState([]);
   const [rumahSakit, setRumahSakit] = useState("");
@@ -190,6 +190,7 @@ function TabOne() {
   const [loadingRS, setLoadingRS] = useState(false);
   const [spinner, setSpinner] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -373,9 +374,12 @@ function TabOne() {
   const handleSelectRumahSakit = (e) => {
     const id = e.target.value;
     const selected = daftarRumahSakit.find((item) => item.id == id);
+
     if (selected) {
+      setSelectedRsID(selected.id);
       setRumahSakit(selected);
     } else {
+      setSelectedRsID(null);
       setRumahSakit(null);
     }
   };
@@ -462,11 +466,14 @@ function TabOne() {
   const getRL = async (e) => {
     e.preventDefault();
 
-    if (!rumahSakit) {
-      toast("rumah sakit harus dipilih", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setSpinner(false);
+        return;
+      }
     }
 
     const filter = [];
@@ -923,7 +930,8 @@ function TabOne() {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -978,7 +986,8 @@ function TabOne() {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -1008,7 +1017,8 @@ function TabOne() {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -2283,32 +2293,38 @@ function TabOne() {
                   </tbody>
                 </table>
               </div>
-              <div
-                style={{
-                  bottom: 0,
-                  background: "#fff",
-                  padding: "12px 0",
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: 12,
-                  borderTop: "1px solid #ddd",
-                }}
-              >
-                <button disabled={page === 1} onClick={() => fetchRL(page - 1)}>
-                  ◀ Prev
-                </button>
 
-                <span>
-                  Halaman {page} / {totalPages}
-                </span>
-
-                <button
-                  disabled={page === totalPages}
-                  onClick={() => fetchRL(page + 1)}
+              {totalPages > 1 && (
+                <div
+                  style={{
+                    bottom: 0,
+                    background: "#fff",
+                    padding: "12px 0",
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: 12,
+                    borderTop: "1px solid #ddd",
+                  }}
                 >
-                  Next ▶
-                </button>
-              </div>
+                  <button
+                    disabled={page === 1}
+                    onClick={() => fetchRL(page - 1)}
+                  >
+                    ◀ Prev
+                  </button>
+
+                  <span>
+                    Halaman {page} / {totalPages}
+                  </span>
+
+                  <button
+                    disabled={page === totalPages}
+                    onClick={() => fetchRL(page + 1)}
+                  >
+                    Next ▶
+                  </button>
+                </div>
+              )}
             </div>
             <div
               className={`tab-pane fade ${
@@ -3395,17 +3411,11 @@ function TabTwo() {
 
             {sudahFilter && (
               <button
-                className="btn"
-                style={{
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                  marginLeft: "10px",
-                }}
+                className={style.btnPrimary}
+                style={{ marginLeft: "10px" }}
                 onClick={tarikDataSatusehat}
                 disabled={loading}
               >
-                <FaSync />
                 {loading ? "Memproses..." : "Tarik Data"}
               </button>
             )}

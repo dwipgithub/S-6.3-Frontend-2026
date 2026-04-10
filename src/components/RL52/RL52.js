@@ -14,7 +14,7 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import Spinner from "react-bootstrap/Spinner";
 
 const RL52 = () => {
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear());
   const [bulan, setBulan] = useState("01");
   const [dataRL, setDataRL] = useState([]);
   const [token, setToken] = useState("");
@@ -40,6 +40,7 @@ const RL52 = () => {
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -199,6 +200,19 @@ const RL52 = () => {
     setLoadingRS(false);
   };
 
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
+  };
+
   const showRumahSakit = async (id) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
@@ -251,11 +265,14 @@ const RL52 = () => {
   const getRL = async (e) => {
     setSpinner(true);
     e.preventDefault();
-    if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setSpinner(false);
+        return;
+      }
     }
     const filter = [];
     filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
@@ -502,7 +519,8 @@ const RL52 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       Pilih
@@ -557,7 +575,8 @@ const RL52 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       Pilih
@@ -587,7 +606,8 @@ const RL52 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       Pilih
