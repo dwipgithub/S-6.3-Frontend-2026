@@ -87,7 +87,7 @@ export default function TabMenu34() {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <div className="row">
         <div className="col-md-12">
@@ -1017,13 +1017,9 @@ function TabOne() {
                 return (
                   <tr key={value.id}>
                     <td>
-                      <input
-                        type="text"
-                        name="id"
-                        className="form-control"
-                        value={index + 1}
-                        disabled={true}
-                      />
+                     
+                        {index + 1}
+                    
                     </td>
                     <td
                       style={{ textAlign: "center", verticalAlign: "middle" }}
@@ -1058,23 +1054,12 @@ function TabOne() {
                       </div>
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        name="jenisPengunjung"
-                        className="form-control"
-                        value={value.jenis_pengunjung_rl_tiga_titik_tempat.nama}
-                        disabled={true}
-                      />
+                      
+                        {value.jenis_pengunjung_rl_tiga_titik_tempat.nama}
+                        
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        name="jumlah"
-                        className="form-control"
-                        value={value.jumlah}
-                        onChange={(e) => changeHandler(e, index)}
-                        disabled={true}
-                      />
+                     {value.jumlah}
                     </td>
                   </tr>
                 );

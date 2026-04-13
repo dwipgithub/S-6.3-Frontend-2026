@@ -559,6 +559,42 @@ const FormTambahRL33 = () => {
       //   dataRLArray.push(nonBedahData);
       // }
 
+      for (let i = 0; i < dataRLArray.length; i++) {
+        const row = dataRLArray[i];
+
+        const totalPasien =
+          (row.total_pasien_rujukan || 0) +
+          (row.total_pasien_non_rujukan || 0);
+
+        const totalLuka =
+          (row.luka_laki || 0) +
+          (row.luka_perempuan || 0);
+
+        // Jika luka lebih besar dari total pasien
+        if (totalLuka > totalPasien) {
+          toast(
+            `Gagal simpan: jumlah pasien luka melebihi total pasien`,
+            {
+              position: toast.POSITION.TOP_RIGHT,
+            }
+          );
+
+          return; // HENTIKAN PROSES SIMPAN
+        }
+
+        // Tambahan keamanan: dirawat tidak boleh negatif
+        if (row.tlp_dirawat < 0) {
+          toast(
+            `Gagal simpan: jumlah dirawat tidak boleh negatif`,
+            {
+              position: toast.POSITION.TOP_RIGHT,
+            }
+          );
+
+          return;
+        }
+      }
+
       const result = await axiosJWT.post(
         "/apisirs6v2/rltigatitiktiga",
         {

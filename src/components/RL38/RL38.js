@@ -12,7 +12,7 @@ import { DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL38 = () => {
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState("2026");
   const [bulan, setBulan] = useState("");
   // const [namaRS, setNamaRS] = useState("");
   // const [alamatRS, setAlamatRS] = useState("");
