@@ -404,9 +404,8 @@ const FormTambahRL310 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h2>RL. 3.10</h2>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -530,279 +529,130 @@ const FormTambahRL310 = () => {
             </div>
           </div>
         </div>
+
+        {/* RL 3.10 Rujukan */}
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl310/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              {/* <IoArrowBack size={30} style={{ color: "gray", cursor: "pointer" }} /><span style={{ color: "gray" }}></span> */}
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>RL 3.10 Rujukan</span>
+            <div className={style.headerAction}>
+              <Link to="/rl318">
+                <button type="button" className={style.btnPrimary}>
+                  ←
+                </button>
+              </Link>
 
-            <div className={`${style["table-container"]} mt-2 mb-1 pb-2 `}>
+              <h4 className={style.pageHeader}>RL 3.18 Farmasi Resep</h4>
+            </div>
+
+            <div className={`${style["table-container"]} mt-2 mb-1 pb-2`}>
               <table className={style.table}>
                 <thead className={style.thead}>
-                  <tr className="">
+                  <tr>
                     <th
-                      className={style["sticky-header"]}
-                      style={{ width: "4%" }}
+                      className={`${style["sticky-col-1"]}`}
+                      style={{ width: "60px" }}
                       rowSpan={3}
                     >
-                      No Spesialisasi
+                      No
                     </th>
                     <th
-                      className={style["sticky-header"]}
-                      style={{ width: "3%" }}
+                      className={`${style["sticky-col-2"]}`}
+                      style={{ width: "60px" }}
                       rowSpan={3}
-                    ></th>
+                    >
+                      Pilih
+                    </th>
                     <th
-                      className={style["sticky-header"]}
-                      style={{ width: "20%" }}
+                      className={`${style["sticky-col-3"]}`}
+                      style={{ width: "250px" }}
                       rowSpan={3}
                     >
                       Jenis Spesialisasi
                     </th>
                     <th colSpan={8}>Rujukan Masuk</th>
-                    <th
-                      colSpan={4}
-                      rowSpan={2}
-                      style={{ verticalAlign: "middle" }}
-                    >
+                    <th colSpan={4} rowSpan={2}>
                       Dirujuk Keluar
                     </th>
                   </tr>
-                  <tr className={style["subheader-row"]}>
+                  <tr>
                     <th colSpan={4}>Diterima Dari</th>
                     <th colSpan={4}>Dikembalikan Ke</th>
                   </tr>
-                  <tr className={style["subsubheader-row"]}>
+                  <tr>
                     <th>Puskesmas</th>
                     <th>RS Lain</th>
                     <th>Faskes Lain</th>
-                    <th>Total Rujukan Masuk</th>
+                    <th>Total</th>
                     <th>Puskesmas</th>
                     <th>RS Asal</th>
                     <th>Faskes Lain</th>
-                    <th>Total Rujukan Masuk Dikembalikan</th>
-                    <th>Pasien Rujukn</th>
-                    <th>Pasien Datang Sendiri</th>
-                    <th>Total Dirujuk Keluar</th>
+                    <th>Total</th>
+                    <th>Pasien Rujukan</th>
+                    <th>Datang Sendiri</th>
+                    <th>Total Keluar</th>
                     <th>Diterima Kembali</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {dataRL.map((value, index) => {
-                    return (
-                      <tr key={value.id}>
-                        <td className={style["sticky-column"]}>
+                  {dataRL.map((value, index) => (
+                    <tr key={value.id}>
+                      {/* NO */}
+                      <td
+                        className={`${style.center} ${style["sticky-col-1"]}`}
+                      >
+                        {value.no}
+                      </td>
+
+                      {/* CHECKBOX */}
+                      <td
+                        className={`${style.center} ${style["sticky-col-2"]}`}
+                      >
+                        <input
+                          type="checkbox"
+                          name="check"
+                          onChange={(e) => changeHandler(e, index)}
+                          checked={value.checked}
+                        />
+                      </td>
+
+                      {/* NAMA */}
+                      <td className={`${style.left} ${style["sticky-col-3"]}`}>
+                        {value.jenisSpesialis}
+                      </td>
+
+                      {/* INPUT DINAMIS */}
+                      {[
+                        "rm_diterima_puskesmas",
+                        "rm_diterima_rs",
+                        "rm_diterima_faskes_lain",
+                        "rm_diterima_total_rm",
+                        "rm_dikembalikan_puskesmas",
+                        "rm_dikembalikan_rs",
+                        "rm_dikembalikan_faskes_lain",
+                        "rm_dikembalikan_total_rm",
+                        "keluar_pasien_rujukan",
+                        "keluar_pasien_datang_sendiri",
+                        "keluar_total_keluar",
+                        "keluar_diterima_kembali",
+                      ].map((field) => (
+                        <td key={field} className={style.inputCell}>
                           <input
-                            type="text"
-                            name="no"
-                            className="form-control"
-                            value={value.no}
-                            disabled={true}
-                          />
-                        </td>
-                        <td
-                          className={style["sticky-column"]}
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            name="check"
-                            className="form-check-input"
+                            type="number"
+                            name={field}
+                            min={0}
+                            value={value[field]}
                             onChange={(e) => changeHandler(e, index)}
-                            checked={value.checked}
-                          />
-                        </td>
-                        <td className={style["sticky-column"]}>
-                          <input
-                            type="text"
-                            name="jenisKegiatan"
-                            className="form-control"
-                            value={value.jenisSpesialis}
-                            disabled={true}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="rm_diterima_puskesmas"
-                            className="form-control"
-                            value={value.rm_diterima_puskesmas}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
+                            disabled={
+                              value.disabledInput || field.includes("total")
+                            }
                             onPaste={preventPasteNegative}
                             onKeyPress={preventMinus}
-                            onFocus={handleFocus}
+                            className={style.inputExcel}
                           />
                         </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="rm_diterima_rs"
-                            className="form-control"
-                            value={value.rm_diterima_rs}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="rm_diterima_faskes_lain"
-                            className="form-control"
-                            value={value.rm_diterima_faskes_lain}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="rm_diterima_total_rm"
-                            className="form-control"
-                            value={value.rm_diterima_total_rm}
-                            disabled={true}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="rm_dikembalikan_puskesmas"
-                            className="form-control"
-                            value={value.rm_dikembalikan_puskesmas}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="rm_dikembalikan_rs"
-                            className="form-control"
-                            value={value.rm_dikembalikan_rs}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="rm_dikembalikan_faskes_lain"
-                            className="form-control"
-                            value={value.rm_dikembalikan_faskes_lain}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="rm_dikembalikan_total_rm"
-                            className="form-control"
-                            value={value.rm_dikembalikan_total_rm}
-                            disabled={true}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="keluar_pasien_rujukan"
-                            className="form-control"
-                            value={value.keluar_pasien_rujukan}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="keluar_pasien_datang_sendiri"
-                            className="form-control"
-                            value={value.keluar_pasien_datang_sendiri}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="keluar_total_keluar"
-                            className="form-control"
-                            value={value.keluar_total_keluar}
-                            disabled={true}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            name="keluar_diterima_kembali"
-                            className="form-control"
-                            value={value.keluar_diterima_kembali}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -810,7 +660,7 @@ const FormTambahRL310 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button type="submit" className="btn btn-outline-success">
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Simpan
           </button>
         </div>
