@@ -661,10 +661,11 @@ function TabOne() {
           customConfig,
         );
       }
+      setIsValidated(statusValidasi == 3);
+      await getValidasi();
       toast("Data Berhasil Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
       });
-      setIsValidated(statusValidasi == 3);
     } catch (error) {
       toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
         position: toast.POSITION.TOP_RIGHT,
