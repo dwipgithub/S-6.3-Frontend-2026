@@ -67,3 +67,24 @@
   background-color: white;
   z-index: 1; /* Ensures sticky column is above other content */
 }
+
+.btnPrimary {
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #00b9ad;
+  color: #fff;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btnPrimary:hover {
+  background: #00b9ad;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btnPrimary:active {
+  transform: translateY(0);
+}

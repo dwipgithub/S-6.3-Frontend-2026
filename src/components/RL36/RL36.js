@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef} from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
@@ -36,6 +36,7 @@ const RL36 = () => {
   const [dataValidasi, setDataValidasi] = useState(null);
   const [activeTab, setActiveTab] = useState("tab1");
   const { CSRFToken } = useCSRFTokenContext();
+  const tableRef = useRef(null);
 
   // Load validasi data when user opens Validasi tab or when filters change
   useEffect(() => {
@@ -1340,14 +1341,13 @@ const RL36 = () => {
             <div className={`tab-content ${style.tabContent}`}>
               <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
                 <div className={style["table-container"]}>
-                  <div className="table-responsive">
-                    <table className={style.table} style={{ width: "200%" }}>
-                      <thead className={style.thead}>
-                <tr>
+                   <table className={style["table"]}>
+                      <thead className={style["thead"]}>
+                <tr className="main-header-row">
                   <th
                     style={{ width: "2" }}
                     rowSpan={2}
-                    className={style["sticky-header"]}
+                    className={style["sticky-header-view"]}
                   >
                     No.
                   </th>
@@ -1356,7 +1356,7 @@ const RL36 = () => {
                   <th
                     style={{ width: "6%" }}
                     rowSpan={2}
-                    className={style["sticky-header"]}
+                    className={style["sticky-header-view"]}
                   >
                     Aksi
                   </th>
@@ -1366,7 +1366,7 @@ const RL36 = () => {
                   <th
                     style={{ width: "15%" }}
                     rowSpan={2}
-                    className={style["sticky-header"]}
+                    className={style["sticky-header-view"]}
                   >
                     Jenis Kegiatan
                   </th>
@@ -1383,7 +1383,7 @@ const RL36 = () => {
                     Dirujuk
                   </th>
                 </tr>
-                <tr className={style["subheader-row"]}>
+                <tr className={style["subsubheader-row"]}>
                   <th className="align-middle">Rumah Sakit</th>
                   <th className="align-middle">Bidan</th>
                   <th className="align-middle">Puskesmas</th>
@@ -1505,6 +1505,7 @@ const RL36 = () => {
                                     >
                                       Hapus
                                     </button>
+                                     {value2.jenis_kegiatan_rl_tiga_titik_enam.nama !== "Tidak Ada Data" && (
                                     <Link
                                       to={`/rl36/ubah/${value2.id}`}
                                       className="btn btn-warning"
@@ -1517,6 +1518,7 @@ const RL36 = () => {
                                     >
                                       Ubah
                                     </Link>
+                                    )}
                                   </div>
                                 </td>
                                 : <>
@@ -1596,7 +1598,6 @@ const RL36 = () => {
                 }
               </tbody>
                     </table>
-                  </div>
                 </div>
               </div>
 
