@@ -362,69 +362,96 @@ const FormTambahRL36 = () => {
     // }
   };
 
-  const Simpan = async (e) => {
-    let date = tahun + "-" + bulan + "-01";
-    e.preventDefault();
-    setSpinner(true);
-    setButtonStatus(true);
-    try {
-      const dataRLArray = dataRL
-        .filter((value) => {
-          return value.checked === true;
-        })
-        .map((value, index) => {
-          return {
-            jenisKegiatanId: value.id,
-            rmRumahSakit: value.rmRumahSakit,
-            rmBidan: value.rmBidan,
-            rmPuskesmas: value.rmPuskesmas,
-            rmFaskesLainnya: value.rmFaskesLainnya,
-            rmHidup: value.rmHidup,
-            rmMati: value.rmMati,
-            rmTotal: value.rmTotal,
-            rnmHidup: value.rnmHidup,
-            rnmMati: value.rnmMati,
-            rnmTotal: value.rnmTotal,
-            nrHidup: value.nrHidup,
-            nrMati: value.nrMati,
-            nrTotal: value.nrTotal,
-            dirujuk: value.dirujuk,
-          };
-        });
+const Simpan = async (e) => {
+  let date = tahun + "-" + bulan + "-01";
+  e.preventDefault();
+  setSpinner(true);
+  setButtonStatus(true);
 
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "XSRF-TOKEN": CSRFToken,
-        },
-      };
-      const result = await axiosJWT.post(
-        "/apisirs6v2/rltigatitikenam",
-        {
-          tahun: parseInt(tahun),
-          tahunDanBulan: date,
-          data: dataRLArray,
-        },
-        customConfig
-      );
-      console.log(result.data);
-      setSpinner(false);
-      toast("Data Berhasil Disimpan", {
-        position: toast.POSITION.TOP_RIGHT,
+  try {
+    const dataRLArray = dataRL
+      .filter((value) => {
+        return value.checked === true;
+      })
+      .map((value) => {
+        return {
+          jenisKegiatanId: value.id,
+          rmRumahSakit: value.rmRumahSakit,
+          rmBidan: value.rmBidan,
+          rmPuskesmas: value.rmPuskesmas,
+          rmFaskesLainnya: value.rmFaskesLainnya,
+          rmHidup: value.rmHidup,
+          rmMati: value.rmMati,
+          rmTotal: value.rmTotal,
+          rnmHidup: value.rnmHidup,
+          rnmMati: value.rnmMati,
+          rnmTotal: value.rnmTotal,
+          nrHidup: value.nrHidup,
+          nrMati: value.nrMati,
+          nrTotal: value.nrTotal,
+          dirujuk: value.dirujuk,
+        };
       });
-      setTimeout(() => {
-        navigate("/rl36");
-      }, 1000);
-    } catch (error) {
-      console.log(error);
-      toast("Data Gagal Disimpan", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      setButtonStatus(false);
-      setSpinner(false);
+
+    const customConfig = {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "XSRF-TOKEN": CSRFToken,
+      },
+    };
+
+    const result = await axiosJWT.post(
+      "/apisirs6v2/rltigatitikenam",
+      {
+        tahun: parseInt(tahun),
+        tahunDanBulan: date,
+        data: dataRLArray,
+      },
+      customConfig
+    );
+
+    console.log(result.data);
+
+    setSpinner(false);
+
+    toast("Data Berhasil Disimpan", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
+
+    setTimeout(() => {
+      navigate("/rl36");
+    }, 1000);
+
+  } catch (error) {
+  console.log(error);
+
+  let message = "Data Gagal Disimpan";
+
+  // cek jika ada response dari backend
+  if (error.response && error.response.data) {
+
+    const errorMsg =
+      error.response.data.message ||
+      error.response.data.error ||
+      "";
+
+    // jika duplicate entry
+    if (errorMsg.toLowerCase().includes("duplicate")) {
+      message = "Data gagal disimpan karena sudah ada data pada bulan dan jenis kegiatan yang sama";
+    } else {
+      message = errorMsg;
     }
-  };
+  }
+
+  toast(message, {
+    position: toast.POSITION.TOP_RIGHT,
+  });
+
+  setButtonStatus(false);
+  setSpinner(false);
+}
+};
 
   const preventPasteNegative = (e) => {
     const clipboardData = e.clipboardData || window.clipboardData;
@@ -460,7 +487,7 @@ const FormTambahRL36 = () => {
 
   const currentYear = new Date().getFullYear();
   const daftarTahun = [];
-  for (let i = 2026; i <= currentYear; i++) {
+  for (let i = 2025; i <= currentYear; i++) {
     daftarTahun.push(i);
   }
 
@@ -468,7 +495,7 @@ const FormTambahRL36 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <h2>RL 3.6 - Kebidanan</h2>
       <form onSubmit={Simpan}>
@@ -587,12 +614,12 @@ const FormTambahRL36 = () => {
           <div className="col-md-12">
             <Link
               to={`/rl36/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              className={style.btnPrimary}
+                                          style={{
+                                            textDecoration: "none",
+                                            display: "inline-block",
+                                            color: "#FFF",
+                                          }}
             >
               {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/><span style={{color: "gray"}}></span>
                             <span style={{color:"gray"}}>Tambah data RL 3.5 -  Kunjungan Rawat Jalan</span> */}
@@ -954,14 +981,10 @@ const FormTambahRL36 = () => {
           </div>
         </div>
         <div className="mt-3 mb-3">
-          <ToastContainer />
-          <button
-            type="submit"
-            disabled={buttonStatus}
-            className="btn btn-outline-success"
-          >
-            <HiSaveAs /> Simpan
-          </button>
+           <ToastContainer />
+                                        <button type="submit" className={style.btnPrimary}>
+                                          <HiSaveAs /> Simpan
+                                        </button>
         </div>
       </form>
     </div>
