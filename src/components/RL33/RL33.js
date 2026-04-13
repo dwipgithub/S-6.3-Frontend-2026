@@ -124,7 +124,7 @@ const getDataRLTigaTitikTiga = async (e) => {
   e.preventDefault();
 
   // ⭐ FIX VALIDASI RS (object kosong sering lolos)
-  if (!rumahSakit || !rumahSakit.id) {
+  if (!rumahSakit || !rumahSakit.id || rumahSakit.id === 0) {
     toast(`rumah sakit harus dipilih`, {
       position: toast.POSITION.TOP_RIGHT,
     });
@@ -430,33 +430,34 @@ const getDataRLTigaTitikTiga = async (e) => {
 
   const handleClose = () => setShow(false);
 
-  const handleShow = () => {
-    const jenisUserId = user.jenisUserId;
-    const satKerId = user.satKerId;
-    switch (jenisUserId) {
-      case 1:
-        getProvinsi();
-        setBulan(1);
-        setShow(true);
-        break;
-      case 2:
-        getKabKota(satKerId);
-        setBulan(1);
-        setShow(true);
-        break;
-      case 3:
-        getRumahSakit(satKerId);
-        setBulan(1);
-        setShow(true);
-        break;
-      case 4:
-        showRumahSakit(satKerId);
-        setBulan(1);
-        setShow(true);
-        break;
-      default:
-    }
-  };
+const handleShow = () => {
+  const jenisUserId = user.jenisUserId;
+  const satKerId = user.satKerId;
+
+  switch (jenisUserId) {
+    case 1:
+      getProvinsi();
+      setShow(true);
+      break;
+
+    case 2:
+      getKabKota(satKerId);
+      setShow(true);
+      break;
+
+    case 3:
+      getRumahSakit(satKerId);
+      setShow(true);
+      break;
+
+    case 4:
+      showRumahSakit(satKerId);
+      setShow(true);
+      break;
+
+    default:
+  }
+};
 
   const getProvinsi = async () => {
     try {
@@ -633,8 +634,18 @@ const getDataRLTigaTitikTiga = async (e) => {
   };
 
   const handleTabClick = (tab) => {
-    setActiveTab(tab);
-  };
+
+  if (tab === "tab2") {
+    if (!rumahSakit || !rumahSakit.id) {
+      toast("RS belum dipilih", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+  }
+
+  setActiveTab(tab);
+};
 
   const months = [
     { value: "1", label: "Januari" },
@@ -810,12 +821,12 @@ const getDataRLTigaTitikTiga = async (e) => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => showRumahSakit(e.target.value)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -865,12 +876,12 @@ const getDataRLTigaTitikTiga = async (e) => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => showRumahSakit(e.target.value)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -895,12 +906,12 @@ const getDataRLTigaTitikTiga = async (e) => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => showRumahSakit(e.target.value)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>

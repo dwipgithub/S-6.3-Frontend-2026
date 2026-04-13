@@ -186,7 +186,7 @@ export const FormUbahRL33 = () => {
       console.log(error);
       if (error.response?.data) {
         console.error(error.response.data);
-        toast(`Data Gagal Diupdate, ${error.response.data.message}`, {
+        toast(`Gagal simpan : jumlah pasien luka melebihi total pasien"`, {
           position: toast.POSITION.TOP_RIGHT,
         });
       } else {
@@ -324,7 +324,7 @@ export const FormUbahRL33 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <h2>RL. 3.3</h2>
       <form onSubmit={updateDataRLTigaTitikTiga}>
