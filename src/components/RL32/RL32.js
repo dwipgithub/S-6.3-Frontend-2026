@@ -14,7 +14,7 @@ import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL32 = () => {
-  const [bulan, setBulan] = useState(1);
+  const [bulan, setBulan] = useState(0);
   const [tahun, setTahun] = useState("");
   const [filterLabel, setFilterLabel] = useState([]);
   const [daftarBulan, setDaftarBulan] = useState([]);
@@ -26,9 +26,12 @@ const RL32 = () => {
   const [token, setToken] = useState("");
   const [expire, setExpire] = useState("");
   const [show, setShow] = useState(false);
-  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [statusValidasi, setStatusValidasi] = useState(0);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [user, setUser] = useState({});
+  const [validasiId, setValidasiId] = useState(null);
+  const [dataValidasi, setDataValidasi] = useState(null);
+  const [activeTab, setActiveTab] = useState("tab1");
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -37,12 +40,19 @@ const RL32 = () => {
     getBulan();
     const getLastYear = async () => {
       const date = new Date();
-      setTahun("2025");
+      setTahun("2026");
       return date.getFullYear();
     };
     getLastYear().then((results) => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load validasi data secara realtime saat bulan/tahun/rumahSakit berubah
+  useEffect(() => {
+    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
+      getValidasi();
+    }
+  }, [bulan, tahun, rumahSakit, activeTab]);
 
   const refreshToken = async () => {
     try {
@@ -197,6 +207,44 @@ const RL32 = () => {
     setKeteranganValidasi(e.target.value);
   };
 
+  const getValidasi = async () => {
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+        },
+      };
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rltigatitikduavalidasi",
+        customConfig
+      );
+
+      if (response.data.data && response.data.data.length > 0) {
+        const validasi = response.data.data[0];
+        setValidasiId(validasi.id);
+        setStatusValidasi(validasi.statusValidasiId);
+        setKeteranganValidasi(validasi.catatan || "");
+        setDataValidasi(validasi);
+      } else {
+        setValidasiId(null);
+        setStatusValidasi(0);
+        setKeteranganValidasi("");
+        setDataValidasi(null);
+      }
+    } catch (error) {
+      console.log(error);
+      setValidasiId(null);
+      setStatusValidasi(0);
+      setKeteranganValidasi("");
+      setDataValidasi(null);
+    }
+  };
+
   const getRumahSakit = async (kabKotaId) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
@@ -256,8 +304,39 @@ const RL32 = () => {
       });
 
       setDataRL(rlTigaTitikDuaDetails);
-      // setRumahSakit(null)
+      setValidasiId(null);
+      setStatusValidasi(0);
+      setKeteranganValidasi("");
+      setDataValidasi(null);
       handleClose();
+      
+      // Load validasi data setelah filter diterapkan
+      try {
+        const validasiConfig = {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            rsId: rumahSakit.id,
+            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          },
+        };
+        const validasiResponse = await axiosJWT.get(
+          "/apisirs6v2/rltigatitikduavalidasi",
+          validasiConfig
+        );
+
+        if (validasiResponse.data.data && validasiResponse.data.data.length > 0) {
+          const validasi = validasiResponse.data.data[0];
+          setValidasiId(validasi.id);
+          setStatusValidasi(validasi.statusValidasiId);
+          setKeteranganValidasi(validasi.catatan || "");
+          setDataValidasi(validasi);
+        }
+      } catch (error) {
+        console.log(error);
+      }
     } catch (error) {
       console.log(error);
     }
@@ -305,43 +384,87 @@ const RL32 = () => {
 
   const simpanValidasi = async (e) => {
     e.preventDefault();
+    
+    if (!rumahSakit || !rumahSakit.id) {
+      toast("Rumah sakit harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (parseInt(statusValidasi) === 0) {
+      toast("Status harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
     try {
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
         },
       };
 
-      await axiosJWT.post(
-        "/apisirs6v2/validasi",
-        {
+      const payload = {
+        statusValidasiId: parseInt(statusValidasi),
+        catatan: keteranganValidasi,
+      };
+
+      console.log("Payload yang dikirim:", payload);
+      console.log("ValidasiId:", validasiId);
+
+      if (validasiId) {
+        // Update existing validation
+        const response = await axiosJWT.patch(
+          `/apisirs6v2/rltigatitikduavalidasi/${validasiId}`,
+          payload,
+          customConfig
+        );
+        console.log("Response PATCH:", response.data);
+        toast("Data Validasi Berhasil Diperbarui", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        // Refresh validasi data tanpa reload halaman
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      } else {
+        // Create new validation
+        const createPayload = {
           rsId: rumahSakit.id,
-          rlId: "rl.3.2",
-          periodeBulan: bulan,
-          periodeTahun: tahun,
-          statusId: statusValidasi,
-          keterangan: keteranganValidasi,
-        },
-        customConfig
-      );
-
-      toast("Data Berhasil Disimpan", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-
-      // Form tetap di tab Validasi setelah simpan
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          jenisPeriode: 1,
+          statusValidasiId: parseInt(statusValidasi),
+          catatan: keteranganValidasi,
+        };
+        const response = await axiosJWT.post(
+          "/apisirs6v2/rltigatitikduavalidasi",
+          createPayload,
+          customConfig
+        );
+        setValidasiId(response.data.data.id);
+        toast("Data Validasi Berhasil Disimpan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        // Refresh validasi data tanpa reload halaman
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      }
     } catch (error) {
-      toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
+      console.log(error);
+      toast(
+        `Data tidak bisa disimpan karena: ${
+          error.response?.data?.message || error.message
+        }`,
+        {
+          position: toast.POSITION.TOP_RIGHT,
+        }
+      );
     }
-
-    // console.log(rumahSakit.id)
-    // console.log(bulan)
-    // console.log(tahun)
-    // console.log(statusValidasi)
-    // console.log(keteranganValidasi)
   };
 
   const handleClose = () => setShow(false);
@@ -483,8 +606,6 @@ const RL32 = () => {
     });
   }
 
-  const [activeTab, setActiveTab] = useState("tab1");
-
   const handleTabClick = (tab) => {
     setActiveTab(tab);
   };
@@ -624,6 +745,8 @@ const RL32 = () => {
       0
     );
   };
+
+  const isAksi = user.jenisUserId === 4;
 
   const totalPasienAwalBulan = calculateTotalPasienAwalBulan(dataRL);
   const totalPasienMasuk = calculateTotalPasienMasuk(dataRL);
@@ -834,8 +957,10 @@ const RL32 = () => {
               <select
                 typeof="select"
                 className="form-control"
+                value={bulan}
                 onChange={bulanChangeHandler}
               >
+                <option value={0}>Pilih</option>
                 {daftarBulan.map((bulan) => {
                   return (
                     <option
@@ -869,7 +994,7 @@ const RL32 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -887,7 +1012,7 @@ const RL32 = () => {
                 className={style.btnPrimary}
                 style={{ textDecoration: "none" }}
               >
-                + Tambah
+              Tambah
               </Link>
             ) : null}
             <button
@@ -925,7 +1050,7 @@ const RL32 = () => {
                   Data
                 </button>
               </li>
-              {user.jenisUserId === 3 ? (
+              {[3, 4].includes(user.jenisUserId) ? (
                 <li className={`nav-item ${style.navItem}`}>
                   <button
                     type="button"
@@ -945,530 +1070,138 @@ const RL32 = () => {
                 }`}
               >
                 <div className={style["table-container"]}>
-                  <table className={style.table}>
-                    <thead className={style.thead}>
-                      <tr className="">
-                        <th
-                          className={style["sticky-header"]}
-                          rowSpan="2"
-                          style={{ width: "2%" }}
-                        >
-                          No.
-                        </th>
-                        <th
-                          className={style["sticky-header"]}
-                          rowSpan="2"
-                          style={{ width: "5%" }}
-                        >
-                          Aksi
-                        </th>
-                        <th
-                          className={style["sticky-header"]}
-                          rowSpan="2"
-                          style={{ width: "8%" }}
-                        >
-                          Jenis Pelayanan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Awal Bulan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Masuk
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Pindahan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Dipindahkan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Keluar Hidup
-                        </th>
-                        <th colSpan="2" style={{ width: "8%" }}>
-                          Pasien Pria Keluar Mati
-                        </th>
-                        <th colSpan="2" style={{ width: "8%" }}>
-                          Pasien Wanita Keluar Mati
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Jumlah Lama Dirawat
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Pasien Akhir Bulan
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Jumlah Hari Perawatan
-                        </th>
-                        <th colSpan="6" style={{ width: "20%" }}>
-                          Rincian Hari Perawatan Per Kelas
-                        </th>
-                        <th rowSpan="2" style={{ width: "4%" }}>
-                          Jumlah Alokasi TT Awal Bulan
-                        </th>
-                      </tr>
-                      <tr className={style["subheader-row"]}>
-                        <th style={{ width: "5%" }}>{"< 48 jam"}</th>
-                        <th style={{ width: "5%" }}>{">= 48 jam"}</th>
-                        <th style={{ width: "5%" }}>{"< 48 jam"}</th>
-                        <th style={{ width: "5%" }}>{">= 48 jam"}</th>
-                        <th style={{ width: "5%" }}>VVIP</th>
-                        <th style={{ width: "5%" }}>VIP</th>
-                        <th style={{ width: "5%" }}>1</th>
-                        <th style={{ width: "5%" }}>2</th>
-                        <th style={{ width: "5%" }}>3</th>
-                        <th style={{ width: "5%" }}>Khusus</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dataRL.map((value, index) => {
-                        return (
+                  
+
+                    <table className={style.table}>
+                      <thead className={style.thead}>
+                        <tr>
+                          <th rowSpan="2">No.</th>
+
+                          {/* ✅ kolom SELALU ADA */}
+                          <th rowSpan="2">Aksi</th>
+
+                          <th rowSpan="2">Jenis Pelayanan</th>
+                          <th rowSpan="2">Pasien Awal Bulan</th>
+                          <th rowSpan="2">Pasien Masuk</th>
+                          <th rowSpan="2">Pasien Pindahan</th>
+                          <th rowSpan="2">Pasien Dipindahkan</th>
+                          <th rowSpan="2">Pasien Keluar Hidup</th>
+
+                          <th colSpan="2">Pasien Pria Keluar Mati</th>
+                          <th colSpan="2">Pasien Wanita Keluar Mati</th>
+
+                          <th rowSpan="2">Jumlah Lama Dirawat</th>
+                          <th rowSpan="2">Pasien Akhir Bulan</th>
+                          <th rowSpan="2">Jumlah Hari Perawatan</th>
+
+                          <th colSpan="6">Rincian Hari Perawatan</th>
+                          <th rowSpan="2">TT Awal</th>
+                        </tr>
+
+                        <tr>
+                          <th>{"<48 jam"}</th>
+                          <th>{">=48 jam"}</th>
+                          <th>{"<48 jam"}</th>
+                          <th>{">=48 jam"}</th>
+
+                          <th>VVIP</th>
+                          <th>VIP</th>
+                          <th>1</th>
+                          <th>2</th>
+                          <th>3</th>
+                          <th>Khusus</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {dataRL.map((value, index) => (
                           <tr key={value.id}>
-                            <td className={style["sticky-column"]}>
-                              <input
-                                type="text"
-                                name="id"
-                                className="form-control"
-                                value={index + 1}
-                                disabled={true}
-                              />
-                            </td>
-                            <td
-                              className={style["sticky-column"]}
-                              style={{
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              <ToastContainer />
-                              {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
-                              {user.jenisUserId === 4 ? (
+                            <td>{index + 1}</td>
+
+                            {/* ✅ kolom tetap ada */}
+                            <td>
+                              {isAksi && (
                                 <div style={{ display: "flex" }}>
                                   <button
                                     className="btn btn-danger"
-                                    style={{
-                                      margin: "0 5px 0 0",
-                                      backgroundColor: "#FF6663",
-                                      border: "1px solid #FF6663",
-                                    }}
-                                    type="button"
-                                    onClick={(e) =>
-                                      deleteConfirmation(value.id)
-                                    }
+                                    onClick={() => deleteConfirmation(value.id)}
                                   >
                                     Hapus
                                   </button>
+
                                   <Link
                                     to={`/rl32/ubah/${value.id}`}
                                     className="btn btn-warning"
-                                    style={{
-                                      margin: "0 5px 0 0",
-                                      backgroundColor: "#CFD35E",
-                                      border: "1px solid #CFD35E",
-                                      color: "#FFFFFF",
-                                    }}
                                   >
                                     Ubah
                                   </Link>
                                 </div>
-                              ) : (
-                                <></>
                               )}
                             </td>
-                            <td
-                              className={style["sticky-column"]}
-                              style={{ background: "white" }}
-                            >
-                              <input
-                                type="text"
-                                name="jenisPelayanan"
-                                className="form-control"
-                                value={value.nama_jenis_pelayanan}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="pasienAwalBulan"
-                                className="form-control"
-                                value={value.pasien_awal_bulan}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="pasienMasuk"
-                                className="form-control"
-                                value={value.pasien_masuk}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="pasienPindahan"
-                                className="form-control"
-                                value={value.pasien_pindahan}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="pasienDipindahkan"
-                                className="form-control"
-                                value={value.pasien_dipindahkan}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="pasienKeluarHidup"
-                                className="form-control"
-                                value={value.pasien_keluar_hidup}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="kurangDari48Jam"
-                                className="form-control"
-                                value={
-                                  value.pasien_keluar_mati_kurang_dari_48_jam
-                                }
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="lebihDariAtauSamaDengan48Jam"
-                                className="form-control"
-                                value={
-                                  value.pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam
-                                }
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="wanitaKurangDari48Jam"
-                                className="form-control"
-                                value={
-                                  value.pasien_wanita_keluar_mati_kurang_dari_48_jam
-                                }
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="wanitaLebihDariAtauSamaDengan48Jam"
-                                className="form-control"
-                                value={
-                                  value.pasien_wanita_keluar_mati_lebih_dari_atau_sama_dengan_48_jam
-                                }
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="jumlahLamaDirawat"
-                                className="form-control"
-                                value={value.jumlah_lama_dirawat}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="pasienAkhirBulan"
-                                className="form-control"
-                                value={hitungPasienAkhirBulan(index)}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="jumlahHariPerawatan"
-                                className="form-control"
-                                value={hitungJumlahHariPerawatan(index)}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="kelasVVIP"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_VVIP}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="kelasVIP"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_VIP}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="kelas1"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_1}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="kelas2"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_2}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="kelas3"
-                                className="form-control"
-                                value={value.rincian_hari_perawatan_kelas_3}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="kelasKhusus"
-                                className="form-control"
-                                value={
-                                  value.rincian_hari_perawatan_kelas_khusus
-                                }
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="jumlahAlokasiTTAwalBulan"
-                                className="form-control"
-                                value={
-                                  value.jumlah_alokasi_tempat_tidur_awal_bulan
-                                }
-                                disabled={true}
-                              />
-                            </td>
+
+                            <td>{value.nama_jenis_pelayanan}</td>
+                            <td>{value.pasien_awal_bulan}</td>
+                            <td>{value.pasien_masuk}</td>
+                            <td>{value.pasien_pindahan}</td>
+                            <td>{value.pasien_dipindahkan}</td>
+                            <td>{value.pasien_keluar_hidup}</td>
+
+                            <td>{value.pasien_keluar_mati_kurang_dari_48_jam}</td>
+                            <td>{value.pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam}</td>
+                            <td>{value.pasien_wanita_keluar_mati_kurang_dari_48_jam}</td>
+                            <td>{value.pasien_wanita_keluar_mati_lebih_dari_atau_sama_dengan_48_jam}</td>
+
+                            <td>{value.jumlah_lama_dirawat}</td>
+                            <td>{hitungPasienAkhirBulan(index)}</td>
+                            <td>{hitungJumlahHariPerawatan(index)}</td>
+
+                            <td>{value.rincian_hari_perawatan_kelas_VVIP}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_VIP}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_1}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_2}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_3}</td>
+                            <td>{value.rincian_hari_perawatan_kelas_khusus}</td>
+
+                            <td>{value.jumlah_alokasi_tempat_tidur_awal_bulan}</td>
                           </tr>
-                        );
-                      })}
-                      {dataRL.length > 0 ? (
-                        <>
+                        ))}
+
+                        {dataRL.length > 0 && (
                           <tr>
-                            <td className={style["sticky-column"]}></td>
-                            <td className={style["sticky-column"]}></td>
-                            <td
-                              className={style["sticky-column"]}
-                              style={{ background: "white" }}
-                            >
-                              Total
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalJenisPelayanan"
-                                className="form-control"
-                                value={totalPasienAwalBulan}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalPasienMasuk"
-                                className="form-control"
-                                value={totalPasienMasuk}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalPasienPindahan"
-                                className="form-control"
-                                value={totalPasienPindahan}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalPasienDipindahkan"
-                                className="form-control"
-                                value={totalPasienDipindahkan}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalPasienKeluarHidup"
-                                className="form-control"
-                                value={totalPasienKeluarHidup}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalPasienKeluarMatiKurangDari48Jam"
-                                className="form-control"
-                                value={totalPasienKeluarMatiKurangDari48Jam}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam"
-                                className="form-control"
-                                value={
-                                  totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam
-                                }
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalPasienWanitaKeluarMatiKurangDari48Jam"
-                                className="form-control"
-                                value={
-                                  totalPasienWanitaKeluarMatiKurangDari48Jam
-                                }
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam"
-                                className="form-control"
-                                value={
-                                  totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam
-                                }
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalJumlahDirawat"
-                                className="form-control"
-                                value={totalJumlahDirawat}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalPasienAkhirBulan"
-                                className="form-control"
-                                value={totalPasienAkhirBulan}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalHariPerawatan"
-                                className="form-control"
-                                value={totalHariPerawatan}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalKelasVVIP"
-                                className="form-control"
-                                value={totalKelasVVIP}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalKelasVIP"
-                                className="form-control"
-                                value={totalKelasVIP}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalKelas1"
-                                className="form-control"
-                                value={totalKelas1}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalKelas2"
-                                className="form-control"
-                                value={totalKelas2}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalKelas3"
-                                className="form-control"
-                                value={totalKelas3}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalKelasKhusus"
-                                className="form-control"
-                                value={totalKelasKhusus}
-                                disabled={true}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                name="totalJumlahAlokasiTTAwalBulan"
-                                className="form-control"
-                                value={
-                                  totalTotalJumlahAlokasiTempatTidurAwalBulan
-                                }
-                                disabled={true}
-                              />
-                            </td>
+                            <td></td>
+
+                            {/* ✅ tetap ada */}
+                            <td></td>
+
+                            <td>Total</td>
+
+                            <td>{totalPasienAwalBulan}</td>
+                            <td>{totalPasienMasuk}</td>
+                            <td>{totalPasienPindahan}</td>
+                            <td>{totalPasienDipindahkan}</td>
+                            <td>{totalPasienKeluarHidup}</td>
+
+                            <td>{totalPasienKeluarMatiKurangDari48Jam}</td>
+                            <td>{totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
+                            <td>{totalPasienWanitaKeluarMatiKurangDari48Jam}</td>
+                            <td>{totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
+
+                            <td>{totalJumlahDirawat}</td>
+                            <td>{totalPasienAkhirBulan}</td>
+                            <td>{totalHariPerawatan}</td>
+
+                            <td>{totalKelasVVIP}</td>
+                            <td>{totalKelasVIP}</td>
+                            <td>{totalKelas1}</td>
+                            <td>{totalKelas2}</td>
+                            <td>{totalKelas3}</td>
+                            <td>{totalKelasKhusus}</td>
+
+                            <td>{totalTotalJumlahAlokasiTempatTidurAwalBulan}</td>
                           </tr>
-                        </>
-                      ) : (
-                        <></>
-                      )}
-                    </tbody>
-                  </table>
+                        )}
+                      </tbody>
+                    </table>
                 </div>
               </div>
 
@@ -1478,37 +1211,163 @@ const RL32 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Form Validasi RL 3.2</h3>
-                  <form onSubmit={simpanValidasi}>
-                    <ToastContainer />
-                    <div className={style.validasiFormGroup}>
-                      <label htmlFor="statusValidasi">Status</label>
-                      <select
-                        id="statusValidasi"
-                        name="statusValidasi"
-                        value={statusValidasi}
-                        onChange={(e) => statusValidasiChangeHadler(e)}
-                      >
-                        <option value="1">Disetujui</option>
-                        <option value="2">Diperbaiki</option>
-                      </select>
-                    </div>
-                    <div className={style.validasiFormGroup}>
-                      <label htmlFor="keteranganValidasi">Catatan</label>
-                      <textarea
-                        id="keteranganValidasi"
-                        name="keteranganValidasi"
-                        value={keteranganValidasi}
-                        onChange={(e) => keteranganValidasiChangeHadler(e)}
-                        placeholder="Tambahkan catatan (opsional)"
-                        rows={4}
-                      />
-                    </div>
-                    <button type="submit" className={style.btnPrimary}>
-                      <HiSaveAs size={20} /> Simpan
-                    </button>
-                  </form>
-                </div>
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.2</h3>
+
+                    {/* =========================
+                        1️⃣ DATA RL KOSONG
+                    ========================== */}
+                    {dataRL.length === 0 ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Silahkan pilih filter terlebih dahulu untuk menampilkan data. </strong>
+                      </div>
+
+                    /* =========================
+                        2️⃣ RS BELUM PERNAH DIVALIDASI
+                    ========================== */
+                    ) : (!dataValidasi && user.jenisUserId === 4) ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data Belum di Validasi</strong>
+                      </div>
+
+                    ) : (
+
+                      <>
+                        {/* =========================
+                            3️⃣ INFO VALIDASI
+                        ========================== */}
+                        {dataValidasi && (
+                              <div style={{
+                                backgroundColor: "#f0f0f0",
+                                padding: "12px",
+                                borderRadius: "4px",
+                                marginBottom: "15px"
+                              }}>
+
+                                {/* STATUS */}
+                                <div style={{ display: "flex", marginBottom: "4px" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px" }}><strong>
+                                    Status
+                                    </strong>
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {dataValidasi.statusValidasiId === 1
+                                      ? "Perlu Perbaikan"
+                                      : dataValidasi.statusValidasiId === 2
+                                      ? "Selesai Diperbaiki"
+                                      : dataValidasi.statusValidasiId === 3
+                                      ? "Disetujui"
+                                      : "-"}
+                                  </div>
+                                </div>
+
+                                {/* CATATAN */}
+                                {(dataValidasi.keteranganValidasi ||
+                                  dataValidasi.catatan ||
+                                  dataValidasi.keterangan) && (
+                                  <div style={{ display: "flex", marginBottom: "4px" }}>
+                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px" }}><strong>
+                                      Catatan</strong>
+                                    </div>
+                                    <div style={{ width: "10px" }}>:</div>
+                                    <div>
+                                      {dataValidasi.keteranganValidasi ||
+                                        dataValidasi.catatan ||
+                                        dataValidasi.keterangan}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* DIBUAT */}
+                                <div style={{ display: "flex" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px" }}><strong>
+                                    Dibuat</strong>
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                                  </div>
+                                </div>
+
+                              </div>
+                            )}
+
+                        {/* =========================
+                            4️⃣ STATUS FINAL LOCK
+                        ========================== */}
+                        {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                        <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data telah divalidasi.</strong>
+                      </div>
+
+                        ) : (
+
+                          /* =========================
+                              5️⃣ FORM VALIDASI
+                          ========================== */
+                          <form onSubmit={simpanValidasi}>
+                            <ToastContainer />
+
+                            <div className={style.validasiFormGroup}>
+                              <label>Status</label>
+                              <select
+                                value={statusValidasi}
+                                onChange={statusValidasiChangeHadler}
+                              >
+                                <option value={0}>Pilih</option>
+
+                                {user.jenisUserId === 4
+                                  ? <option value="2">Selesai Diperbaiki</option>
+                                  : <>
+                                      <option value="1">Perlu Perbaikan</option>
+                                      <option value="3">Disetujui</option>
+                                    </>
+                                }
+                              </select>
+                            </div>
+
+                            {/* ✅ TEXTAREA HANYA UNTUK VALIDATOR */}
+                            {user.jenisUserId !== 4 && (
+                              <div className={style.validasiFormGroup}>
+                                <label>Catatan</label>
+                                <textarea
+                                  onChange={keteranganValidasiChangeHadler}
+                                  rows={4}
+                                />
+                              </div>
+                            )}
+
+                            <button type="submit" className={style.btnPrimary}>
+                              <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                            </button>
+
+                          </form>
+
+                        )}
+                      </>
+                    )}
+                  </div>
               </div>
             </div>
           </div>

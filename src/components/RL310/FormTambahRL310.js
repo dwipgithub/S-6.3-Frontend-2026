@@ -11,7 +11,8 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const FormTambahRL310 = () => {
   const navigate = useNavigate();
-  const [tahun, setTahun] = useState(2025);
+  // const [tahun, setTahun] = useState(2025);
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [bulan, setBulan] = useState(1);
   const [daftarBulan, setDaftarBulan] = useState([]);
   // Data RS

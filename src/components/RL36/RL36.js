@@ -30,14 +30,27 @@ const RL36 = () => {
   const [user, setUser] = useState({});
   const navigate = useNavigate();
   const [spinner, setSpinner] = useState(false);
+  const [statusValidasi, setStatusValidasi] = useState(0);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [validasiId, setValidasiId] = useState(null);
+  const [dataValidasi, setDataValidasi] = useState(null);
+  const [activeTab, setActiveTab] = useState("tab1");
   const { CSRFToken } = useCSRFTokenContext();
+
+  // Load validasi data when user opens Validasi tab or when filters change
+  useEffect(() => {
+    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
+      getValidasi();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bulan, tahun, rumahSakit, activeTab]);
 
   useEffect(() => {
     refreshToken();
     getBulan();
     const getLastYear = async () => {
       const date = new Date();
-      setTahun("2025");
+      setTahun("2026");
       return date.getFullYear();
     };
     getLastYear().then((results) => {});
@@ -52,11 +65,19 @@ const RL36 = () => {
         },
       };
       const response = await axios.get("/apisirs6v2/token", customConfig);
-      setToken(response.data.accessToken);
-      const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
-      setExpire(decoded.exp);
+      const accessToken = response.data.accessToken;
+      setToken(accessToken);
+      const decoded = jwt_decode(accessToken);
       setUser(decoded);
+      if (decoded.jenisUserId === 2) {
+        getKabKota(decoded.satKerId);
+      } else if (decoded.jenisUserId === 3) {
+        getRumahSakit(decoded.satKerId);
+      } else if (decoded.jenisUserId === 4) {
+        showRumahSakit(decoded.satKerId, accessToken);
+      }
+
+      setExpire(decoded.exp);
     } catch (error) {
       if (error.response) {
         navigate("/");
@@ -178,11 +199,11 @@ const RL36 = () => {
     } catch (error) {}
   };
 
-  const showRumahSakit = async (id) => {
+  const showRumahSakit = async (id, tokenOverride) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenOverride || token}`,
         },
       });
 
@@ -378,7 +399,7 @@ const RL36 = () => {
     let date = tahun + "-" + bulan + "-01";
     e.preventDefault();
     setSpinner(true);
-    if (rumahSakit == null) {
+    if (!rumahSakit || !rumahSakit.id) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -544,6 +565,35 @@ const RL36 = () => {
       // console.log(data);
       setDataRL(data);
       handleClose();
+
+      // Load validasi data setelah filter diterapkan
+      try {
+        const validasiConfig = {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            rsId: rumahSakit.id,
+            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          },
+        };
+        const validasiResponse = await axiosJWT.get(
+          "/apisirs6v2/rltigatitikenamvalidasi",
+          validasiConfig
+        );
+
+        if (validasiResponse.data.data && validasiResponse.data.data.length > 0) {
+          const validasi = validasiResponse.data.data[0];
+          setValidasiId(validasi.id);
+          setStatusValidasi(validasi.statusValidasiId);
+          setKeteranganValidasi(validasi.catatan || "");
+          setDataValidasi(validasi);
+        }
+      } catch (error) {
+        console.log(error);
+      }
+
       setSpinner(false);
     } catch (error) {
       console.log(error);
@@ -880,10 +930,134 @@ const RL36 = () => {
     });
   }
 
+  const getValidasi = async () => {
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+        },
+      };
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rltigatitikenamvalidasi",
+        customConfig
+      );
+
+      if (response.data.data && response.data.data.length > 0) {
+        const validasi = response.data.data[0];
+        setValidasiId(validasi.id);
+        setStatusValidasi(validasi.statusValidasiId);
+        setKeteranganValidasi(validasi.catatan || "");
+        setDataValidasi(validasi);
+      } else {
+        setValidasiId(null);
+        setStatusValidasi(0);
+        setKeteranganValidasi("");
+        setDataValidasi(null);
+      }
+    } catch (error) {
+      console.log(error);
+      setValidasiId(null);
+      setStatusValidasi(0);
+      setKeteranganValidasi("");
+      setDataValidasi(null);
+    }
+  };
+
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    e.preventDefault();
+
+    if (!rumahSakit || !rumahSakit.id) {
+      toast("Rumah sakit harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (parseInt(statusValidasi) === 0) {
+      toast("Status harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+
+      const payload = {
+        statusValidasiId: parseInt(statusValidasi),
+        catatan: keteranganValidasi,
+      };
+
+      if (validasiId) {
+        await axiosJWT.patch(
+          `/apisirs6v2/rltigatitikenamvalidasi/${validasiId}`,
+          payload,
+          customConfig
+        );
+        toast("Data Validasi Berhasil Diperbarui", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      } else {
+        const response = await axiosJWT.post(
+          "/apisirs6v2/rltigatitikenamvalidasi",
+          {
+            rsId: rumahSakit.id,
+            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+            ...payload,
+          },
+          customConfig
+        );
+        setValidasiId(response.data.data.id);
+        toast("Data Validasi Berhasil Disimpan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      }
+    } catch (error) {
+      console.log(error);
+      toast(
+        `Data tidak bisa disimpan karena: ${
+          error.response?.data?.message || error.message
+        }`,
+        {
+          position: toast.POSITION.TOP_RIGHT,
+        }
+      );
+    }
+  };
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
+
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
@@ -1100,7 +1274,7 @@ const RL36 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -1109,45 +1283,30 @@ const RL36 = () => {
       </Modal>
       <div className="row">
         <div className="col-md-12">
-          <h4>
-            <span style={{ color: "gray" }}>RL. 3.6 Kebidanan</span>
-          </h4>
-          <div style={{ marginBottom: "10px" }}>
+            <h4 className={style.pageHeader}> RL. 3.6 - Kebidanan</h4>
+          <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
                 to={`/rl36/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                 type="button"
+                 className={style.btnPrimary}
+                 style={{ textDecoration: "none" }}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
             )}
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+               type="button"
+               className={style.btnPrimary}
               onClick={handleShow}
             >
               Filter
             </button>
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                marginLeft: "5px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+               type="button"
+               className={style.btnPrimary}
               onClick={handleDownloadExcel}
             >
               Download
@@ -1169,9 +1328,21 @@ const RL36 = () => {
             <></>
           )}
 
-          <div className={style["table-container"]}>
-            <table responsive className={style.table}>
-              <thead className={style.thead}>
+          <div>
+            <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button type="button" className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`} onClick={() => handleTabClick("tab1")}>Data</button>
+              </li>
+              <li className={`nav-item ${style.navItem}`}>
+                <button type="button" className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`} onClick={() => handleTabClick("tab2")}>Validasi</button>
+              </li>
+            </ul>
+            <div className={`tab-content ${style.tabContent}`}>
+              <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
+                <div className={style["table-container"]}>
+                  <div className="table-responsive">
+                    <table className={style.table} style={{ width: "200%" }}>
+                      <thead className={style.thead}>
                 <tr>
                   <th
                     style={{ width: "2" }}
@@ -1180,6 +1351,8 @@ const RL36 = () => {
                   >
                     No.
                   </th>
+                  {user.jenisUserId === 4
+                   ?
                   <th
                     style={{ width: "6%" }}
                     rowSpan={2}
@@ -1187,6 +1360,9 @@ const RL36 = () => {
                   >
                     Aksi
                   </th>
+                  : <>
+                     </>
+                      }
                   <th
                     style={{ width: "15%" }}
                     rowSpan={2}
@@ -1239,182 +1415,73 @@ const RL36 = () => {
                             }}
                           >
                             <td className={style["sticky-column"]}>
-                              <input
-                                type="text"
-                                name="id"
-                                className="form-control"
-                                value={value.groupNo}
-                                disabled={true}
-                              />
+                              {value.groupNo}
                             </td>
+                            {user.jenisUserId === 4
+                   ?
                             <td className={style["sticky-column"]}></td>
+                            : <>
+                     </>
+                      }
                             <td className={style["sticky-column"]}>
                               {/* {value.groupNama} */}
-                              <input
-                                type="text"
-                                name="jenisPelayanan"
-                                className="form-control"
-                                value={value.groupNama}
-                                disabled={true}
-                              />
+                              {value.groupNama}
                             </td>
 
                             <td>
-                              <input
-                                type="text"
-                                name="rmRumahSakit"
-                                className="form-control"
-                                value={value.subTotalRmRumahSakit}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalRmRumahSakit}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="rmBidan"
-                                className="form-control"
-                                value={value.subTotalRmBidan}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalRmBidan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="rmPuskesmas"
-                                className="form-control"
-                                value={value.subTotalRmPuskesmas}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalRmPuskesmas}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="rmFaskesLainnya"
-                                className="form-control"
-                                value={value.subTotalRmFaskesLainnya}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalRmFaskesLainnya}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="rmHidup"
-                                className="form-control"
-                                value={value.subTotalRmHidup}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalRmHidup}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="rmMati"
-                                className="form-control"
-                                value={value.subTotalRmMati}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalRmMati}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="rmTotal"
-                                className="form-control"
-                                value={value.subTotalRmTotal}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalRmTotal}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="rnmHidup"
-                                className="form-control"
-                                value={value.subTotalRnmHidup}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                             {value.subTotalRnmHidup}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="rnmMati"
-                                className="form-control"
-                                value={value.subTotalRnmMati}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalRnmMati}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="rnmTotal"
-                                className="form-control"
-                                value={value.subTotalRnmTotal}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalRnmTotal}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="nrHidup"
-                                className="form-control"
-                                value={value.subTotalNrHidup}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalNrHidup}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="nrMati"
-                                className="form-control"
-                                value={value.subTotalNrMati}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalNrMati}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="nrTotal"
-                                className="form-control"
-                                value={value.subTotalNrTotal}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalNrTotal}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="dirujuk"
-                                className="form-control"
-                                value={value.subTotalDirujuk}
-                                onChange={(e) => changeHandler(e, index)}
-                                disabled={true}
-                              />
+                              {value.subTotalDirujuk}
                             </td>
                           </tr>
                           {value.details.map((value2, index2) => {
                             return (
                               <tr key={index2}>
                                 <td className={style["sticky-column"]}>
-                                  <input
-                                    type="text"
-                                    name="id"
-                                    className="form-control"
-                                    value={
+                                  {
                                       value2.jenis_kegiatan_rl_tiga_titik_enam
                                         .no
                                     }
-                                    disabled={true}
-                                  />
                                 </td>
+                                {user.jenisUserId === 4
+                   ?
                                 <td
                                   className={style["sticky-column"]}
                                   style={{
@@ -1452,161 +1519,60 @@ const RL36 = () => {
                                     </Link>
                                   </div>
                                 </td>
+                                : <>
+                     </>
+                      }
                                 <td className={style["sticky-column"]}>
                                   {/* {
                                     value2.jenis_kegiatan_rl_tiga_titik_enam
                                       .nama
                                   } */}
-                                  <input
-                                    type="text"
-                                    name="jenisPelayanan"
-                                    className="form-control"
-                                    value={
+                                  {
                                       value2.jenis_kegiatan_rl_tiga_titik_enam
                                         .nama
                                     }
-                                    disabled={true}
-                                  />
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rmRumahSakit"
-                                    className="form-control"
-                                    value={value2.rmRumahSakit}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                 {value2.rmRumahSakit}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rmBidan"
-                                    className="form-control"
-                                    value={value2.rmBidan}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.rmBidan}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rmPuskesmas"
-                                    className="form-control"
-                                    value={value2.rmPuskesmas}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.rmPuskesmas}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rmFaskesLainnya"
-                                    className="form-control"
-                                    value={value2.rmFaskesLainnya}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.rmFaskesLainnya}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rmHidup"
-                                    className="form-control"
-                                    value={value2.rmHidup}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.rmHidup}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rmMati"
-                                    className="form-control"
-                                    value={value2.rmMati}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.rmMati}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rmTotal"
-                                    className="form-control"
-                                    value={value2.rmTotal}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.rmTotal}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rnmHidup"
-                                    className="form-control"
-                                    value={value2.rnmHidup}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                 {value2.rnmHidup}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rnmMati"
-                                    className="form-control"
-                                    value={value2.rnmMati}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.rnmMati}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="rnmTotal"
-                                    className="form-control"
-                                    value={value2.rnmTotal}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.rnmTotal}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="nrHidup"
-                                    className="form-control"
-                                    value={value2.nrHidup}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                {value2.nrHidup}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="nrMati"
-                                    className="form-control"
-                                    value={value2.nrMati}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.nrMati}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="nrTotal"
-                                    className="form-control"
-                                    value={value2.nrTotal}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.nrTotal}
                                 </td>
                                 <td>
-                                  <input
-                                    type="text"
-                                    name="dirujuk"
-                                    className="form-control"
-                                    value={value2.dirujuk}
-                                    onChange={(e) => changeHandler(e, index)}
-                                    disabled={true}
-                                  />
+                                  {value2.dirujuk}
                                 </td>
                               </tr>
                             );
@@ -1629,7 +1595,175 @@ const RL36 = () => {
                   })
                 }
               </tbody>
-            </table>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab2" ? "show active" : ""
+                }`}
+              >
+                <div className={style.validasiCard}>
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.6</h3>
+
+                    {/* =========================
+                        1️⃣ DATA RL KOSONG
+                    ========================== */}
+                    {dataRL.length === 0 ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
+                      </div>
+
+                    /* =========================
+                        2️⃣ RS BELUM PERNAH DIVALIDASI
+                    ========================== */
+                    ) : (!dataValidasi && user.jenisUserId === 4) ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data Belum di Validasi</strong>
+                      </div>
+
+                    ) : (
+
+                      <>
+                        {/* =========================
+                            3️⃣ INFO VALIDASI
+                        ========================== */}
+                        {dataValidasi && (
+                              <div style={{
+                                backgroundColor: "#f0f0f0",
+                                padding: "12px",
+                                borderRadius: "4px",
+                                marginBottom: "15px"
+                              }}>
+
+                                {/* STATUS */}
+                                <div style={{ display: "flex", marginBottom: "4px" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Status
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {dataValidasi.statusValidasiId === 1
+                                      ? "Perlu Perbaikan"
+                                      : dataValidasi.statusValidasiId === 2
+                                      ? "Selesai Diperbaiki"
+                                      : dataValidasi.statusValidasiId === 3
+                                      ? "Disetujui"
+                                      : "-"}
+                                  </div>
+                                </div>
+
+                                {/* CATATAN */}
+                                {(dataValidasi.keteranganValidasi ||
+                                  dataValidasi.catatan ||
+                                  dataValidasi.keterangan) && (
+                                  <div style={{ display: "flex", marginBottom: "4px" }}>
+                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                      Catatan
+                                    </div>
+                                    <div style={{ width: "10px" }}>:</div>
+                                    <div>
+                                      {dataValidasi.keteranganValidasi ||
+                                        dataValidasi.catatan ||
+                                        dataValidasi.keterangan}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* DIBUAT */}
+                                <div style={{ display: "flex" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Dibuat
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                                  </div>
+                                </div>
+
+                              </div>
+                            )}
+
+                        {/* =========================
+                            4️⃣ STATUS FINAL LOCK
+                        ========================== */}
+                        {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                        <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data telah divalidasi.</strong>
+                      </div>
+
+                        ) : (
+
+                          /* =========================
+                              5️⃣ FORM VALIDASI
+                          ========================== */
+                          <form onSubmit={simpanValidasi}>
+                            <ToastContainer />
+
+                            <div className={style.validasiFormGroup}>
+                              <label>Status</label>
+                              <select
+                                value={statusValidasi}
+                                onChange={statusValidasiChangeHadler}
+                              >
+                                <option value={0}>Pilih</option>
+
+                                {user.jenisUserId === 4
+                                  ? <option value="2">Selesai Diperbaiki</option>
+                                  : <>
+                                      <option value="1">Perlu Perbaikan</option>
+                                      <option value="3">Disetujui</option>
+                                    </>
+                                }
+                              </select>
+                            </div>
+
+                            {/* ✅ TEXTAREA HANYA UNTUK VALIDATOR */}
+                            {user.jenisUserId !== 4 && (
+                              <div className={style.validasiFormGroup}>
+                                <label>Catatan</label>
+                                <textarea
+                                  onChange={keteranganValidasiChangeHadler}
+                                  rows={4}
+                                />
+                              </div>
+                            )}
+
+                            <button type="submit" className={style.btnPrimary}>
+                              <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                            </button>
+
+                          </form>
+
+                        )}
+                      </>
+                    )}
+                  </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -18,7 +18,7 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL37 = () => {
   const [bulan, setBulan] = useState(1);
-  const [tahun, setTahun] = useState(2025);
+  const [tahun, setTahun] = useState(2026);
   const [filterLabel, setFilterLabel] = useState([]);
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [rumahSakit, setRumahSakit] = useState("");
@@ -34,7 +34,20 @@ const RL37 = () => {
   const [spinner, setSpinner] = useState(false);
   const [namafile, setNamaFile] = useState("");
   const tableRef = useRef(null);
+  const [statusValidasi, setStatusValidasi] = useState(0);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [validasiId, setValidasiId] = useState(null);
+  const [dataValidasi, setDataValidasi] = useState(null);
+  const [activeTab, setActiveTab] = useState("tab1");
   const { CSRFToken } = useCSRFTokenContext();
+
+  // Load validasi data when user opens Validasi tab or when filters change
+  useEffect(() => {
+    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
+      getValidasi();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bulan, tahun, rumahSakit, activeTab]);
 
   useEffect(() => {
     refreshToken();
@@ -59,11 +72,19 @@ const RL37 = () => {
         },
       };
       const response = await axios.get("/apisirs6v2/token", customConfig);
-      setToken(response.data.accessToken);
-      const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
-      setExpire(decoded.exp);
+      const accessToken = response.data.accessToken;
+      setToken(accessToken);
+      const decoded = jwt_decode(accessToken);
       setUser(decoded);
+      if (decoded.jenisUserId === 2) {
+        getKabKota(decoded.satKerId);
+      } else if (decoded.jenisUserId === 3) {
+        getRumahSakit(decoded.satKerId);
+      } else if (decoded.jenisUserId === 4) {
+        showRumahSakit(decoded.satKerId, accessToken);
+      }
+
+      setExpire(decoded.exp);
     } catch (error) {
       if (error.response) {
         navigate("/");
@@ -185,11 +206,11 @@ const RL37 = () => {
     } catch (error) {}
   };
 
-  const showRumahSakit = async (id) => {
+  const showRumahSakit = async (id, tokenOverride) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenOverride || token}`,
         },
       });
 
@@ -553,7 +574,7 @@ const RL37 = () => {
     let date = tahun + "-" + bulan + "-01";
     e.preventDefault();
     setSpinner(true);
-    if (rumahSakit == null) {
+    if (!rumahSakit || !rumahSakit.id) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -563,6 +584,13 @@ const RL37 = () => {
     filter.push("filtered by nama: ".concat(rumahSakit.nama));
     filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
     setFilterLabel(filter);
+
+    // Reset validation state before fetching new data
+    setValidasiId(null);
+    setStatusValidasi(0);
+    setKeteranganValidasi("");
+    setDataValidasi(null);
+
     try {
       const customConfig = {
         headers: {
@@ -771,6 +799,34 @@ const RL37 = () => {
       setSpinner(false);
 
       handleClose();
+
+      // Load validasi data setelah filter diterapkan
+      try {
+        const validasiConfig = {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            rsId: rumahSakit.id,
+            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          },
+        };
+        const validasiResponse = await axiosJWT.get(
+          "/apisirs6v2/rltigatitiktujuhvalidasi",
+          validasiConfig
+        );
+
+        if (validasiResponse.data.data && validasiResponse.data.data.length > 0) {
+          const validasi = validasiResponse.data.data[0];
+          setValidasiId(validasi.id);
+          setStatusValidasi(validasi.statusValidasiId);
+          setKeteranganValidasi(validasi.catatan || "");
+          setDataValidasi(validasi);
+        }
+      } catch (error) {
+        console.log(error);
+      }
     } catch (error) {
       console.log(error);
       setSpinner(false);
@@ -1101,488 +1157,540 @@ const RL37 = () => {
     }
   };
 
+  const getValidasi = async () => {
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+        },
+      };
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiktujuhvalidasi",
+        customConfig
+      );
+
+      if (response.data.data && response.data.data.length > 0) {
+        const validasi = response.data.data[0];
+        setValidasiId(validasi.id);
+        setStatusValidasi(validasi.statusValidasiId);
+        setKeteranganValidasi(validasi.catatan || "");
+        setDataValidasi(validasi);
+      } else {
+        setValidasiId(null);
+        setStatusValidasi(0);
+        setKeteranganValidasi("");
+        setDataValidasi(null);
+      }
+    } catch (error) {
+      console.log(error);
+      setValidasiId(null);
+      setStatusValidasi(0);
+      setKeteranganValidasi("");
+      setDataValidasi(null);
+    }
+  };
+
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    e.preventDefault();
+
+    if (!rumahSakit || !rumahSakit.id) {
+      toast("Rumah sakit harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (parseInt(statusValidasi) === 0) {
+      toast("Status harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+
+      const payload = {
+        statusValidasiId: parseInt(statusValidasi),
+        catatan: keteranganValidasi,
+      };
+
+      if (validasiId) {
+        await axiosJWT.patch(
+          `/apisirs6v2/rltigatitiktujuhvalidasi/${validasiId}`,
+          payload,
+          customConfig
+        );
+        toast("Data Validasi Berhasil Diperbarui", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      } else {
+        const response = await axiosJWT.post(
+          "/apisirs6v2/rltigatitiktujuhvalidasi",
+          {
+            rsId: rumahSakit.id,
+            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+            jenisPeriode: 1,
+            ...payload,
+          },
+          customConfig
+        );
+        setValidasiId(response.data.data.id);
+        toast("Data Validasi Berhasil Disimpan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      }
+    } catch (error) {
+      console.log(error);
+      toast(
+        `Data tidak bisa disimpan karena: ${
+          error.response?.data?.message || error.message
+        }`,
+        {
+          position: toast.POSITION.TOP_RIGHT,
+        }
+      );
+    }
+  };
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
+
   return (
-    <div
-      className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
-    >
-      <h4 style={{ color: "grey" }}>
-        {" "}
-        <span> RL 3.7-Neonatal, Bayi dan Balita </span>
-      </h4>
+    <div className="container" style={{ marginTop: "20px", marginBottom: "70px" }}>
+        <h4 className={style.pageHeader}> RL 3.7 - Neonatal, Bayi dan Balita </h4>
+
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>
         </Modal.Header>
-
         <form onSubmit={getRL}>
           <Modal.Body>
-            {user.jenisUserId === 1 ? (
+            {user.jenisUserId === 1 && (
               <>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="provinsi"
-                    id="provinsi"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => provinsiChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarProvinsi.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
+                <div className="form-floating" style={{ width: "100%", paddingBottom: "5px" }}>
+                  <select name="provinsi" id="provinsi" className="form-select" onChange={(e) => provinsiChangeHandler(e)}>
+                    <option key={0} value={0}>Pilih</option>
+                    {daftarProvinsi.map((nilai) => (
+                      <option key={nilai.id} value={nilai.id}>{nilai.nama}</option>
+                    ))}
                   </select>
                   <label htmlFor="provinsi">Provinsi</label>
                 </div>
 
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="kabKota"
-                    id="kabKota"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => kabKotaChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarKabKota.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
+                <div className="form-floating" style={{ width: "100%", paddingBottom: "5px" }}>
+                  <select name="kabKota" id="kabKota" className="form-select" onChange={(e) => kabKotaChangeHandler(e)}>
+                    <option key={0} value={0}>Pilih</option>
+                    {daftarKabKota.map((nilai) => (
+                      <option key={nilai.id} value={nilai.id}>{nilai.nama}</option>
+                    ))}
                   </select>
                   <label htmlFor="kabKota">Kab/Kota</label>
                 </div>
 
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarRumahSakit.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
+                <div className="form-floating" style={{ width: "100%", paddingBottom: "5px" }}>
+                  <select name="rumahSakit" id="rumahSakit" className="form-select" onChange={(e) => rumahSakitChangeHandler(e)}>
+                    <option key={0} value={0}>Pilih</option>
+                    {daftarRumahSakit.map((nilai) => (
+                      <option key={nilai.id} value={nilai.id}>{nilai.nama}</option>
+                    ))}
                   </select>
                   <label htmlFor="rumahSakit">Rumah Sakit</label>
                 </div>
               </>
-            ) : (
-              <></>
             )}
-            {user.jenisUserId === 2 ? (
+
+            {user.jenisUserId === 2 && (
               <>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="kabKota"
-                    id="kabKota"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => kabKotaChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarKabKota.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
+                <div className="form-floating" style={{ width: "100%", paddingBottom: "5px" }}>
+                  <select name="kabKota" id="kabKota" className="form-select" onChange={(e) => kabKotaChangeHandler(e)}>
+                    <option key={0} value={0}>Pilih</option>
+                    {daftarKabKota.map((nilai) => (
+                      <option key={nilai.id} value={nilai.id}>{nilai.nama}</option>
+                    ))}
                   </select>
                   <label htmlFor="kabKota">Kab/Kota</label>
                 </div>
 
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarRumahSakit.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
+                <div className="form-floating" style={{ width: "100%", paddingBottom: "5px" }}>
+                  <select name="rumahSakit" id="rumahSakit" className="form-select" onChange={(e) => rumahSakitChangeHandler(e)}>
+                    <option key={0} value={0}>Pilih</option>
+                    {daftarRumahSakit.map((nilai) => (
+                      <option key={nilai.id} value={nilai.id}>{nilai.nama}</option>
+                    ))}
                   </select>
                   <label htmlFor="rumahSakit">Rumah Sakit</label>
                 </div>
               </>
-            ) : (
-              <></>
             )}
-            {user.jenisUserId === 3 ? (
-              <>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarRumahSakit.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <label htmlFor="rumahSakit">Rumah Sakit</label>
-                </div>
-              </>
-            ) : (
-              <></>
+
+            {user.jenisUserId === 3 && (
+              <div className="form-floating" style={{ width: "100%", paddingBottom: "5px" }}>
+                <select name="rumahSakit" id="rumahSakit" className="form-select" onChange={(e) => rumahSakitChangeHandler(e)}>
+                  <option key={0} value={0}>Pilih</option>
+                  {daftarRumahSakit.map((nilai) => (
+                    <option key={nilai.id} value={nilai.id}>{nilai.nama}</option>
+                  ))}
+                </select>
+                <label htmlFor="rumahSakit">Rumah Sakit</label>
+              </div>
             )}
-            <div
-              className="form-floating"
-              style={{ width: "70%", display: "inline-block" }}
-            >
-              <select
-                typeof="select"
-                className="form-control"
-                onChange={bulanChangeHandler}
-              >
-                {daftarBulan.map((bulan) => {
-                  return (
-                    <option
-                      key={bulan.value}
-                      name={bulan.key}
-                      value={bulan.value}
-                    >
-                      {bulan.key}
-                    </option>
-                  );
-                })}
+
+            <div className="form-floating" style={{ width: "70%", display: "inline-block" }}>
+              <select className="form-control" onChange={bulanChangeHandler}>
+                {daftarBulan.map((bulanItem) => (
+                  <option key={bulanItem.value} value={bulanItem.value} name={bulanItem.key}>{bulanItem.key}</option>
+                ))}
               </select>
               <label>Bulan</label>
             </div>
-            <div
-              className="form-floating"
-              style={{ width: "30%", display: "inline-block" }}
-            >
-              <input
-                name="tahun"
-                type="number"
-                className="form-control"
-                id="tahun"
-                placeholder="Tahun"
-                value={tahun}
-                onChange={(e) => tahunChangeHandler(e)}
-                disabled={false}
-              />
+
+            <div className="form-floating" style={{ width: "30%", display: "inline-block" }}>
+              <input name="tahun" type="number" className="form-control" id="tahun" placeholder="Tahun" value={tahun} onChange={(e) => tahunChangeHandler(e)} />
               <label htmlFor="tahun">Tahun</label>
             </div>
           </Modal.Body>
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
-                <HiSaveAs size={20} /> Terapkan
-              </button>
+              <button type="submit" className="btn btn-outline-success"><HiSaveAs size={20} /> Terapkan</button>
             </div>
           </Modal.Footer>
         </form>
       </Modal>
+
       <div className="row">
         <div className="col-md-12">
-          <div style={{ marginBottom: "10px" }}>
-            {user.jenisUserId === 4 ? (
-              <Link
-                className="btn"
-                to={`/rl37/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
-              >
-                +
-              </Link>
-            ) : (
-              <></>
+          <div className={style.toolbar}>
+            {user.jenisUserId === 4 && (
+              <Link to={`/rl37/tambah/`} type="button" className={style.btnPrimary} style={{ textDecoration: "none" }} > Tambah </Link>
             )}
-            <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-              onClick={handleShow}
-            >
-              Filter
-            </button>
-            {/* <button className='btn' style={{ fontSize: "18px", marginLeft: "5px", backgroundColor: "#779D9E", color: "#FFFFFF" }} onClick={handleDownloadExcel}>Download</button> */}
-            <DownloadTableExcel
-              filename={namafile}
-              sheet="data RL 37"
-              currentTableRef={tableRef.current}
-            >
-              {/* <button> Export excel </button> */}
-              <button
-                className="btn"
-                style={{
-                  fontSize: "18px",
-                  marginLeft: "5px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
-              >
-                {" "}
-                Download
-              </button>
+            <button type="button" className={style.btnPrimary} onClick={handleShow}>Filter</button>
+
+            <DownloadTableExcel filename={namafile} sheet="data RL 37" currentTableRef={tableRef.current}>
+              <button type="button" className={style.btnPrimary}>Download</button>
             </DownloadTableExcel>
           </div>
-          {/* <div className="col-md-2" style={{ fontSize: "14px", backgroundColor: "#779D9E", color: "#FFFFFF"}}>
-                       
-                        </div> */}
-          <div>
-            <h5 style={{ fontSize: "14px" }}>
-              {filterLabel
-                .map((value) => {
-                  return value;
-                })
-                .join(", ")}
-            </h5>
-          </div>
-          <div className={`${style["table-container"]} mt-2 mb-1 pb-2 `}>
-            <table
-              className={style.table}
-              striped
-              bordered
-              responsive
-              style={{ width: "200%" }}
-              ref={tableRef}
-            >
-              <thead className={style.thead}>
-                <tr className="main-header-row">
-                  <th
-                    className={style["sticky-header-view"]}
-                    style={{ width: "2.5%" }}
-                  >
-                    No.
-                  </th>
-                  <th
-                    className={style["sticky-header-view"]}
-                    style={{ width: "6%" }}
-                  >
-                    Aksi
-                  </th>
-                  <th
-                    className={style["sticky-header-view"]}
-                    style={{ width: "10%" }}
-                  >
-                    Jenis Kegiatan
-                  </th>
-                  <th>Rujukan Medis Rumah Sakit</th>
-                  <th>Rujukan Medis Bidan</th>
-                  <th>Rujukan Medis Puskesmas</th>
-                  <th>Rujukan Medis Faskes Lainnya</th>
-                  <th>Rujukan Medis Hidup</th>
-                  <th>Rujukan Medis Mati</th>
-                  <th>Rujukan Medis Total</th>
-                  <th>Rujukan Non Medis Hidup</th>
-                  <th>Rujukan Non Medis Mati</th>
-                  <th>Rujukan Non Medis Total</th>
-                  <th>Non Rujukan Hidup</th>
-                  <th>Non Rujukan Mati</th>
-                  <th>Non Rujukan Total</th>
-                  <th>Dirujuk</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dataRL.map((value, index) => {
-                  return (
-                    <React.Fragment key={index}>
-                      <tr
-                        style={{
-                          textAlign: "center",
-                          backgroundColor: "#C4DFAA",
-                          fontWeight: "bold",
-                          // color:"#354259"
-                        }}
-                      >
-                        <td className={style["sticky-column-view"]}>
-                          {value.groupId}
-                        </td>
-                        <td className={style["sticky-column-view"]}></td>
-                        <td className={style["sticky-column-view"]}>
-                          {value.groupNama}
-                        </td>
-                        <td>{value.groupRmRumahSakit}</td>
-                        <td>{value.groupRmBidan}</td>
-                        <td>{value.groupRmPuskesmas}</td>
-                        <td>{value.groupRmFaskesLainnya}</td>
-                        <td>{value.groupRmHidup}</td>
-                        <td>{value.groupRmMati}</td>
-                        <td>{value.groupRmTotal}</td>
-                        <td>{value.groupRnmHidup}</td>
-                        <td>{value.groupRnmMati}</td>
-                        <td>{value.groupRnmTotal}</td>
-                        <td>{value.groupNrHidup}</td>
-                        <td>{value.groupNrMati}</td>
-                        <td>{value.groupNrTotal}</td>
-                        <td>{value.groupDirujuk}</td>
-                      </tr>
-                      {value.details.map((value2, index2) => {
-                        return (
-                          <React.Fragment key={index2}>
-                            <tr
-                              style={{
-                                textAlign: "center",
-                                backgroundColor: "#90C8AC",
-                                fontWeight: "bold",
-                                // color:"#354259"
-                              }}
-                            >
-                              <td className={style["sticky-column-view"]}>
-                                {value2.subGroupNo}
-                              </td>
-                              <td className={style["sticky-column-view"]}></td>
-                              <td className={style["sticky-column-view"]}>
-                                {value2.subGroupNama}
-                              </td>
-                              <td>{value2.subGroupRmRumahSakit}</td>
-                              <td>{value2.subGroupRmBidan}</td>
-                              <td>{value2.subGroupRmPuskesmas}</td>
-                              <td>{value2.subGroupRmFaskesLainnya}</td>
-                              <td>{value2.subGroupRmHidup}</td>
-                              <td>{value2.subGroupRmMati}</td>
-                              <td>{value2.subGroupRmTotal}</td>
-                              <td>{value2.subGroupRnmHidup}</td>
-                              <td>{value2.subGroupRnmMati}</td>
-                              <td>{value2.subGroupRnmTotal}</td>
-                              <td>{value2.subGroupNrHidup}</td>
-                              <td>{value2.subGroupNrMati}</td>
-                              <td>{value2.subGroupNrTotal}</td>
-                              <td>{value2.subGroupDirujuk}</td>
-                            </tr>
-                            {value2.kegiatan.map((value3, index3) => {
-                              return (
-                                <tr
-                                  key={index3}
-                                  style={{
-                                    textAlign: "center",
-                                    fontWeight: "bold",
-                                  }}
-                                >
-                                  <td className={style["sticky-column-view"]}>
-                                    {value3.jenisKegiatanNo}
-                                  </td>
-                                  <td className={style["sticky-column-view"]}>
-                                    <ToastContainer />
 
-                                    <div style={{ display: "flex" }}>
-                                      <button
-                                        className="btn btn-danger"
-                                        style={{
-                                          margin: "0 5px 0 0",
-                                          backgroundColor: "#FF6663",
-                                          border: "1px solid #FF6663",
-                                        }}
-                                        type="button"
-                                        onClick={(e) =>
-                                          hapus(value3.id, value3.tahun)
-                                        }
-                                      >
-                                        Hapus
-                                      </button>
-                                      {value3.jenisKegiatanNo === "0" ? (
-                                        ""
-                                      ) : (
-                                        <Link
-                                          to={`/rl37/ubah/${value3.id}`}
-                                          className="btn btn-warning"
-                                          style={{
-                                            margin: "0 5px 0 0",
-                                            backgroundColor: "#CFD35E",
-                                            border: "1px solid #CFD35E",
-                                            color: "#FFFFFF",
-                                          }}
-                                        >
-                                          Ubah
-                                        </Link>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className={style["sticky-column-view"]}>
-                                    {value3.jenisKegiatanNama}
-                                  </td>
-                                  <td>{value3.rmRumahSakit}</td>
-                                  <td>{value3.rmBidan}</td>
-                                  <td>{value3.rmPuskesmas}</td>
-                                  <td>{value3.rmFaskesLainnya}</td>
-                                  <td>{value3.rmHidup}</td>
-                                  <td>{value3.rmMati}</td>
-                                  <td>{value3.rmTotal}</td>
-                                  <td>{value3.rnmHidup}</td>
-                                  <td>{value3.rnmMati}</td>
-                                  <td>{value3.rnmTotal}</td>
-                                  <td>{value3.nrHidup}</td>
-                                  <td>{value3.nrMati}</td>
-                                  <td>{value3.nrTotal}</td>
-                                  <td>{value3.dirujuk}</td>
+          <div>
+            <h5 style={{ fontSize: "14px" }}>{filterLabel.map((value) => value).join(", ")}</h5>
+          </div>
+
+          <div>
+            <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button type="button" className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`} onClick={() => handleTabClick("tab1")}>Data</button>
+              </li>
+              <li className={`nav-item ${style.navItem}`}>
+                <button type="button" className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`} onClick={() => handleTabClick("tab2")}>Validasi</button>
+              </li>
+            </ul>
+
+            <div className={`tab-content ${style.tabContent}`}>
+              <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
+                <div className={style["table-container"]}>
+                  <div className="table-responsive">
+                    <table className={style.table} ref={tableRef} style={{ width: "200%" }}>
+                      <thead className={style.thead}>
+                        <tr className="main-header-row">
+                          <th className={style["sticky-header-view"]} style={{ width: "2.5%" }}>No.</th>
+                          {user.jenisUserId === 4
+                            ?
+                          <th className={style["sticky-header-view"]} style={{ width: "7%" }}>Aksi</th>
+                          : <>
+                                      
+                                    </>
+                                }
+                          <th className={style["sticky-header-view"]} style={{ width: "10%" }}>Jenis Kegiatan</th>
+                          <th>Rujukan Medis Rumah Sakit</th>
+                          <th>Rujukan Medis Bidan</th>
+                          <th>Rujukan Medis Puskesmas</th>
+                          <th>Rujukan Medis Faskes Lainnya</th>
+                          <th>Rujukan Medis Hidup</th>
+                          <th>Rujukan Medis Mati</th>
+                          <th>Rujukan Medis Total</th>
+                          <th>Rujukan Non Medis Hidup</th>
+                          <th>Rujukan Non Medis Mati</th>
+                          <th>Rujukan Non Medis Total</th>
+                          <th>Non Rujukan Mati</th>
+                          <th>Non Rujukan Total</th>
+                          <th>Dirujuk</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dataRL.map((value, index) => (
+                          <React.Fragment key={index}>
+                            <tr style={{ textAlign: "center", backgroundColor: "#C4DFAA", fontWeight: "bold" }}>
+                              <td className={style["sticky-column-view"]}>{value.groupId}</td>
+                              <td className={style["sticky-column-view"]}></td>
+                              <td className={style["sticky-column-view"]}>{value.groupNama}</td>
+                              <td>{value.groupRmRumahSakit}</td>
+                              <td>{value.groupRmBidan}</td>
+                              <td>{value.groupRmPuskesmas}</td>
+                              <td>{value.groupRmFaskesLainnya}</td>
+                              <td>{value.groupRmHidup}</td>
+                              <td>{value.groupRmMati}</td>
+                              <td>{value.groupRmTotal}</td>
+                              <td>{value.groupRnmHidup}</td>
+                              <td>{value.groupRnmMati}</td>
+                              <td>{value.groupRnmTotal}</td>
+                              <td>{value.groupNrHidup}</td>
+                              <td>{value.groupNrMati}</td>
+                              <td>{value.groupNrTotal}</td>
+                              <td>{value.groupDirujuk}</td>
+                            </tr>
+                            {value.details.map((value2, index2) => (
+                              <React.Fragment key={index2}>
+                                <tr style={{ textAlign: "center", backgroundColor: "#90C8AC", fontWeight: "bold" }}>
+                                  <td className={style["sticky-column-view"]}>{value2.subGroupNo}</td>
+                                  <td className={style["sticky-column-view"]}></td>
+                                  <td className={style["sticky-column-view"]}>{value2.subGroupNama}</td>
+                                  <td>{value2.subGroupRmRumahSakit}</td>
+                                  <td>{value2.subGroupRmBidan}</td>
+                                  <td>{value2.subGroupRmPuskesmas}</td>
+                                  <td>{value2.subGroupRmFaskesLainnya}</td>
+                                  <td>{value2.subGroupRmHidup}</td>
+                                  <td>{value2.subGroupRmMati}</td>
+                                  <td>{value2.subGroupRmTotal}</td>
+                                  <td>{value2.subGroupRnmHidup}</td>
+                                  <td>{value2.subGroupRnmMati}</td>
+                                  <td>{value2.subGroupRnmTotal}</td>
+                                  <td>{value2.subGroupNrHidup}</td>
+                                  <td>{value2.subGroupNrMati}</td>
+                                  <td>{value2.subGroupNrTotal}</td>
+                                  <td>{value2.subGroupDirujuk}</td>
                                 </tr>
-                              );
-                            })}
+                                {value2.kegiatan.map((value3, index3) => (
+                                  <tr key={index3} style={{ textAlign: "center", fontWeight: "bold" }}>
+                                    <td className={style["sticky-column-view"]}>{value3.jenisKegiatanNo}</td>
+                                    {user.jenisUserId === 4
+                        ?
+                                    <td className={style["sticky-column-view"]}>
+                                      <ToastContainer />
+                                      <div style={{ display: "flex" }}>
+                                        <button className="btn btn-danger" style={{ margin: "0 5px 0 0", backgroundColor: "#FF6663", border: "1px solid #FF6663" }} type="button" onClick={() => hapus(value3.id)}>
+                                          Hapus
+                                        </button>
+                                        {value3.jenisKegiatanNo === "0" ? null : (
+                                          <Link to={`/rl37/ubah/${value3.id}`} className="btn btn-warning" style={{ margin: "0 5px 0 0", backgroundColor: "#CFD35E", border: "1px solid #CFD35E", color: "#FFFFFF" }}>Ubah</Link>
+                                        )}
+                                      </div>
+                                    </td>
+                                    : <>
+                                      
+                                    </>
+                                }
+                                    <td className={style["sticky-column-view"]}>{value3.jenisKegiatanNama}</td>
+                                    <td>{value3.rmRumahSakit}</td>
+                                    <td>{value3.rmBidan}</td>
+                                    <td>{value3.rmPuskesmas}</td>
+                                    <td>{value3.rmFaskesLainnya}</td>
+                                    <td>{value3.rmHidup}</td>
+                                    <td>{value3.rmMati}</td>
+                                    <td>{value3.rmTotal}</td>
+                                    <td>{value3.rnmHidup}</td>
+                                    <td>{value3.rnmMati}</td>
+                                    <td>{value3.rnmTotal}</td>
+                                    <td>{value3.nrHidup}</td>
+                                    <td>{value3.nrMati}</td>
+                                    <td>{value3.nrTotal}</td>
+                                    <td>{value3.dirujuk}</td>
+                                  </tr>
+                                ))}
+                              </React.Fragment>
+                            ))}
                           </React.Fragment>
-                        );
-                      })}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
+                                <div className={style.validasiCard}>
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.7</h3>
+
+                    {/* =========================
+                        1️⃣ DATA RL KOSONG
+                    ========================== */}
+                    {dataRL.length === 0 ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
+                      </div>
+
+                    /* =========================
+                        2️⃣ RS BELUM PERNAH DIVALIDASI
+                    ========================== */
+                    ) : (!dataValidasi && user.jenisUserId === 4) ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data Belum di Validasi</strong>
+                      </div>
+
+                    ) : (
+
+                      <>
+                        {/* =========================
+                            3️⃣ INFO VALIDASI
+                        ========================== */}
+                        {dataValidasi && (
+                              <div style={{
+                                backgroundColor: "#f0f0f0",
+                                padding: "12px",
+                                borderRadius: "4px",
+                                marginBottom: "15px"
+                              }}>
+
+                                {/* STATUS */}
+                                <div style={{ display: "flex", marginBottom: "4px" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Status
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {dataValidasi.statusValidasiId === 1
+                                      ? "Perlu Perbaikan"
+                                      : dataValidasi.statusValidasiId === 2
+                                      ? "Selesai Diperbaiki"
+                                      : dataValidasi.statusValidasiId === 3
+                                      ? "Disetujui"
+                                      : "-"}
+                                  </div>
+                                </div>
+
+                                {/* CATATAN */}
+                                {(dataValidasi.catatan || dataValidasi.keterangan) && (
+                                  <div style={{ display: "flex", marginBottom: "4px" }}>
+                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                      Catatan
+                                    </div>
+                                    <div style={{ width: "10px" }}>:</div>
+                                    <div>
+                                      {dataValidasi.catatan || dataValidasi.keterangan}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* DIBUAT */}
+                                <div style={{ display: "flex" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Dibuat
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                                  </div>
+                                </div>
+
+                              </div>
+                            )}
+
+                        {/* =========================
+                            4️⃣ STATUS FINAL LOCK
+                        ========================== */}
+                        {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                        <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data telah divalidasi.</strong>
+                      </div>
+
+                        ) : (
+
+                          /* =========================
+                              5️⃣ FORM VALIDASI
+                          ========================== */
+                          <form onSubmit={simpanValidasi}>
+                            <ToastContainer />
+
+                            <div className={style.validasiFormGroup}>
+                              <label>Status</label>
+                              <select
+                                value={statusValidasi}
+                                onChange={statusValidasiChangeHadler}
+                              >
+                                <option value={0}>Pilih</option>
+
+                                {user.jenisUserId === 4
+                                  ? <option value="2">Selesai Diperbaiki</option>
+                                  : <>
+                                      <option value="1">Perlu Perbaikan</option>
+                                      <option value="3">Disetujui</option>
+                                    </>
+                                }
+                              </select>
+                            </div>
+
+                            {/* ✅ TEXTAREA HANYA UNTUK VALIDATOR */}
+                            {user.jenisUserId !== 4 && (
+                              <div className={style.validasiFormGroup}>
+                                <label>Catatan</label>
+                                <textarea
+                                  onChange={keteranganValidasiChangeHadler}
+                                  rows={4}
+                                  value={keteranganValidasi}
+                                  placeholder="Tambahkan catatan jika perlu perbaikan..."
+                                />
+                              </div>
+                            )}
+
+                            <button type="submit" className={style.btnPrimary}>
+                              <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                            </button>
+
+                          </form>
+
+                        )}
+                      </>
+                    )}
+                  </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

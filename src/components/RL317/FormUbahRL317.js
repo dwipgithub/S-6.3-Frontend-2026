@@ -75,7 +75,7 @@ export const FormUbahRL317 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getRumahSakit = async (id) => {
@@ -141,7 +141,7 @@ export const FormUbahRL317 = () => {
         await axiosJWT.patch(
           "/apisirs6v2/rltigatitiktujuhbelas/" + id,
           data,
-          customConfig
+          customConfig,
         );
 
         setSpinner(false);
@@ -164,7 +164,7 @@ export const FormUbahRL317 = () => {
         `Data Gagal Disimpan, Jumlah Item Obat Di Rumah Sakit tidak boleh lebih besar dari Jumlah Item Obat`,
         {
           position: toast.POSITION.TOP_RIGHT,
-        }
+        },
       );
       setButtonStatus(false);
       setSpinner(false);
@@ -179,7 +179,7 @@ export const FormUbahRL317 = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     setNama(response.data.data.nama_golongan_obat);
@@ -208,7 +208,7 @@ export const FormUbahRL317 = () => {
     if (object.target.value.length > object.target.maxLength) {
       object.target.value = object.target.value.slice(
         0,
-        object.target.maxLength
+        object.target.maxLength,
       );
     }
   };

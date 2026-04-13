@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
-import style from "./FormTambahRL317.module.css";
+import style from "./RL317.module.css";
 import { HiSaveAs } from "react-icons/hi";
-// import { IoArrowBack } from 'react-icons/io5'
+import { IoArrowBack } from "react-icons/io5";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Spinner from "react-bootstrap/esm/Spinner";
@@ -12,7 +12,8 @@ import Spinner from "react-bootstrap/esm/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const FormTambahRL317 = () => {
-  const [tahun, setTahun] = useState("2025");
+  // const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
   const [namaPropinsi, setNamaPropinsi] = useState("");
@@ -249,6 +250,7 @@ const FormTambahRL317 = () => {
       e.preventDefault();
     }
   };
+
   const maxLengthCheck = (object) => {
     if (object.target.value.length > object.target.maxLength) {
       object.target.value = object.target.value.slice(
@@ -258,10 +260,20 @@ const FormTambahRL317 = () => {
     }
   };
 
+  const totalJumlahItemObat = dataRL.reduce(
+    (acc, item) => acc + Number(item.jumlahItemObat || 0),
+    0,
+  );
+
+  const totalJumlahItemObatRs = dataRL.reduce(
+    (acc, item) => acc + Number(item.jumlahItemObatRs || 0),
+    0,
+  );
+
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <form onSubmit={Simpan}>
         <div className="row">
@@ -365,180 +377,138 @@ const FormTambahRL317 = () => {
             </div>
           </div>
         </div>
+        {/* RL 3.17 Farmasi Pengadaan Obat */}
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl317/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/><span style={{color: "gray"}}></span> */}
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>
-              RL 3.17 Farmasi Pengadaan Obat
-            </span>
+            <div className={style.headerAction}>
+              <Link to="/rl317">
+                <button type="button" className={style.btnPrimary}>
+                  <IoArrowBack />
+                </button>
+              </Link>
 
-            <div className="container" style={{ textAlign: "center" }}>
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
+              <h4 className={style.pageHeader}>
+                RL 3.17 Farmasi Pengadaan Obat
+              </h4>
             </div>
-            <table className={style.rlTable}>
-              <thead>
-                <tr>
-                  <th>No Golongan Obat</th>
-                  <th style={{ width: "2%" }}></th>
-                  <th>Golongan Obat</th>
-                  <th>JUMLAH ITEM OBAT</th>
-                  <th>JUMLAH ITEM OBAT YANG TERSEDIA DI RUMAH SAKIT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dataRL.map((value, index) => {
-                  if (value.no === "0") {
-                    let disabledInput = true;
-                    return (
-                      <tr key={value.id}>
-                        <td>
-                          <center>{value.no}</center>
-                        </td>
-                        <td
+
+            <div className={style["table-container"]}>
+              <table className={style.table}>
+                <thead className={style.thead}>
+                  <tr>
+                    <th style={{ width: "5%" }}>No</th>
+                    <th style={{ width: "8%" }}>Pilih</th>
+                    <th>Golongan Obat</th>
+                    <th style={{ width: "15%" }}>Jumlah Item Obat</th>
+                    <th style={{ width: "20%" }}>
+                      Jumlah Item Obat Yang Tersedia
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {dataRL.map((value, index) => (
+                    <tr key={value.id}>
+                      {/* NO */}
+                      <td className={style.center}>{value.no}</td>
+
+                      {/* CHECKBOX */}
+                      <td className={style.center}>
+                        <input
+                          type="checkbox"
+                          name="check"
+                          onChange={(e) => changeHandler(e, index)}
+                          checked={value.checked}
+                        />
+                      </td>
+
+                      {/* NAMA */}
+                      <td className={style.left}>{value.golonganObat}</td>
+
+                      {/* JUMLAH ITEM OBAT */}
+                      <td className={style.inputCell}>
+                        <input
+                          type="number"
+                          name="jumlahItemObat"
+                          min={0}
+                          onInput={maxLengthCheck}
+                          onPaste={preventPasteNegative}
+                          onKeyPress={preventMinus}
+                          value={value.jumlahItemObat}
+                          onChange={(e) => changeHandler(e, index)}
+                          disabled={value.no === "0" || value.disabledInput}
+                          className={style.inputExcel}
                           style={{
+                            width: "100%",
+                            height: "100%",
                             textAlign: "center",
-                            verticalAlign: "middle",
+                            backgroundColor:
+                              value.id === 88 || value.disabledInput
+                                ? "#e0e0e0"
+                                : "#ffffff",
+                            border: "none",
+                            outline: "none",
+                            boxShadow: "none",
+                            margin: 0,
+                            padding: "8px 4px",
                           }}
-                        >
-                          <input
-                            type="checkbox"
-                            name="check"
-                            className="form-check-input"
-                            onChange={(e) => changeHandler(e, index)}
-                            checked={value.checked}
-                          />
-                        </td>
-                        <td>{value.golonganObat}</td>
-                        <td>
-                          <input
-                            type="number"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            name="jumlahItemObat"
-                            className="form-control"
-                            value={value.jumlahItemObat}
-                            onFocus={handleFocus}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={true}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            name="jumlahItemObatRs"
-                            className="form-control"
-                            value={value.jumlahItemObatRs}
-                            onFocus={handleFocus}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={true}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  } else {
-                    return (
-                      <tr key={value.id}>
-                        <td>
-                          <center>{value.no}</center>
-                        </td>
-                        <td
+                        />
+                      </td>
+
+                      {/* JUMLAH ITEM RS */}
+                      <td className={style.inputCell}>
+                        <input
+                          type="number"
+                          name="jumlahItemObatRs"
+                          min={0}
+                          onInput={maxLengthCheck}
+                          onPaste={preventPasteNegative}
+                          onKeyPress={preventMinus}
+                          value={value.jumlahItemObatRs}
+                          onChange={(e) => changeHandler(e, index)}
+                          disabled={value.no === "0" || value.disabledInput}
+                          className={style.inputExcel}
                           style={{
+                            width: "100%",
+                            height: "100%",
                             textAlign: "center",
-                            verticalAlign: "middle",
+                            backgroundColor:
+                              value.id === 88 || value.disabledInput
+                                ? "#e0e0e0"
+                                : "#ffffff",
+                            border: "none",
+                            outline: "none",
+                            boxShadow: "none",
+                            margin: 0,
+                            padding: "8px 4px",
                           }}
-                        >
-                          <input
-                            type="checkbox"
-                            name="check"
-                            className="form-check-input"
-                            onChange={(e) => changeHandler(e, index)}
-                            checked={value.checked}
-                          />
-                        </td>
-                        <td>{value.golonganObat}</td>
-                        <td>
-                          <input
-                            type="number"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            name="jumlahItemObat"
-                            className="form-control"
-                            value={value.jumlahItemObat}
-                            onFocus={handleFocus}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            name="jumlahItemObatRs"
-                            className="form-control"
-                            value={value.jumlahItemObatRs}
-                            onFocus={handleFocus}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  }
-                })}
-              </tbody>
-            </table>
+                        />
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* TOTAL */}
+                  {dataRL.length > 0 && (
+                    <tr className={style.totalRow}>
+                      <td colSpan={3} className={style.center}>
+                        <strong>TOTAL</strong>
+                      </td>
+                      <td className={style.center}>
+                        <strong>{totalJumlahItemObat}</strong>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <strong>{totalJumlahItemObatRs}</strong>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button
-            type="submit"
-            className="btn btn-outline-success"
-            disabled={buttonStatus}
-          >
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Simpan
           </button>
         </div>

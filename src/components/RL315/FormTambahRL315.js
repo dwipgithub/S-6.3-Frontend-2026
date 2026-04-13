@@ -2,15 +2,18 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { Link, useNavigate } from "react-router-dom";
-import style from "./FormTambahRL315.module.css";
+// import style from "./FormTambahRL315.module.css";
+import style from "./RL315.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 // import Table from "react-bootstrap/Table";
 import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import { IoArrowBack } from "react-icons/io5";
 
 const FormTambahRL315 = () => {
-  const [tahun, setTahun] = useState("");
+  // const [tahun, setTahun] = useState("");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
   const [namaPropinsi, setNamaPropinsi] = useState("");
@@ -239,12 +242,27 @@ const FormTambahRL315 = () => {
     }
   };
 
+  // TOTAL
+  const totalLakiLaki = dataRL.reduce(
+    (acc, item) => acc + Number(item.laki || 0),
+    0,
+  );
+
+  const totalPerempuan = dataRL.reduce(
+    (acc, item) => acc + Number(item.perempuan || 0),
+    0,
+  );
+
+  const totalJumlah = dataRL.reduce(
+    (acc, item) => acc + Number(item.jumlah || 0),
+    0,
+  );
+
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h2>RL. 3.15</h2>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -348,28 +366,22 @@ const FormTambahRL315 = () => {
         </div>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl315/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/> */}
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>
-              Kembali RL 3.15 Kesehatan Jiwa
-            </span>
+            <div className={style.headerAction}>
+              <Link to="/rl315">
+                <button type="button" className={style.btnPrimary}>
+                  <IoArrowBack />
+                </button>
+              </Link>
 
-            <div className={`${style["table-container"]} mt-2 mb-1 pb-2 `}>
+              <h4 className={style.pageHeader}>RL 3.15 Kesehatan Jiwa</h4>
+            </div>
+
+            <div className={style["table-container"]}>
               <table className={style.table}>
                 <thead className={style.thead}>
-                  <tr className="main-header-row">
-                    <th style={{ width: "4%" }}>No</th>
-                    <th style={{ width: "4%" }}></th>
+                  <tr>
+                    <th style={{ width: "5%" }}>No</th>
+                    <th style={{ width: "5%" }}>Pilih</th>
                     <th style={{ width: "30%" }}>Jenis Kegiatan</th>
                     <th>Laki-Laki</th>
                     <th>Perempuan</th>
@@ -380,39 +392,22 @@ const FormTambahRL315 = () => {
                   {dataRL.map((value, index) => {
                     return (
                       <tr key={value.id}>
-                        <td>
-                          <input
-                            type="text"
-                            name="no"
-                            className="form-control"
-                            value={value.no}
-                            disabled={true}
-                          />
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
+                        {/* NO */}
+                        <td className={style.center}>{value.no}</td>
+
+                        {/* CHECKBOX */}
+                        <td className={style.center}>
                           <input
                             type="checkbox"
                             name="check"
-                            className="form-check-input"
                             onChange={(e) => changeHandler(e, index)}
                             checked={value.checked}
                           />
                         </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="jenisKegiatan"
-                            className="form-control"
-                            value={value.jenisKegiatan}
-                            disabled={true}
-                            onFocus={handleFocus}
-                          />
-                        </td>
+                        {/* NAMA */}
+                        <td className={style.left}>{value.jenisKegiatan}</td>
+
+                        {/* INPUT */}
                         <td>
                           <input
                             type="number"
@@ -425,6 +420,20 @@ const FormTambahRL315 = () => {
                             onPaste={preventPasteNegative}
                             onKeyPress={preventMinus}
                             onFocus={handleFocus}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              textAlign: "center",
+                              backgroundColor:
+                                value.id === 88 || value.disabledInput
+                                  ? "#e0e0e0"
+                                  : "#ffffff",
+                              border: "none",
+                              outline: "none",
+                              boxShadow: "none",
+                              margin: 0,
+                              padding: "8px 4px",
+                            }}
                           />
                         </td>
                         <td>
@@ -439,6 +448,20 @@ const FormTambahRL315 = () => {
                             onPaste={preventPasteNegative}
                             onKeyPress={preventMinus}
                             onFocus={handleFocus}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              textAlign: "center",
+                              backgroundColor:
+                                value.id === 88 || value.disabledInput
+                                  ? "#e0e0e0"
+                                  : "#ffffff",
+                              border: "none",
+                              outline: "none",
+                              boxShadow: "none",
+                              margin: 0,
+                              padding: "8px 4px",
+                            }}
                           />
                         </td>
                         <td>
@@ -454,11 +477,42 @@ const FormTambahRL315 = () => {
                             onPaste={preventPasteNegative}
                             onKeyPress={preventMinus}
                             onFocus={handleFocus}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              textAlign: "center",
+                              backgroundColor:
+                                value.id === 88 || value.disabledInput
+                                  ? "#e0e0e0"
+                                  : "#ffffff",
+                              border: "none",
+                              outline: "none",
+                              boxShadow: "none",
+                              margin: 0,
+                              padding: "8px 4px",
+                            }}
                           />
                         </td>
                       </tr>
                     );
                   })}
+                  {/* TOTAL */}
+                  {dataRL.length > 0 && (
+                    <tr className="table-light fw-bold">
+                      <td colSpan={3} className="text-center">
+                        TOTAL
+                      </td>
+                      {/* <td className="text-center">
+                        {dataRL.reduce(
+                          (acc, item) => acc + Number(item.jumlah || 0),
+                          0,
+                        )}
+                      </td> */}
+                      <td className="text-center">{totalLakiLaki}</td>
+                      <td className="text-center">{totalPerempuan}</td>
+                      <td className="text-center">{totalJumlah}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -466,7 +520,7 @@ const FormTambahRL315 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button type="submit" className="btn btn-outline-success">
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Simpan
           </button>
         </div>

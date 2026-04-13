@@ -16,7 +16,7 @@ const FormTambahRL39 = () => {
   const [namaPropinsi, setNamaPropinsi] = useState("");
   const [namaKabKota, setNamaKabKota] = useState("");
   const [bulan, setBulan] = useState(0);
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState("2026");
   const [daftarBulan, setDaftarBulan] = useState([]);
   // const [namaKelompokJenisKegiatan, setnamaKelompokJenisKegiatan] = useState([])
   const [dataRL, setDataRL] = useState([]);
@@ -307,7 +307,7 @@ const FormTambahRL39 = () => {
 
   const currentYear = new Date().getFullYear();
   const daftarTahun = [];
-  for (let i = 2025; i <= currentYear; i++) {
+  for (let i = 2026; i <= currentYear; i++) {
     daftarTahun.push(i);
   }
 
@@ -463,11 +463,11 @@ const FormTambahRL39 = () => {
                 <Spinner animation="grow" variant="success"></Spinner>
               )}
             </div>
-            <table className={style.rlTable}>
+             <table className={style["table"]}>
               <thead>
                 <tr>
                   <th style={{ width: "6%" }}>No.</th>
-                  <th style={{ width: "2%" }}></th>
+                  <th style={{ width: "%" }}></th>
                   <th style={{ width: "7%" }}>No Kegiatan</th>
                   <th>Jenis Kegiatan</th>
                   <th>Jumlah</th>

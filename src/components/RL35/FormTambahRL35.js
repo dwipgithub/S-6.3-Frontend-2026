@@ -11,7 +11,7 @@ import Spinner from "react-bootstrap/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const FormTambahRL35 = () => {
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState("2026");
   const [bulan, setBulan] = useState("00");
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
@@ -378,7 +378,7 @@ const FormTambahRL35 = () => {
 
   const currentYear = new Date().getFullYear();
   const daftarTahun = [];
-  for (let i = 2025; i <= currentYear; i++) {
+  for (let i = 2026; i <= currentYear; i++) {
     daftarTahun.push(i);
   }
 
@@ -527,7 +527,8 @@ const FormTambahRL35 = () => {
                             {spinner && <Spinner animation="grow" variant="success"></Spinner>}
                         </div> */}
             <div className={style["table-container"]}>
-              <table responsive className={style["table"]}>
+              <div className="table-responsive">
+              <table className={style["table"]}>
                 <thead className={style["thead"]}>
                   <tr>
                     <th
@@ -696,6 +697,7 @@ const FormTambahRL35 = () => {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </div>

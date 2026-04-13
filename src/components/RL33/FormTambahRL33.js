@@ -14,7 +14,7 @@ const FormTambahRL33 = () => {
   const [alamatRS, setAlamatRS] = useState("");
   const [namaPropinsi, setNamaPropinsi] = useState("");
   const [namaKabKota, setNamaKabKota] = useState("");
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState("2026");
   const [bulan, setBulan] = useState(1);
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [dataRL, setDataRL] = useState([]);
@@ -559,6 +559,42 @@ const FormTambahRL33 = () => {
       //   dataRLArray.push(nonBedahData);
       // }
 
+      for (let i = 0; i < dataRLArray.length; i++) {
+        const row = dataRLArray[i];
+
+        const totalPasien =
+          (row.total_pasien_rujukan || 0) +
+          (row.total_pasien_non_rujukan || 0);
+
+        const totalLuka =
+          (row.luka_laki || 0) +
+          (row.luka_perempuan || 0);
+
+        // Jika luka lebih besar dari total pasien
+        if (totalLuka > totalPasien) {
+          toast(
+            `Gagal simpan: jumlah pasien luka melebihi total pasien`,
+            {
+              position: toast.POSITION.TOP_RIGHT,
+            }
+          );
+
+          return; // HENTIKAN PROSES SIMPAN
+        }
+
+        // Tambahan keamanan: dirawat tidak boleh negatif
+        if (row.tlp_dirawat < 0) {
+          toast(
+            `Gagal simpan: jumlah dirawat tidak boleh negatif`,
+            {
+              position: toast.POSITION.TOP_RIGHT,
+            }
+          );
+
+          return;
+        }
+      }
+
       const result = await axiosJWT.post(
         "/apisirs6v2/rltigatitiktiga",
         {
@@ -632,9 +668,9 @@ const FormTambahRL33 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h2>RL. 3.3</h2>
+      <h4>RL. 3.3</h4>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -748,12 +784,12 @@ const FormTambahRL33 = () => {
           <div className="col-md-12">
             <Link
               to={`/rl33/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              className={style.btnPrimary}
+                            style={{
+                              textDecoration: "none",
+                              display: "inline-block",
+                              color: "#FFF",
+                            }}
             >
               &lt;
             </Link>
@@ -1089,11 +1125,7 @@ const FormTambahRL33 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button
-            type="submit"
-            className="btn btn-outline-success"
-            disabled={buttonStatus}
-          >
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Simpan
           </button>
         </div>

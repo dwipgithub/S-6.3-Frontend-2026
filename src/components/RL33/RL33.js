@@ -26,6 +26,11 @@ const RL33 = () => {
   const [expire, setExpire] = useState("");
   const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
+  const [statusValidasi, setStatusValidasi] = useState(0);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [validasiId, setValidasiId] = useState(null);
+  const [dataValidasi, setDataValidasi] = useState(null);
+  const [activeTab, setActiveTab] = useState("tab1");
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -38,6 +43,13 @@ const RL33 = () => {
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load validasi data secara realtime saat rumahSakit atau activeTab berubah
+  useEffect(() => {
+    if (activeTab === "tab2" && rumahSakit && rumahSakit.id) {
+      getValidasi();
+    }
+  }, [rumahSakit, activeTab]);
 
   const refreshToken = async () => {
     try {
@@ -108,59 +120,112 @@ const RL33 = () => {
     } catch (error) {}
   };
 
-  const getDataRLTigaTitikTiga = async (e) => {
-    e.preventDefault();
-    if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
+const getDataRLTigaTitikTiga = async (e) => {
+  e.preventDefault();
+
+  // ⭐ FIX VALIDASI RS (object kosong sering lolos)
+  if (!rumahSakit || !rumahSakit.id) {
+    toast(`rumah sakit harus dipilih`, {
+      position: toast.POSITION.TOP_RIGHT,
+    });
+    return;
+  }
+
+  const filter = [];
+  filter.push("Nama: ".concat(rumahSakit.nama));
+  filter.push(
+    "Periode ".concat(
+      String(months[bulan - 1].label)
+        .concat(" ")
+        .concat(tahun)
+    )
+  );
+  setFilterLabel(filter);
+
+  try {
+    const customConfig = {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        rsId: rumahSakit.id, // ⭐ FIX PENTING (tadi kamu tidak kirim rsId)
+        tahun: tahun,
+        bulan: bulan,
+      },
+    };
+
+    const results = await axiosJWT.get(
+      "/apisirs6v2/rltigatitiktiga",
+      customConfig
+    );
+
+    // ⭐ GUARD kalau backend return kosong
+    if (!results.data.data || results.data.data.length === 0) {
+      setDataRL([]);
+      toast("Data RL tidak ditemukan", {
         position: toast.POSITION.TOP_RIGHT,
       });
+      handleClose();
       return;
     }
 
-    const filter = [];
-    filter.push("Nama: ".concat(rumahSakit.nama));
-    filter.push(
-      "Periode ".concat(
-        String(months[bulan - 1].label)
-          .concat(" ")
-          .concat(tahun)
-      )
-    );
-    setFilterLabel(filter);
+    // ⭐ FLATTEN LEBIH AMAN
+    let dataRLTigaTitikTigaDetails = [];
+    results.data.data.forEach((value) => {
+      if (value.rl_tiga_titik_tiga_details) {
+        value.rl_tiga_titik_tiga_details.forEach((v) => {
+          dataRLTigaTitikTigaDetails.push(v);
+        });
+      }
+    });
 
+    setDataRL(dataRLTigaTitikTigaDetails);
+
+    // reset validasi state
+    setValidasiId(null);
+    setStatusValidasi(0);
+    setKeteranganValidasi("");
+    setDataValidasi(null);
+
+    handleClose();
+
+    // ================= LOAD VALIDASI =================
     try {
-      const customConfig = {
+      const validasiConfig = {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         params: {
-          tahun: tahun,
-          bulan: bulan,
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
         },
       };
-      const results = await axiosJWT.get(
-        "/apisirs6v2/rltigatitiktiga",
-        customConfig
+
+      const validasiResponse = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiktigavalidasi",
+        validasiConfig
       );
 
-      const rlTigaTitikTigaDetails = results.data.data.map((value) => {
-        return value.rl_tiga_titik_tiga_details;
-      });
-
-      let dataRLTigaTitikTigaDetails = [];
-      rlTigaTitikTigaDetails.forEach((element) => {
-        element.forEach((value) => {
-          dataRLTigaTitikTigaDetails.push(value);
-        });
-      });
-      setDataRL(dataRLTigaTitikTigaDetails);
-      setRumahSakit(null);
-      handleClose();
+      if (validasiResponse.data.data && validasiResponse.data.data.length > 0) {
+        const validasi = validasiResponse.data.data[0];
+        setValidasiId(validasi.id);
+        setStatusValidasi(validasi.statusValidasiId);
+        setKeteranganValidasi(validasi.catatan || "");
+        setDataValidasi(validasi);
+      }
     } catch (error) {
       console.log(error);
     }
-  };
+
+  } catch (error) {
+    console.log(error);
+    toast("Gagal mengambil data RL", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
+  }
+};
 
   // const hapusData = async (id) => {
   //   const customConfig = {
@@ -221,10 +286,10 @@ const RL33 = () => {
       let parent;
       const currentData = await getRLTigaTitikTigaById(id);
 
-      if (currentData.jenis_pelayanan_rl_tiga_titik_tiga.no.includes("1.")) {
+      if (currentData.jenis_pelayanan_rl_tiga_titik_tiga.no.startsWith("1.")) {
         parent = await getParent(1, id);
       } else if (
-        currentData.jenis_pelayanan_rl_tiga_titik_tiga.no.includes("2.")
+        currentData.jenis_pelayanan_rl_tiga_titik_tiga.no.startsWith("2.")
       ) {
         parent = await getParent(2, id);
       }
@@ -243,11 +308,21 @@ const RL33 = () => {
 
       toast("Data Berhasil Dihapus", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       });
     } catch (error) {
       console.log(error);
       toast("Data Gagal Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       });
     }
   };
@@ -303,7 +378,11 @@ const RL33 = () => {
 
     const parent = dataRLTigaTitikTigaDetails
       .filter((value) => {
-        return value.jenis_pelayanan_rl_tiga_titik_tiga.no == filter;
+        const no = value.jenis_pelayanan_rl_tiga_titik_tiga.no;
+        return (
+          no === `${filter}.` ||
+          no === String(filter)
+        );
       })
       .map((value) => {
         return {
@@ -422,6 +501,141 @@ const RL33 = () => {
     }
   };
 
+  const getValidasi = async () => {
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+        },
+      };
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiktigavalidasi",
+        customConfig
+      );
+
+      if (response.data.data && response.data.data.length > 0) {
+        const validasi = response.data.data[0];
+        setValidasiId(validasi.id);
+        setStatusValidasi(validasi.statusValidasiId);
+        setKeteranganValidasi(validasi.catatan || "");
+        setDataValidasi(validasi);
+      } else {
+        setValidasiId(null);
+        setStatusValidasi(0);
+        setKeteranganValidasi("");
+        setDataValidasi(null);
+      }
+    } catch (error) {
+      console.log(error);
+      setValidasiId(null);
+      setStatusValidasi(0);
+      setKeteranganValidasi("");
+      setDataValidasi(null);
+    }
+  };
+
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(e.target.value);
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    e.preventDefault();
+    
+    if (!rumahSakit || !rumahSakit.id) {
+      toast("Rumah sakit harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (parseInt(statusValidasi) === 0) {
+      toast("Status harus dipilih terlebih dahulu", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+
+      const payload = {
+        statusValidasiId: parseInt(statusValidasi),
+        catatan: keteranganValidasi,
+      };
+
+      console.log("Payload yang dikirim:", payload);
+      console.log("ValidasiId:", validasiId);
+
+      if (validasiId) {
+        // Update existing validation
+        const response = await axiosJWT.patch(
+          `/apisirs6v2/rltigatitiktigavalidasi/${validasiId}`,
+          payload,
+          customConfig
+        );
+        console.log("Response PATCH:", response.data);
+        toast("Data Validasi Berhasil Diperbarui", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        // Refresh validasi data tanpa reload halaman
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      } else {
+        // Create new validation
+        const createPayload = {
+          rsId: rumahSakit.id,
+          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          jenisPeriode: 1,
+          statusValidasiId: parseInt(statusValidasi),
+          catatan: keteranganValidasi,
+        };
+        const response = await axiosJWT.post(
+          "/apisirs6v2/rltigatitiktigavalidasi",
+          createPayload,
+          customConfig
+        );
+        setValidasiId(response.data.data.id);
+        toast("Data Validasi Berhasil Disimpan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        // Refresh validasi data tanpa reload halaman
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      }
+    } catch (error) {
+      console.log(error);
+      toast(
+        `Data tidak bisa disimpan karena: ${
+          error.response?.data?.message || error.message
+        }`,
+        {
+          position: toast.POSITION.TOP_RIGHT,
+        }
+      );
+    }
+  };
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
+
   const months = [
     { value: "1", label: "Januari" },
     { value: "2", label: "Februari" },
@@ -530,7 +744,7 @@ const RL33 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
@@ -742,8 +956,7 @@ const RL33 = () => {
           </Modal.Body>
           <Modal.Footer>
             <div className="mt-3 mb-3">
-              <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -753,45 +966,30 @@ const RL33 = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <h4>
-            <span style={{ color: "gray" }}>RL. 3.3 Rawat Darurat</span>
-          </h4>
-          <div style={{ marginBottom: "10px" }}>
+            <h4 className={style.pageHeader}>RL. 3.3 - Rawat Darurat</h4>
+          <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
                 to={`/rl33/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                type="button"
+                className={style.btnPrimary}
+                style={{ textDecoration: "none" }}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
             )}
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              type="button"
+              className={style.btnPrimary}
               onClick={handleShow}
             >
               Filter
             </button>
             <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                marginLeft: "5px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              type="button"
+              className={style.btnPrimary}
               onClick={handleDownloadExcel}
             >
               Download
@@ -813,26 +1011,62 @@ const RL33 = () => {
             <></>
           )}
 
-          <div className={style["table-container"]}>
-            <table className={style.table} responsive>
-              <thead className={style.thead}>
+          <div>
+            <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button
+                  type="button"
+                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                  onClick={() => handleTabClick("tab1")}
+                >
+                  Data
+                </button>
+              </li>
+              {[3, 4].includes(user.jenisUserId) ? (
+                <li className={`nav-item ${style.navItem}`}>
+                  <button
+                    type="button"
+                    className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                    onClick={() => handleTabClick("tab2")}
+                  >
+                    Validasi
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+
+            <div className={`tab-content ${style.tabContent}`}>
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab1" ? "show active" : ""
+                }`}
+              >
+                <div className={style["table-container"]}>
+                  <div className="table-responsive">
+                  <table className={style.table}>
+                <thead className={style.thead}>
                 <tr>
                   <th
-                    style={{ width: "4%" }}
+                    style={{ width: "2%" }}
                     rowSpan={2}
                     className={style["sticky-header"]}
                   >
-                    No Pelayanan
+                    No.
                   </th>
-                  <th
-                    style={{ width: "6%" }}
+                  {user.jenisUserId === 4
+                   ? <th
+                    style={{ width: "7%" }}
                     rowSpan={2}
                     className={style["sticky-header"]}
                   >
                     Aksi
                   </th>
+                  : <>
+                                      
+                                    </>
+                                }
                   <th
-                    style={{ width: "20%" }}
+                    style={{ width: "13%", textAlign: "center" }}
                     rowSpan={2}
                     className={style["sticky-header"]}
                   >
@@ -874,24 +1108,18 @@ const RL33 = () => {
                         return (
                           <tr key={value.id}>
                             <td className={style["sticky-column"]}>
-                              <input
-                                type="text"
-                                name="no"
-                                className="form-control"
-                                value={
+                              {
                                   value.jenis_pelayanan_rl_tiga_titik_tiga.no
                                 }
-                                disabled={true}
-                              />
                             </td>
-                            <td
+                            {user.jenisUserId === 4
+                            ? <td
                               className={style["sticky-column"]}
                               style={{
                                 textAlign: "center",
                                 verticalAlign: "middle",
                               }}
                             >
-                              <ToastContainer />
                               {value.jenis_pelayanan_rl_tiga_titik_tiga.no !=
                                 1 &&
                               value.jenis_pelayanan_rl_tiga_titik_tiga.no !=
@@ -926,136 +1154,58 @@ const RL33 = () => {
                                 ""
                               )}
                             </td>
-                            <td className={style["sticky-column"]}>
-                              <input
-                                type="text"
-                                name="jenisKegiatan"
-                                className="form-control"
-                                value={
+                            : <>
+                                      
+                                    </>
+                                }
+                            <td className={style["sticky-column"]}
+                            style={{ textAlign: "Left" }}
+                            >
+                              {
                                   value.jenis_pelayanan_rl_tiga_titik_tiga.nama
                                 }
-                                disabled={true}
-                              />
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="total_pasien_rujukan"
-                                className="form-control"
-                                value={value.total_pasien_rujukan}
-                                disabled={true}
-                              />
+                              {value.total_pasien_rujukan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="total_pasien_non_rujukan"
-                                className="form-control"
-                                value={value.total_pasien_non_rujukan}
-                                disabled={true}
-                              />
+                              {value.total_pasien_non_rujukan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="tlp_dirawat"
-                                className="form-control"
-                                value={value.tlp_dirawat}
-                                disabled={true}
-                              />
+                              {value.tlp_dirawat}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="tlp_dirujuk"
-                                className="form-control"
-                                value={value.tlp_dirujuk}
-                                disabled={true}
-                              />
+                              {value.tlp_dirujuk}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="tlp_pulang"
-                                className="form-control"
-                                value={value.tlp_pulang}
-                                disabled={true}
-                              />
+                              {value.tlp_pulang}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="m_igd_laki"
-                                className="form-control"
-                                value={value.m_igd_laki}
-                                disabled={true}
-                              />
+                              {value.m_igd_laki}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="m_igd_perempuan"
-                                className="form-control"
-                                value={value.m_igd_perempuan}
-                                disabled={true}
-                              />
+                              {value.m_igd_perempuan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="doa_laki"
-                                className="form-control"
-                                value={value.doa_laki}
-                                disabled={true}
-                              />
+                              {value.doa_laki}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="doa_perempuan"
-                                className="form-control"
-                                value={value.doa_perempuan}
-                                disabled={true}
-                              />
+                              {value.doa_perempuan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="luka_laki"
-                                className="form-control"
-                                value={value.luka_laki}
-                                disabled={true}
-                              />
+                              {value.luka_laki}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="luka_perempuan"
-                                className="form-control"
-                                value={value.luka_perempuan}
-                                disabled={true}
-                              />
+                              {value.luka_perempuan}
                             </td>
                             <td>
-                              <input
-                                type="text"
-                                name="false_emergency"
-                                className="form-control"
-                                value={value.false_emergency}
-                                disabled={true}
-                              />
+                              {value.false_emergency}
                             </td>
                           </tr>
                         );
                       })}
                     <tr className="row-total">
-                      <td></td>
-                      <td></td>
-                      <td
-                        // colSpan={3}
-                        style={{ textAlign: "center" }}
-                        className={style["sticky-column"]}
-                      >
+                      <td colSpan={user.jenisUserId === 4 ? 3 : 2} style={{ textAlign: "center" }} className={style["sticky-column"]}>
                         <strong>Total</strong>
                       </td>
                       <td className="text-center">
@@ -1080,10 +1230,179 @@ const RL33 = () => {
                   <></>
                 )}
               </tbody>
-            </table>
+              </table>
+                </div>
+                </div>
+              </div>
+
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab2" ? "show active" : ""
+                }`}
+              >
+                <div className={style.validasiCard}>
+                    <h3 className={style.validasiCardTitle}>Validasi RL 3.3</h3>
+
+                    {/* =========================
+                        1️⃣ DATA RL KOSONG
+                    ========================== */}
+                    {dataRL.length === 0 ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
+                      </div>
+
+                    /* =========================
+                        2️⃣ RS BELUM PERNAH DIVALIDASI
+                    ========================== */
+                    ) : (!dataValidasi && user.jenisUserId === 4) ? (
+                      <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data Belum di Validasi</strong>
+                      </div>
+
+                    ) : (
+
+                      <>
+                        {/* =========================
+                            3️⃣ INFO VALIDASI
+                        ========================== */}
+                        {dataValidasi && (
+                              <div style={{
+                                backgroundColor: "#f0f0f0",
+                                padding: "12px",
+                                borderRadius: "4px",
+                                marginBottom: "15px"
+                              }}>
+
+                                {/* STATUS */}
+                                <div style={{ display: "flex", marginBottom: "4px" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Status
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {dataValidasi.statusValidasiId === 1
+                                      ? "Perlu Perbaikan"
+                                      : dataValidasi.statusValidasiId === 2
+                                      ? "Selesai Diperbaiki"
+                                      : dataValidasi.statusValidasiId === 3
+                                      ? "Disetujui"
+                                      : "-"}
+                                  </div>
+                                </div>
+
+                                {/* CATATAN */}
+                                {(dataValidasi.keteranganValidasi ||
+                                  dataValidasi.catatan ||
+                                  dataValidasi.keterangan) && (
+                                  <div style={{ display: "flex", marginBottom: "4px" }}>
+                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                      Catatan
+                                    </div>
+                                    <div style={{ width: "10px" }}>:</div>
+                                    <div>
+                                      {dataValidasi.keteranganValidasi ||
+                                        dataValidasi.catatan ||
+                                        dataValidasi.keterangan}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* DIBUAT */}
+                                <div style={{ display: "flex" }}>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Dibuat
+                                  </div>
+                                  <div style={{ width: "10px" }}>:</div>
+                                  <div>
+                                    {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                                  </div>
+                                </div>
+
+                              </div>
+                            )}
+
+                        {/* =========================
+                            4️⃣ STATUS FINAL LOCK
+                        ========================== */}
+                        {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                        <div style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center"
+                      }}>
+                        <strong>Data telah divalidasi.</strong>
+                      </div>
+
+                        ) : (
+
+                          /* =========================
+                              5️⃣ FORM VALIDASI
+                          ========================== */
+                          <form onSubmit={simpanValidasi}>
+                            <ToastContainer />
+
+                            <div className={style.validasiFormGroup}>
+                              <label>Status</label>
+                              <select
+                                value={statusValidasi}
+                                onChange={statusValidasiChangeHadler}
+                              >
+                                <option value={0}>Pilih</option>
+
+                                {user.jenisUserId === 4
+                                  ? <option value="2">Selesai Diperbaiki</option>
+                                  : <>
+                                      <option value="1">Perlu Perbaikan</option>
+                                      <option value="3">Disetujui</option>
+                                    </>
+                                }
+                              </select>
+                            </div>
+
+                            {/* ✅ TEXTAREA HANYA UNTUK VALIDATOR */}
+                            {user.jenisUserId !== 4 && (
+                              <div className={style.validasiFormGroup}>
+                                <label>Catatan</label>
+                                <textarea
+                                  onChange={keteranganValidasiChangeHadler}
+                                  rows={4}
+                                />
+                              </div>
+                            )}
+
+                            <button type="submit" className={style.btnPrimary}>
+                              <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                            </button>
+
+                          </form>
+
+                        )}
+                      </>
+                    )}
+                  </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

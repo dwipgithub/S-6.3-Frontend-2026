@@ -9,7 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const FormTambahRL38 = () => {
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState("2026");
   const [bulan, setBulan] = useState("00");
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
@@ -277,7 +277,7 @@ const FormTambahRL38 = () => {
 
   const currentYear = new Date().getFullYear();
   const daftarTahun = [];
-  for (let i = 2025; i <= currentYear; i++) {
+  for (let i = 2026; i <= currentYear; i++) {
     daftarTahun.push(i);
   }
 
