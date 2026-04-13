@@ -44,12 +44,12 @@ const RL33 = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load validasi data secara realtime saat bulan/tahun/rumahSakit berubah
+  // Load validasi data secara realtime saat rumahSakit atau activeTab berubah
   useEffect(() => {
-    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
+    if (activeTab === "tab2" && rumahSakit && rumahSakit.id) {
       getValidasi();
     }
-  }, [bulan, tahun, rumahSakit, activeTab]);
+  }, [rumahSakit, activeTab]);
 
   const refreshToken = async () => {
     try {

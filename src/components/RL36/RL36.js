@@ -50,7 +50,7 @@ const RL36 = () => {
     getBulan();
     const getLastYear = async () => {
       const date = new Date();
-      setTahun("2025");
+      setTahun("2026");
       return date.getFullYear();
     };
     getLastYear().then((results) => {});
