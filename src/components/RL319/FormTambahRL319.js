@@ -23,25 +23,35 @@ const FormTambahRL319 = () => {
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
 
+  // const startYear = 2025;
+
+  // const today = new Date();
+  // const currentYear = today.getFullYear();
+
+  // // batas: 31 Maret
+  // const batasTanggal = new Date(currentYear, 2, 31); // bulan 0-based → 2 = Maret
+
+  // // kalau hari ini lewat 31 Maret → hanya boleh current year
+  // const maxYear = today > batasTanggal ? currentYear : currentYear;
+
+  // const minYear = today > batasTanggal ? currentYear : currentYear - 1;
+
+  // // generate list tahun
+  // const years = [];
+  // for (let y = startYear; y <= maxYear; y++) {
+  //   if (y >= minYear) {
+  //     years.push(y);
+  //   }
+  // }
+
   const startYear = 2025;
 
   const today = new Date();
   const currentYear = today.getFullYear();
-
-  // batas: 31 Maret
-  const batasTanggal = new Date(currentYear, 2, 31); // bulan 0-based → 2 = Maret
-
-  // kalau hari ini lewat 31 Maret → hanya boleh current year
-  const maxYear = today > batasTanggal ? currentYear : currentYear;
-
-  const minYear = today > batasTanggal ? currentYear : currentYear - 1;
-
-  // generate list tahun
+  
   const years = [];
-  for (let y = startYear; y <= maxYear; y++) {
-    if (y >= minYear) {
-      years.push(y);
-    }
+  for (let y = startYear; y <= currentYear; y++) {
+    years.push(y);
   }
 
   useEffect(() => {
