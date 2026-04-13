@@ -50,6 +50,7 @@ export const RL318 = () => {
   const [loadingRS, setLoadingRS] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -124,8 +125,16 @@ export const RL318 = () => {
   };
 
   const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
   };
 
   const getRumahSakit = async (kabKotaId) => {
@@ -391,7 +400,16 @@ export const RL318 = () => {
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
+
+        // 🔥 INI KUNCI UTAMA
+        if (user.jenisUserId === 3) {
+          setStatusValidasi(1);
+        } else if (user.jenisUserId === 4) {
+          setStatusValidasi(2);
+        } else {
+          setStatusValidasi("");
+        }
+
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
@@ -448,7 +466,10 @@ export const RL318 = () => {
         await axiosJWT.patch(
           "/apisirs6v2/rltigatitikdelapanbelasvalidasi/" + idValidasi,
           {
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -459,7 +480,10 @@ export const RL318 = () => {
           {
             rsId: rumahSakit.id,
             periode: `${tahun}-12-01`,
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -578,6 +602,7 @@ export const RL318 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
+                    value={selectedRsID || ""}
                     onChange={(e) => rumahSakitChangeHandler(e)}
                   >
                     <option key={0} value={0}>
@@ -633,6 +658,7 @@ export const RL318 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
+                    value={selectedRsID || ""}
                     onChange={(e) => rumahSakitChangeHandler(e)}
                   >
                     <option key={0} value={0}>
@@ -663,6 +689,7 @@ export const RL318 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
+                    value={selectedRsID || ""}
                     onChange={(e) => rumahSakitChangeHandler(e)}
                   >
                     <option key={0} value={0}>
