@@ -109,7 +109,7 @@ const RL34 = () => {
       value: "1",
     });
     results.push({
-      key: "Febuari",
+      key: "Februari",
       value: "2",
     });
     results.push({
@@ -235,10 +235,24 @@ const RL34 = () => {
       });
       return;
     }
-    const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
+    setFilterLabel([]);
+      const filter = [];
+      filter.push("nama: ".concat(rumahSakit.nama));
+
+      // Ambil nama bulan dari daftarBulan
+      const bulanObj = daftarBulan.find(
+        (item) => item.value === String(parseInt(bulan))
+      );
+
+      const namaBulan = bulanObj ? bulanObj.key : bulan;
+
+      // Tampilkan nama bulan
+      filter.push(
+        "periode: ".concat(namaBulan + " " + tahun)
+      );
+
     setFilterLabel(filter);
+    
     try {
       const customConfig = {
         headers: {
@@ -896,90 +910,78 @@ const RL34 = () => {
                 <th>Jumlah</th>
               </tr>
             </thead>
-            <tbody>
-              {dataRL.map((value, index) => {
-                // setTotal(total + value.jumlah);
-                return (
-                  <tr key={value.id}>
-                    <td>
-                      <input
-                        type="text"
-                        name="id"
-                        className="form-control"
-                        value={index + 1}
-                        disabled={true}
-                      />
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      <ToastContainer />
-                      <div style={{ display: "flex" }}>
-                        {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
-                        <button
-                          className="btn btn-danger"
-                          style={{
-                            margin: "0 5px 0 0",
-                            backgroundColor: "#FF6663",
-                            border: "1px solid #FF6663",
-                          }}
-                          type="button"
-                          onClick={(e) => hapus(value.id)}
-                        >
-                          Hapus
-                        </button>
-                        <Link
-                          to={`/rl34/ubah/${value.id}`}
-                          className="btn btn-warning"
-                          style={{
-                            margin: "0 5px 0 0",
-                            backgroundColor: "#CFD35E",
-                            border: "1px solid #CFD35E",
-                            color: "#FFFFFF",
-                          }}
-                        >
-                          Ubah
-                        </Link>
-                      </div>
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        name="jenisPengunjung"
-                        className="form-control"
-                        value={value.jenis_pengunjung_rl_tiga_titik_tempat.nama}
-                        disabled={true}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        name="jumlah"
-                        className="form-control"
-                        value={value.jumlah}
-                        onChange={(e) => changeHandler(e, index)}
-                        disabled={true}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-              {total != 0 ? (
-                <tr>
-                  <td
-                    colSpan={3}
-                    style={{ textAlign: "center", verticalAlign: "middle" }}
-                  >
-                    TOTAL :{" "}
-                  </td>
-                  <td style={{ textAlign: "center", verticalAlign: "middle" }}>
-                    {total}
-                  </td>
-                </tr>
-              ) : (
-                <></>
-              )}
-            </tbody>
+                            <tbody>
+                              {dataRL.map((value, index) => {
+                                // setTotal(total + value.jumlah);
+                                return (
+                                  <tr key={value.id}>
+                                    <td>
+                                     
+                                        {index + 1}
+                                    
+                                    </td>
+                                    {user.jenisUserId === 4 ?
+                                    <td
+                                      style={{ textAlign: "center", verticalAlign: "middle" }}
+                                    >
+                                      <ToastContainer />
+                                      <div style={{ display: "flex" }}>
+                                        {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
+                                        <button
+                                          className="btn btn-danger"
+                                          style={{
+                                            margin: "0 5px 0 0",
+                                            backgroundColor: "#FF6663",
+                                            border: "1px solid #FF6663",
+                                          }}
+                                          type="button"
+                                          onClick={(e) => hapus(value.id)}
+                                        >
+                                          Hapus
+                                        </button>
+                                        {value.jenis_pengunjung_rl_tiga_titik_tempat.nama !== "Tidak Ada Data" && (
+                                          <Link
+                                            to={`/rl34/ubah/${value.id}`}
+                                            className="btn btn-warning"
+                                            style={{
+                                              margin: "0 5px 0 0",
+                                              backgroundColor: "#CFD35E",
+                                              border: "1px solid #CFD35E",
+                                              color: "#FFFFFF",
+                                            }}
+                                          >
+                                            Ubah
+                                          </Link>
+                                        )}
+                                      </div>
+                                    </td>
+                                     : <></>
+                                          }
+                                    <td>
+                                        {value.jenis_pengunjung_rl_tiga_titik_tempat.nama}
+                                    </td>
+                                    <td style={{ textAlign: "center", verticalAlign: "middle" }}>
+                                     {value.jumlah}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              {total != 0 ? (
+                                <tr>
+                                  <td
+                                  colSpan={user.jenisUserId === 4 ? 3 : 2}
+                                    style={{ textAlign: "center", verticalAlign: "middle" }}
+                                  >
+                                    TOTAL :{" "}
+                                  </td>
+                                  <td style={{ textAlign: "center", verticalAlign: "middle" }}>
+                                    {total}
+                                  </td>
+                                </tr>
+                              ) : (
+                                <></>
+                              )}
+                            </tbody>
           </Table>
               </div>
 

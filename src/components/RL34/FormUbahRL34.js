@@ -279,7 +279,7 @@ export const FormUbahRL34 = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-6">
+          {/* <div className="col-md-6">
             <div className="card">
               <div className="card-body">
                 <h5 className="card-title h5">Periode Laporan</h5>
@@ -317,19 +317,19 @@ export const FormUbahRL34 = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
         <div className="row mt-3 mb-3">
           <div className="col-md-12">
             {/* <h3>Ubah data RL 3.4 -  Pengunjung</h3> */}
             <Link
               to={`/rl34/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+              className={style.btnPrimary}
+                            style={{
+                                                          textDecoration: "none",
+                                                          display: "inline-block",
+                                                          color: "#FFF",
+                                                        }}
             >
               {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/>
                             <span style={{color: "gray"}}>Ubah data RL 3.4 -  Pengunjung</span> */}
@@ -406,13 +406,9 @@ export const FormUbahRL34 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button
-            type="submit"
-            disabled={buttonStatus}
-            className="btn btn-outline-success"
-          >
-            <HiSaveAs /> Update
-          </button>
+                              <button type="submit" className={style.btnPrimary}>
+                                <HiSaveAs /> Simpan
+                              </button>
         </div>
       </form>
     </div>

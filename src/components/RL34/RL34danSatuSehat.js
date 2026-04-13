@@ -382,13 +382,23 @@ function TabOne() {
       return;
     }
 
-    const filter = [];
+  setFilterLabel([]);
+
+  const filter = [];
     filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push(
-      "periode: ".concat(
-        String(tahun).concat("-").concat(String(bulan).padStart(2, "0"))
-      )
+
+    // Ambil nama bulan dari daftarBulan
+    const bulanObj = daftarBulan.find(
+      (item) => item.value === String(parseInt(bulan))
     );
+
+    const namaBulan = bulanObj ? bulanObj.key : bulan;
+
+    // Tampilkan nama bulan
+    filter.push(
+      "periode: ".concat(namaBulan + " " + tahun)
+    );
+
     setFilterLabel(filter);
 
     setValidasiId(null);
@@ -603,34 +613,37 @@ function TabOne() {
 
   const handleClose = () => setShow(false);
 
-  const handleShow = () => {
-    const jenisUserId = user.jenisUserId;
-    const satKerId = user.satKerId;
-    switch (jenisUserId) {
-      case 1:
-        getProvinsi();
-        setBulan("01");
-        setShow(true);
-        break;
-      case 2:
-        getKabKota(satKerId);
-        setBulan("01");
-        setShow(true);
-        break;
-      case 3:
-        getRumahSakit(satKerId);
-        setBulan("01");
-        setShow(true);
-        break;
-      case 4:
-        showRumahSakit(satKerId);
-        setBulan("01");
-        setShow(true);
-        break;
-      default:
-    }
-  };
+const handleShow = () => {
+  // RESET FILTER LABEL
+  setFilterLabel([]);
 
+  const jenisUserId = user.jenisUserId;
+  const satKerId = user.satKerId;
+
+  switch (jenisUserId) {
+    case 1:
+      getProvinsi();
+      setBulan("01");
+      setShow(true);
+      break;
+    case 2:
+      getKabKota(satKerId);
+      setBulan("01");
+      setShow(true);
+      break;
+    case 3:
+      getRumahSakit(satKerId);
+      setBulan("01");
+      setShow(true);
+      break;
+    case 4:
+      showRumahSakit(satKerId);
+      setBulan("01");
+      setShow(true);
+      break;
+    default:
+  }
+};
   const getProvinsi = async () => {
     try {
       const customConfig = {
@@ -1006,80 +1019,90 @@ function TabOne() {
                       <thead>
                         <tr>
                           <th style={{ width: "5%" }}>No.</th>
-                          <th style={{ width: "5%" }}>Aksi</th>
+                          {user.jenisUserId === 4 ?
+                            <th
+                              rowSpan={2}
+                              style={{ width: "8%", verticalAlign: "middle" }}>
+                                Aksi
+                              </th>
+                              : <></>
+                          }
                           <th style={{ width: "40%" }}>Jenis Pengunjung</th>
-                          <th>Jumlah</th>
+                          <th style={{ textAlign: "center", verticalAlign: "middle" }}>Jumlah</th>
                         </tr>
                       </thead>
-            <tbody>
-              {dataRL.map((value, index) => {
-                // setTotal(total + value.jumlah);
-                return (
-                  <tr key={value.id}>
-                    <td>
-                     
-                        {index + 1}
-                    
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      <ToastContainer />
-                      <div style={{ display: "flex" }}>
-                        {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
-                        <button
-                          className="btn btn-danger"
-                          style={{
-                            margin: "0 5px 0 0",
-                            backgroundColor: "#FF6663",
-                            border: "1px solid #FF6663",
-                          }}
-                          type="button"
-                          onClick={(e) => hapus(value.id)}
-                        >
-                          Hapus
-                        </button>
-                        <Link
-                          to={`/rl34/ubah/${value.id}`}
-                          className="btn btn-warning"
-                          style={{
-                            margin: "0 5px 0 0",
-                            backgroundColor: "#CFD35E",
-                            border: "1px solid #CFD35E",
-                            color: "#FFFFFF",
-                          }}
-                        >
-                          Ubah
-                        </Link>
-                      </div>
-                    </td>
-                    <td>
-                      
-                        {value.jenis_pengunjung_rl_tiga_titik_tempat.nama}
-                        
-                    </td>
-                    <td>
-                     {value.jumlah}
-                    </td>
-                  </tr>
-                );
-              })}
-              {total != 0 ? (
-                <tr>
-                  <td
-                    colSpan={3}
-                    style={{ textAlign: "center", verticalAlign: "middle" }}
-                  >
-                    TOTAL :{" "}
-                  </td>
-                  <td style={{ textAlign: "center", verticalAlign: "middle" }}>
-                    {total}
-                  </td>
-                </tr>
-              ) : (
-                <></>
-              )}
-            </tbody>
+                      <tbody>
+                        {dataRL.map((value, index) => {
+                          // setTotal(total + value.jumlah);
+                          return (
+                            <tr key={value.id}>
+                              <td>
+                              
+                                  {index + 1}
+                              
+                              </td>
+                              {user.jenisUserId === 4 ?
+                              <td
+                                style={{ textAlign: "center", verticalAlign: "middle" }}
+                              >
+                                <ToastContainer />
+                                <div style={{ display: "flex" }}>
+                                  {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
+                                  <button
+                                    className="btn btn-danger"
+                                    style={{
+                                      margin: "0 5px 0 0",
+                                      backgroundColor: "#FF6663",
+                                      border: "1px solid #FF6663",
+                                    }}
+                                    type="button"
+                                    onClick={(e) => hapus(value.id)}
+                                  >
+                                    Hapus
+                                  </button>
+                                  {value.jenis_pengunjung_rl_tiga_titik_tempat.nama !== "Tidak Ada Data" && (
+                                    <Link
+                                      to={`/rl34/ubah/${value.id}`}
+                                      className="btn btn-warning"
+                                      style={{
+                                        margin: "0 5px 0 0",
+                                        backgroundColor: "#CFD35E",
+                                        border: "1px solid #CFD35E",
+                                        color: "#FFFFFF",
+                                      }}
+                                    >
+                                      Ubah
+                                    </Link>
+                                  )}
+                                </div>
+                              </td>
+                              : <></>
+                                    }
+                              <td>
+                                  {value.jenis_pengunjung_rl_tiga_titik_tempat.nama}
+                              </td>
+                              <td style={{ textAlign: "center", verticalAlign: "middle" }}>
+                              {value.jumlah}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {total != 0 ? (
+                          <tr>
+                            <td
+                            colSpan={user.jenisUserId === 4 ? 3 : 2}
+                              style={{ textAlign: "center", verticalAlign: "middle" }}
+                            >
+                              TOTAL :{" "}
+                            </td>
+                            <td style={{ textAlign: "center", verticalAlign: "middle" }}>
+                              {total}
+                            </td>
+                          </tr>
+                        ) : (
+                          <></>
+                        )}
+                      </tbody>
           </Table>
                   </div>
                 </div>
@@ -1275,8 +1298,22 @@ function TabTwo() {
     if (e) e.preventDefault();
     setSpinner(true);
     // Set filter label for display
-    const filter = [];
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
+    setFilterLabel([]);
+      const filter = [];
+      filter.push("nama: ".concat(rumahSakit.nama));
+
+      // Ambil nama bulan dari daftarBulan
+      const bulanObj = daftarBulan.find(
+        (item) => item.value === String(parseInt(bulan))
+      );
+
+      const namaBulan = bulanObj ? bulanObj.key : bulan;
+
+      // Tampilkan nama bulan
+      filter.push(
+        "periode: ".concat(namaBulan + " " + tahun)
+      );
+
     setFilterLabel(filter);
     try {
       // Ganti ke API Satusehat utama
@@ -1547,34 +1584,37 @@ function TabTwo() {
 
   const handleClose = () => setShow(false);
 
-  const handleShow = () => {
-    const jenisUserId = user.jenisUserId;
-    const satKerId = user.satKerId;
-    switch (jenisUserId) {
-      case 1:
-        getProvinsi();
-        setBulan("01");
-        setShow(true);
-        break;
-      case 2:
-        getKabKota(satKerId);
-        setBulan("01");
-        setShow(true);
-        break;
-      case 3:
-        getRumahSakit(satKerId);
-        setBulan("01");
-        setShow(true);
-        break;
-      case 4:
-        showRumahSakit(satKerId);
-        setBulan("01");
-        setShow(true);
-        break;
-      default:
-    }
-  };
+const handleShow = () => {
+  // RESET FILTER LABEL
+  setFilterLabel([]);
 
+  const jenisUserId = user.jenisUserId;
+  const satKerId = user.satKerId;
+
+  switch (jenisUserId) {
+    case 1:
+      getProvinsi();
+      setBulan("01");
+      setShow(true);
+      break;
+    case 2:
+      getKabKota(satKerId);
+      setBulan("01");
+      setShow(true);
+      break;
+    case 3:
+      getRumahSakit(satKerId);
+      setBulan("01");
+      setShow(true);
+      break;
+    case 4:
+      showRumahSakit(satKerId);
+      setBulan("01");
+      setShow(true);
+      break;
+    default:
+  }
+};
   const getProvinsi = async () => {
     try {
       const customConfig = {

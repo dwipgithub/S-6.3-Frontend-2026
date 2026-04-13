@@ -11,7 +11,7 @@ import Spinner from "react-bootstrap/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const FormTambahRL34 = () => {
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState("2026");
   const [bulan, setBulan] = useState("01");
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
@@ -348,13 +348,13 @@ const FormTambahRL34 = () => {
           <div className="col-md-12">
             <Link
               to={`/rl34/`}
-              className="btn btn-info"
+              className={style.btnPrimary}
               style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
+                                            textDecoration: "none",
+                                            display: "inline-block",
+                                            color: "#FFF",
+                                          }}
+            > 
               {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/><span style={{color: "gray"}}></span>
                             <span style={{color:"gray"}}>Tambah data RL 5.1 -  Pengunjung</span> */}
               &lt;
@@ -439,9 +439,11 @@ const FormTambahRL34 = () => {
                           onInput={(e) => maxLengthCheck(e)}
                           name="jumlah"
                           className="form-control"
-                          value={value.jumlah}
+                          // Logika 1: Jika "Tidak Ada Data", paksa value jadi 0
+                          value={value.jenisPengunjung === "Tidak Ada Data" ? 0 : value.jumlah}
                           onChange={(e) => changeHandler(e, index)}
-                          disabled={value.disabledInput}
+                          // Logika 2: Jika "Tidak Ada Data", input otomatis disabled
+                          disabled={value.jenisPengunjung === "Tidak Ada Data" ? true : value.disabledInput}
                           onPaste={preventPasteNegative}
                           onKeyPress={preventMinus}
                         />
@@ -455,13 +457,9 @@ const FormTambahRL34 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button
-            type="submit"
-            disabled={buttonStatus}
-            className="btn btn-outline-success"
-          >
-            <HiSaveAs /> Simpan
-          </button>
+                    <button type="submit" className={style.btnPrimary}>
+                      <HiSaveAs /> Simpan
+                    </button>
         </div>
       </form>
     </div>
