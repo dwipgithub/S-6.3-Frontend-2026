@@ -997,7 +997,9 @@ const RL310 = () => {
                         >
                           Jenis Spesialisasi
                         </th>
-                        <th colSpan={8}>Rujukan Masuk</th>
+                        <th colSpan={8} style={{ textAlign: "center" }}>
+                          Rujukan Masuk
+                        </th>
                         <th
                           colSpan={4}
                           rowSpan={2}

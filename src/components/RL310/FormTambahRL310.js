@@ -534,13 +534,13 @@ const FormTambahRL310 = () => {
         <div className="row mt-3">
           <div className="col-md-12">
             <div className={style.headerAction}>
-              <Link to="/rl318">
+              <Link to="/rl310">
                 <button type="button" className={style.btnPrimary}>
                   ←
                 </button>
               </Link>
 
-              <h4 className={style.pageHeader}>RL 3.18 Farmasi Resep</h4>
+              <h4 className={style.pageHeader}>RL 3.10 Rujukan</h4>
             </div>
 
             <div className={`${style["table-container"]} mt-2 mb-1 pb-2`}>
