@@ -188,7 +188,7 @@ function TabOne() {
 
     totalPengunjung();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataRL]);
+  }, []);
 
   // Load validasi data secara realtime saat tab validasi dibuka atau filter berubah
   useEffect(() => {
@@ -777,12 +777,12 @@ const handleShow = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                          name="rumahSakit"
+                          id="rumahSakit"
+                          className="form-select"
+                          value={rumahSakit?.id || 0}
+                          onChange={(e) => rumahSakitChangeHandler(e)}
+                        >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -832,12 +832,12 @@ const handleShow = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                        name="rumahSakit"
+                        id="rumahSakit"
+                        className="form-select"
+                        value={rumahSakit?.id || 0}
+                        onChange={(e) => rumahSakitChangeHandler(e)}
+                      >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -862,12 +862,12 @@ const handleShow = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                        name="rumahSakit"
+                        id="rumahSakit"
+                        className="form-select"
+                        value={rumahSakit?.id || 0}
+                        onChange={(e) => rumahSakitChangeHandler(e)}
+                      >
                     <option key={0} value={0}>
                       Pilih
                     </option>
