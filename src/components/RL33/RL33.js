@@ -719,56 +719,80 @@ const simpanValidasi = async (e) => {
       total.false_emergency += parseInt(value.false_emergency);
     });
 
-  function handleDownloadExcel() {
-    const header = [
-      "No",
-      "No Pelayanan",
-      "Jenis Pelayanan",
-      "Total Pasien Rujukan",
-      "Total Pasien Non Rujukan",
-      "Tindak Lanjut Pelayanan Dirawat",
-      "Tindak Lanjut Pelayanan Dirujuk",
-      "Tindak Lanjut Pelayanan Pulang",
-      "Mati di IGD (L)",
-      "Mati di IGD (P)",
-      "DOA (L)",
-      "DOA (P)",
-      "Luka-luka (L)",
-      "Luka-luka (P)",
-      "False Emergency",
-    ];
+function handleDownloadExcel() {
 
-    const body = dataRL.map((value, index) => {
-      const data = [
-        index + 1,
-        value.jenis_pelayanan_rl_tiga_titik_tiga.no,
-        value.jenis_pelayanan_rl_tiga_titik_tiga.nama,
-        value.total_pasien_rujukan,
-        value.total_pasien_non_rujukan,
-        value.tlp_dirawat,
-        value.tlp_dirujuk,
-        value.tlp_pulang,
-        value.m_igd_laki,
-        value.m_igd_perempuan,
-        value.doa_laki,
-        value.doa_perempuan,
-        value.luka_laki,
-        value.luka_perempuan,
-        value.false_emergency,
-      ];
+  const header = [
+    "No",
+    "No Pelayanan",
+    "Jenis Pelayanan",
+    "Total Pasien Rujukan",
+    "Total Pasien Non Rujukan",
+    "Tindak Lanjut Dirawat",
+    "Tindak Lanjut Dirujuk",
+    "Tindak Lanjut Pulang",
+    "Mati di IGD (L)",
+    "Mati di IGD (P)",
+    "DOA (L)",
+    "DOA (P)",
+    "Luka-luka (L)",
+    "Luka-luka (P)",
+    "False Emergency",
+  ];
 
-      return data;
-    });
+  // DATA DETAIL
+  const body = dataRL
+    .filter(
+      (value) =>
+        value.total_pasien_rujukan > 0 ||
+        value.total_pasien_non_rujukan > 0
+    )
+    .map((value, index) => [
+      index + 1,
+      value.jenis_pelayanan_rl_tiga_titik_tiga.no,
+      value.jenis_pelayanan_rl_tiga_titik_tiga.nama,
+      value.total_pasien_rujukan,
+      value.total_pasien_non_rujukan,
+      value.tlp_dirawat,
+      value.tlp_dirujuk,
+      value.tlp_pulang,
+      value.m_igd_laki,
+      value.m_igd_perempuan,
+      value.doa_laki,
+      value.doa_perempuan,
+      value.luka_laki,
+      value.luka_perempuan,
+      value.false_emergency,
+    ]);
 
-    downloadExcel({
-      fileName: "RL_3_3",
-      sheet: "react-export-table-to-excel",
-      tablePayload: {
-        header,
-        body: body,
-      },
-    });
-  }
+  // TAMBAHKAN ROW TOTAL
+  body.push([
+    "", 
+    "", 
+    "TOTAL",
+    total.total_pasien_rujukan,
+    total.total_pasien_non_rujukan,
+    total.tlp_dirawat,
+    total.tlp_dirujuk,
+    total.tlp_pulang,
+    total.m_igd_laki,
+    total.m_igd_perempuan,
+    total.doa_laki,
+    total.doa_perempuan,
+    total.luka_laki,
+    total.luka_perempuan,
+    total.false_emergency,
+  ]);
+
+  downloadExcel({
+    fileName: "RL_3_3",
+    sheet: "RL 3.3",
+    tablePayload: {
+      header,
+      body,
+    },
+  });
+
+}
 
   return (
     <div
