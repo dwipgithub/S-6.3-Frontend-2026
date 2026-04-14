@@ -475,26 +475,33 @@ const RL312 = () => {
         (value.sedang || 0) +
         (value.kecil || 0);
 
-      ```
-return [
-  index + 1,
-  value.jenis_pelayanan_rl_tiga_titik_dua_belas?.no,
-  value.jenis_pelayanan_rl_tiga_titik_dua_belas?.nama,
-  value.khusus,
-  value.besar,
-  value.sedang,
-  value.kecil,
-  total,
-];
-```;
+      return [
+        index + 1,
+        value.jenis_pelayanan_rl_tiga_titik_dua_belas?.no,
+        value.jenis_pelayanan_rl_tiga_titik_dua_belas?.nama,
+        value.khusus,
+        value.besar,
+        value.sedang,
+        value.kecil,
+        total,
+      ];
     });
 
+    // downloadExcel({
+    //   fileName: "RL_3_12",
+    //   sheet: "RL312",
+    //   tablePayload: {
+    //     header,
+    //     body: body,
+    //   },
+    // });
+
     downloadExcel({
-      fileName: "RL_3_12",
+      fileName: namafile || "RL_3_12",
       sheet: "RL312",
       tablePayload: {
         header,
-        body: body,
+        body,
       },
     });
   }
@@ -970,7 +977,10 @@ return [
                           No
                         </th>
                         {user.jenisUserId === 4 && (
-                          <th style={{ width: "13%", textAlign: "center" }}>
+                          <th
+                            className={style["sticky-header-view"]}
+                            style={{ verticalAlign: "middle" }}
+                          >
                             Aksi
                           </th>
                         )}
@@ -1014,6 +1024,7 @@ return [
                     </thead>
                     <tbody>
                       {dataRL.map((value, index) => {
+                        console.log(value);
                         return (
                           <tr key={value.id}>
                             <td className={style["sticky-column-view"]}>
@@ -1021,48 +1032,7 @@ return [
                             </td>
 
                             {user.jenisUserId === 4 && (
-                              // <td className={style["sticky-column"]}>
-                              //   {value.no_golongan_obat != 4 &&
-                              //   value.no_golongan_obat != 2 ? (
-                              //     <div
-                              //       style={{
-                              //         display: "flex",
-                              //         justifyContent: "center",
-                              //       }}
-                              //     >
-                              //       <button
-                              //         className="btn btn-danger"
-                              //         style={{
-                              //           margin: "0 5px 0 0",
-                              //           backgroundColor: "#FF6663",
-                              //           border: "1px solid #FF6663",
-                              //         }}
-                              //         type="button"
-                              //         onClick={() =>
-                              //           deleteConfirmation(value.id)
-                              //         }
-                              //       >
-                              //         Hapus
-                              //       </button>
-
-                              //       <Link
-                              //         to={`/rl312/edit/${value.id}`}
-                              //         className="btn btn-warning"
-                              //         style={{
-                              //           margin: "0 5px 0 0",
-                              //           backgroundColor: "#CFD35E",
-                              //           border: "1px solid #CFD35E",
-                              //           color: "#FFFFFF",
-                              //         }}
-                              //       >
-                              //         Ubah
-                              //       </Link>
-                              //     </div>
-                              //   ) : (
-                              //     ""
-                              //   )}
-                              // </td>
-                              <td className={style["sticky-column"]}>
+                              <td className={style["sticky-column-view"]}>
                                 <div
                                   style={{
                                     display: "flex",
@@ -1083,21 +1053,22 @@ return [
                                     Hapus
                                   </button>
 
-                                  {/* Tombol Ubah hanya muncul kalau BUKAN id 88 */}
-                                  {value.id !== 88 && (
-                                    <Link
-                                      to={`/rl312/edit/${value.id}`}
-                                      className="btn btn-warning"
-                                      style={{
-                                        margin: "0 5px 0 0",
-                                        backgroundColor: "#CFD35E",
-                                        border: "1px solid #CFD35E",
-                                        color: "#FFFFFF",
-                                      }}
-                                    >
-                                      Ubah
-                                    </Link>
-                                  )}
+                                  {value.id !== 88 &&
+                                    value.nama_spesialisasi !==
+                                      "Tidak Ada Data" && (
+                                      <Link
+                                        to={`/rl312/edit/${value.id}`}
+                                        className="btn btn-warning"
+                                        style={{
+                                          margin: "0 5px 0 0",
+                                          backgroundColor: "#CFD35E",
+                                          border: "1px solid #CFD35E",
+                                          color: "#FFFFFF",
+                                        }}
+                                      >
+                                        Ubah
+                                      </Link>
+                                    )}
                                 </div>
                               </td>
                             )}
