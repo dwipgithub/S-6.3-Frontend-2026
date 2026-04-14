@@ -142,28 +142,27 @@ const FormTambahRL317 = () => {
     let newDataRL = [...dataRL];
     const name = event.target.name;
     if (name === "check") {
-      if (event.target.checked === true) {
-        newDataRL[index].disabledInput = false;
-      } else if (event.target.checked === false) {
+      const isChecked = event.target.checked;
+
+      newDataRL[index].checked = isChecked;
+
+      if (newDataRL[index].id === 99) {
+        // Tidak Ada Data → selalu disable
         newDataRL[index].disabledInput = true;
+      } else {
+        // selain itu → aktif kalau dicentang
+        newDataRL[index].disabledInput = !isChecked;
       }
-      newDataRL[index].checked = event.target.checked;
     } else if (name === "no") {
       newDataRL[index].no = event.target.value;
     } else if (name === "golonganObat") {
       newDataRL[index].golonganObat = event.target.value;
     } else if (name === "jumlahItemObat") {
-      if (event.target.value === "") {
-        event.target.value = 0;
-        event.target.select(event.target.value);
-      }
-      newDataRL[index].jumlahItemObat = event.target.value;
+      newDataRL[index].jumlahItemObat =
+        event.target.value === "" ? "" : Number(event.target.value);
     } else if (name === "jumlahItemObatRs") {
-      if (event.target.value === "") {
-        event.target.value = 0;
-        event.target.select(event.target.value);
-      }
-      newDataRL[index].jumlahItemObatRs = event.target.value;
+      newDataRL[index].jumlahItemObatRs =
+        event.target.value === "" ? "" : Number(event.target.value);
     }
     setDataRL(newDataRL);
   };
@@ -399,7 +398,7 @@ const FormTambahRL317 = () => {
                     <th style={{ width: "5%" }}>No</th>
                     <th style={{ width: "8%" }}>Pilih</th>
                     <th>Golongan Obat</th>
-                    <th style={{ width: "15%" }}>Jumlah Item Obat</th>
+                    <th style={{ width: "20%" }}>Jumlah Item Obat</th>
                     <th style={{ width: "20%" }}>
                       Jumlah Item Obat Yang Tersedia
                     </th>
@@ -425,65 +424,37 @@ const FormTambahRL317 = () => {
                       {/* NAMA */}
                       <td className={style.left}>{value.golonganObat}</td>
 
-                      {/* JUMLAH ITEM OBAT */}
-                      <td className={style.inputCell}>
-                        <input
-                          type="number"
-                          name="jumlahItemObat"
-                          min={0}
-                          onInput={maxLengthCheck}
-                          onPaste={preventPasteNegative}
-                          onKeyPress={preventMinus}
-                          value={value.jumlahItemObat}
-                          onChange={(e) => changeHandler(e, index)}
-                          disabled={value.no === "0" || value.disabledInput}
-                          className={style.inputExcel}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            textAlign: "center",
-                            backgroundColor:
-                              value.id === 88 || value.disabledInput
-                                ? "#e0e0e0"
-                                : "#ffffff",
-                            border: "none",
-                            outline: "none",
-                            boxShadow: "none",
-                            margin: 0,
-                            padding: "8px 4px",
-                          }}
-                        />
-                      </td>
-
-                      {/* JUMLAH ITEM RS */}
-                      <td className={style.inputCell}>
-                        <input
-                          type="number"
-                          name="jumlahItemObatRs"
-                          min={0}
-                          onInput={maxLengthCheck}
-                          onPaste={preventPasteNegative}
-                          onKeyPress={preventMinus}
-                          value={value.jumlahItemObatRs}
-                          onChange={(e) => changeHandler(e, index)}
-                          disabled={value.no === "0" || value.disabledInput}
-                          className={style.inputExcel}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            textAlign: "center",
-                            backgroundColor:
-                              value.id === 88 || value.disabledInput
-                                ? "#e0e0e0"
-                                : "#ffffff",
-                            border: "none",
-                            outline: "none",
-                            boxShadow: "none",
-                            margin: 0,
-                            padding: "8px 4px",
-                          }}
-                        />
-                      </td>
+                      {["jumlahItemObat", "jumlahItemObatRs"].map((field) => (
+                        <td key={field} className={style.inputCell}>
+                          <input
+                            type="number"
+                            name={field}
+                            min={0}
+                            maxLength={15}
+                            onInput={(e) => maxLengthCheck(e)}
+                            onPaste={preventPasteNegative}
+                            onKeyPress={preventMinus}
+                            value={value[field] ?? ""}
+                            onChange={(e) => changeHandler(e, index)}
+                            disabled={value.id === 99 || value.disabledInput}
+                            className={style.inputExcel}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              textAlign: "center",
+                              backgroundColor:
+                                value.id === 99 || value.disabledInput
+                                  ? "#e0e0e0"
+                                  : "#ffffff",
+                              border: "none",
+                              outline: "none",
+                              boxShadow: "none",
+                              margin: 0,
+                              padding: "8px 4px",
+                            }}
+                          />
+                        </td>
+                      ))}
                     </tr>
                   ))}
 

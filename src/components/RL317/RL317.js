@@ -880,12 +880,22 @@ export const RL317 = () => {
                               {index + 1}
                             </td>
                             {user.jenisUserId === 4 && (
-                              <td className={style["sticky-column"]}>
+                              <td
+                                className={style["sticky-column"]}
+                                style={{ textAlign: "center" }}
+                              >
                                 {value.no_golongan_obat !== 4 &&
                                 value.no_golongan_obat !== 2 ? (
-                                  <div style={{ display: "flex" }}>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "center",
+                                      alignItems: "center",
+                                    }}
+                                  >
                                     {user.jenisUserId === 4 ? (
                                       <>
+                                        {/* Tombol Hapus (selalu ada) */}
                                         <button
                                           className="btn btn-danger"
                                           style={{
@@ -900,18 +910,23 @@ export const RL317 = () => {
                                         >
                                           Hapus
                                         </button>
-                                        <Link
-                                          to={`/rl317/ubah/${value.id}`}
-                                          className="btn btn-warning"
-                                          style={{
-                                            margin: "0 5px 0 0",
-                                            backgroundColor: "#CFD35E",
-                                            border: "1px solid #CFD35E",
-                                            color: "#FFFFFF",
-                                          }}
-                                        >
-                                          Ubah
-                                        </Link>
+
+                                        {/* Tombol Ubah hanya jika bukan 0 */}
+                                        {Number(value.no_golongan_obat) !==
+                                          0 && (
+                                          <Link
+                                            to={`/rl317/ubah/${value.id}`}
+                                            className="btn btn-warning"
+                                            style={{
+                                              margin: "0 5px 0 0",
+                                              backgroundColor: "#CFD35E",
+                                              border: "1px solid #CFD35E",
+                                              color: "#FFFFFF",
+                                            }}
+                                          >
+                                            Ubah
+                                          </Link>
+                                        )}
                                       </>
                                     ) : (
                                       <></>
