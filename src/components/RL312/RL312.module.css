@@ -101,6 +101,7 @@
   padding: 6px 8px;
   border: 1px solid #d4d4d4;
   box-sizing: border-box;
+  background-color: #f8f9fa;
 }
 
 .table thead th {
@@ -221,7 +222,7 @@
 .table tbody td.sticky-column:nth-child(2) {
   position: -webkit-sticky; /* For Safari */
   position: sticky;
-  left: 50px;
+  left: 40px;
   z-index: 2;
 }
 
@@ -243,7 +244,7 @@
   position: -webkit-sticky; /* For Safari */
   position: sticky;
   left: 0;
-  z-index: 1; /* Ensures sticky column is above other content */
+  /* z-index: 1; */
 }
 
 /* ========== Form Validasi (tab Validasi) ========== */
