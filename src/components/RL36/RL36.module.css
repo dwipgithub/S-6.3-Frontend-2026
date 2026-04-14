@@ -93,6 +93,7 @@
     border-collapse: collapse;
     table-layout: fixed;
     font-size: 15px;
+    font-family: 'Times New Roman', Times, serif; /* Set font family */
     /* Ensures column widths are consistent */
 }
 
@@ -121,7 +122,7 @@
     position: -webkit-sticky;
     /* For Safari */
     position: sticky;
-    top: 10px;
+    top: 45px;
     /* Adjust this to the height of the main header row */
     z-index: 1;
     /* Ensures the subheader is below the main header */
@@ -132,7 +133,7 @@
     position: -webkit-sticky;
     /* For Safari */
     position: sticky;
-    top: 10px;
+    top: 39px;
     /* Adjust this to the height of the main header row */
     z-index: 1;
     /* Ensures the subheader is below the main header */
@@ -174,20 +175,20 @@
 {
     position: -webkit-sticky; /* For Safari */
     position: sticky;
-    left: 10px;
+    left: 0px;
     z-index: 4; /* Above both header and body content */
 }
 .table thead th.sticky-header-view:nth-child(3) {
     position: -webkit-sticky; /* For Safari */
     position: sticky;
-    left: 10px;
+    left: 0px;
     z-index: 4; /* Above both header and body content */
 }
 
 .table thead th.sticky-header-view:nth-child(4) {
     position: -webkit-sticky; /* For Safari */
     position: sticky;
-    left: 287px;
+    left: 0px;
     z-index: 4; /* Above both header and body content */
 }
 
@@ -348,24 +349,4 @@
 .table th:nth-child(3),
 .table td:nth-child(3) {
   text-align: left; /* Golongan Obat rata kiri */
-}
-.btnPrimary {
-  font-size: 0.95rem;
-  font-weight: 500;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  background: #00b9ad;
-  color: #fff;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.btnPrimary:hover {
-  background: #00b9ad;
-  color: #fff;
-  transform: translateY(-1px);
-}
-
-.btnPrimary:active {
-  transform: translateY(0);
 }
