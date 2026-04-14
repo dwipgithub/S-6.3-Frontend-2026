@@ -842,12 +842,12 @@ const RL32 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                        name="rumahSakit"
+                        id="rumahSakit"
+                        className="form-select"
+                        value={rumahSakit?.id || 0}
+                        onChange={(e) => rumahSakitChangeHandler(e)}
+                      >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -897,12 +897,12 @@ const RL32 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                        name="rumahSakit"
+                        id="rumahSakit"
+                        className="form-select"
+                        value={rumahSakit?.id || 0}
+                        onChange={(e) => rumahSakitChangeHandler(e)}
+                      >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -927,12 +927,12 @@ const RL32 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                        name="rumahSakit"
+                        id="rumahSakit"
+                        className="form-select"
+                        value={rumahSakit?.id || 0}
+                        onChange={(e) => rumahSakitChangeHandler(e)}
+                      >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1167,39 +1167,39 @@ const RL32 = () => {
                         ))}
 
                         {dataRL.length > 0 && (
-                          <tr>
-                            <td></td>
+                            <tr>
+                              <td></td>
 
-                            {/* ✅ tetap ada */}
-                            <td></td>
+                              {/* kolom aksi tetap dihitung */}
+                              {isAksi && <td></td>}
 
-                            <td>Total</td>
+                              <td>Total</td>
 
-                            <td>{totalPasienAwalBulan}</td>
-                            <td>{totalPasienMasuk}</td>
-                            <td>{totalPasienPindahan}</td>
-                            <td>{totalPasienDipindahkan}</td>
-                            <td>{totalPasienKeluarHidup}</td>
+                              <td>{totalPasienAwalBulan}</td>
+                              <td>{totalPasienMasuk}</td>
+                              <td>{totalPasienPindahan}</td>
+                              <td>{totalPasienDipindahkan}</td>
+                              <td>{totalPasienKeluarHidup}</td>
 
-                            <td>{totalPasienKeluarMatiKurangDari48Jam}</td>
-                            <td>{totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
-                            <td>{totalPasienWanitaKeluarMatiKurangDari48Jam}</td>
-                            <td>{totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
+                              <td>{totalPasienKeluarMatiKurangDari48Jam}</td>
+                              <td>{totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
+                              <td>{totalPasienWanitaKeluarMatiKurangDari48Jam}</td>
+                              <td>{totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
 
-                            <td>{totalJumlahDirawat}</td>
-                            <td>{totalPasienAkhirBulan}</td>
-                            <td>{totalHariPerawatan}</td>
+                              <td>{totalJumlahDirawat}</td>
+                              <td>{totalPasienAkhirBulan}</td>
+                              <td>{totalHariPerawatan}</td>
 
-                            <td>{totalKelasVVIP}</td>
-                            <td>{totalKelasVIP}</td>
-                            <td>{totalKelas1}</td>
-                            <td>{totalKelas2}</td>
-                            <td>{totalKelas3}</td>
-                            <td>{totalKelasKhusus}</td>
+                              <td>{totalKelasVVIP}</td>
+                              <td>{totalKelasVIP}</td>
+                              <td>{totalKelas1}</td>
+                              <td>{totalKelas2}</td>
+                              <td>{totalKelas3}</td>
+                              <td>{totalKelasKhusus}</td>
 
-                            <td>{totalTotalJumlahAlokasiTempatTidurAwalBulan}</td>
-                          </tr>
-                        )}
+                              <td>{totalTotalJumlahAlokasiTempatTidurAwalBulan}</td>
+                            </tr>
+                          )}
                       </tbody>
                     </table>
                 </div>
