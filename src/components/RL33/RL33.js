@@ -548,90 +548,108 @@ const handleShow = () => {
     setKeteranganValidasi(e.target.value);
   };
 
-  const simpanValidasi = async (e) => {
-    e.preventDefault();
-    
-    if (!rumahSakit || !rumahSakit.id) {
-      toast("Rumah sakit harus dipilih terlebih dahulu", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
+const simpanValidasi = async (e) => {
+  e.preventDefault();
+
+  if (!rumahSakit || !rumahSakit.id) {
+    toast("Rumah sakit harus dipilih terlebih dahulu", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
+    return;
+  }
+
+  if (parseInt(statusValidasi) === 0) {
+    toast("Status harus dipilih terlebih dahulu", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
+    return;
+  }
+
+  try {
+    const customConfig = {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "XSRF-TOKEN": CSRFToken,
+      },
+    };
+
+    // ✅ payload dibedakan berdasarkan jenis user
+    let payload = {
+      statusValidasiId: parseInt(statusValidasi),
+    };
+
+    // ✅ HANYA VALIDATOR kirim catatan
+    if (user.jenisUserId !== 4) {
+      payload.catatan = keteranganValidasi;
     }
 
-    if (parseInt(statusValidasi) === 0) {
-      toast("Status harus dipilih terlebih dahulu", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
+    console.log("Payload yang dikirim:", payload);
+    console.log("ValidasiId:", validasiId);
 
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "XSRF-TOKEN": CSRFToken,
-        },
-      };
-
-      const payload = {
-        statusValidasiId: parseInt(statusValidasi),
-        catatan: keteranganValidasi,
-      };
-
-      console.log("Payload yang dikirim:", payload);
-      console.log("ValidasiId:", validasiId);
-
-      if (validasiId) {
-        // Update existing validation
-        const response = await axiosJWT.patch(
-          `/apisirs6v2/rltigatitiktigavalidasi/${validasiId}`,
-          payload,
-          customConfig
-        );
-        console.log("Response PATCH:", response.data);
-        toast("Data Validasi Berhasil Diperbarui", {
-          position: toast.POSITION.TOP_RIGHT,
-        });
-        // Refresh validasi data tanpa reload halaman
-        setTimeout(() => {
-          getValidasi();
-        }, 1500);
-      } else {
-        // Create new validation
-        const createPayload = {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
-          jenisPeriode: 1,
-          statusValidasiId: parseInt(statusValidasi),
-          catatan: keteranganValidasi,
-        };
-        const response = await axiosJWT.post(
-          "/apisirs6v2/rltigatitiktigavalidasi",
-          createPayload,
-          customConfig
-        );
-        setValidasiId(response.data.data.id);
-        toast("Data Validasi Berhasil Disimpan", {
-          position: toast.POSITION.TOP_RIGHT,
-        });
-        // Refresh validasi data tanpa reload halaman
-        setTimeout(() => {
-          getValidasi();
-        }, 1500);
-      }
-    } catch (error) {
-      console.log(error);
-      toast(
-        `Data tidak bisa disimpan karena: ${
-          error.response?.data?.message || error.message
-        }`,
-        {
-          position: toast.POSITION.TOP_RIGHT,
-        }
+    if (validasiId) {
+      // UPDATE
+      const response = await axiosJWT.patch(
+        `/apisirs6v2/rltigatitiktigavalidasi/${validasiId}`,
+        payload,
+        customConfig
       );
+
+      console.log("Response PATCH:", response.data);
+
+      toast("Data Validasi Berhasil Diperbarui", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+
+      setTimeout(() => {
+        getValidasi();
+      }, 1500);
+
+    } else {
+
+      // CREATE
+      let createPayload = {
+        rsId: rumahSakit.id,
+        periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+        jenisPeriode: 1,
+        statusValidasiId: parseInt(statusValidasi),
+      };
+
+      // ✅ hanya validator kirim catatan
+      if (user.jenisUserId !== 4) {
+        createPayload.catatan = keteranganValidasi;
+      }
+
+      const response = await axiosJWT.post(
+        "/apisirs6v2/rltigatitiktigavalidasi",
+        createPayload,
+        customConfig
+      );
+
+      setValidasiId(response.data.data.id);
+
+      toast("Data Validasi Berhasil Disimpan", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+
+      setTimeout(() => {
+        getValidasi();
+      }, 1500);
     }
-  };
+
+  } catch (error) {
+    console.log(error);
+
+    toast(
+      `Data tidak bisa disimpan karena: ${
+        error.response?.data?.message || error.message
+      }`,
+      {
+        position: toast.POSITION.TOP_RIGHT,
+      }
+    );
+  }
+};
 
   const handleTabClick = (tab) => {
 
@@ -701,56 +719,80 @@ const handleShow = () => {
       total.false_emergency += parseInt(value.false_emergency);
     });
 
-  function handleDownloadExcel() {
-    const header = [
-      "No",
-      "No Pelayanan",
-      "Jenis Pelayanan",
-      "Total Pasien Rujukan",
-      "Total Pasien Non Rujukan",
-      "Tindak Lanjut Pelayanan Dirawat",
-      "Tindak Lanjut Pelayanan Dirujuk",
-      "Tindak Lanjut Pelayanan Pulang",
-      "Mati di IGD (L)",
-      "Mati di IGD (P)",
-      "DOA (L)",
-      "DOA (P)",
-      "Luka-luka (L)",
-      "Luka-luka (P)",
-      "False Emergency",
-    ];
+function handleDownloadExcel() {
 
-    const body = dataRL.map((value, index) => {
-      const data = [
-        index + 1,
-        value.jenis_pelayanan_rl_tiga_titik_tiga.no,
-        value.jenis_pelayanan_rl_tiga_titik_tiga.nama,
-        value.total_pasien_rujukan,
-        value.total_pasien_non_rujukan,
-        value.tlp_dirawat,
-        value.tlp_dirujuk,
-        value.tlp_pulang,
-        value.m_igd_laki,
-        value.m_igd_perempuan,
-        value.doa_laki,
-        value.doa_perempuan,
-        value.luka_laki,
-        value.luka_perempuan,
-        value.false_emergency,
-      ];
+  const header = [
+    "No",
+    "No Pelayanan",
+    "Jenis Pelayanan",
+    "Total Pasien Rujukan",
+    "Total Pasien Non Rujukan",
+    "Tindak Lanjut Dirawat",
+    "Tindak Lanjut Dirujuk",
+    "Tindak Lanjut Pulang",
+    "Mati di IGD (L)",
+    "Mati di IGD (P)",
+    "DOA (L)",
+    "DOA (P)",
+    "Luka-luka (L)",
+    "Luka-luka (P)",
+    "False Emergency",
+  ];
 
-      return data;
-    });
+  // DATA DETAIL
+  const body = dataRL
+    .filter(
+      (value) =>
+        value.total_pasien_rujukan > 0 ||
+        value.total_pasien_non_rujukan > 0
+    )
+    .map((value, index) => [
+      index + 1,
+      value.jenis_pelayanan_rl_tiga_titik_tiga.no,
+      value.jenis_pelayanan_rl_tiga_titik_tiga.nama,
+      value.total_pasien_rujukan,
+      value.total_pasien_non_rujukan,
+      value.tlp_dirawat,
+      value.tlp_dirujuk,
+      value.tlp_pulang,
+      value.m_igd_laki,
+      value.m_igd_perempuan,
+      value.doa_laki,
+      value.doa_perempuan,
+      value.luka_laki,
+      value.luka_perempuan,
+      value.false_emergency,
+    ]);
 
-    downloadExcel({
-      fileName: "RL_3_3",
-      sheet: "react-export-table-to-excel",
-      tablePayload: {
-        header,
-        body: body,
-      },
-    });
-  }
+  // TAMBAHKAN ROW TOTAL
+  body.push([
+    "", 
+    "", 
+    "TOTAL",
+    total.total_pasien_rujukan,
+    total.total_pasien_non_rujukan,
+    total.tlp_dirawat,
+    total.tlp_dirujuk,
+    total.tlp_pulang,
+    total.m_igd_laki,
+    total.m_igd_perempuan,
+    total.doa_laki,
+    total.doa_perempuan,
+    total.luka_laki,
+    total.luka_perempuan,
+    total.false_emergency,
+  ]);
+
+  downloadExcel({
+    fileName: "RL_3_3",
+    sheet: "RL 3.3",
+    tablePayload: {
+      header,
+      body,
+    },
+  });
+
+}
 
   return (
     <div
@@ -851,7 +893,7 @@ const handleShow = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
 
-                  
+
                   <select
                     name="kabKota"
                     id="kabKota"
