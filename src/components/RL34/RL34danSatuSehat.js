@@ -689,20 +689,31 @@ const handleShow = () => {
 
   function handleDownloadExcel() {
     const header = ["No", "Jenis Kunjungan", "Jumlah"];
-
+  
+    // hitung total jumlah
+    const totalJumlah = dataRL.reduce((acc, item) => {
+      return acc + Number(item.jumlah || 0);
+    }, 0);
+  
+    // isi body data
     const body = dataRL.map((value, index) => {
-      const data = [
-        value.id,
+      return [
+        index + 1,
         value.jenis_pengunjung_rl_tiga_titik_tempat.nama,
         value.jumlah,
       ];
-
-      return data;
     });
-
+  
+    // tambahkan baris TOTAL di bawah
+    body.push([
+      "",          // kolom No kosong
+      "TOTAL",     // tulisan TOTAL
+      totalJumlah  // total jumlah
+    ]);
+  
     downloadExcel({
-      fileName: "RL_3_4",
-      sheet: "react-export-table-to-excel",
+      fileName: "RL_Pengunjung",
+      sheet: "RL",
       tablePayload: {
         header,
         body: body,
@@ -1659,30 +1670,60 @@ const handleShow = () => {
   };
 
   function handleDownloadExcel() {
-    const header = [
-      "No.",
-      "Bulan",
-      "Pengunjung Baru",
-      "Pengunjung Lama",
-      "Total",
-    ];
-    const body = (Array.isArray(dataRL) ? dataRL : []).map((item, idx) => [
-      idx + 1,
-      item.month,
-      item.organization_id,
-      item.new_visitors,
-      item.returning_visitors,
-      item.total_visitors,
-    ]);
-    downloadExcel({
-      fileName: "RL_3_4_SatuSehat",
-      sheet: "react-export-table-to-excel",
-      tablePayload: {
-        header,
-        body,
-      },
-    });
-  }
+  const header = [
+    "No.",
+    "Bulan",
+    "Pengunjung Baru",
+    "Pengunjung Lama",
+    "Total",
+  ];
+
+  const safeData = Array.isArray(dataRL) ? dataRL : [];
+
+  // 🔢 Hitung total
+  const totalNewVisitors = safeData.reduce(
+    (sum, item) => sum + (item.new_visitors || 0),
+    0
+  );
+
+  const totalReturningVisitors = safeData.reduce(
+    (sum, item) => sum + (item.returning_visitors || 0),
+    0
+  );
+
+  const totalVisitors = safeData.reduce(
+    (sum, item) => sum + (item.total_visitors || 0),
+    0
+  );
+
+  // 🧾 Isi body data
+  const body = safeData.map((item, idx) => [
+    idx + 1,
+    item.month,
+    item.new_visitors,
+    item.returning_visitors,
+    item.total_visitors,
+  ]);
+
+  // ➕ Tambahkan baris TOTAL
+  body.push([
+    "",
+    "TOTAL",
+    totalNewVisitors,
+    totalReturningVisitors,
+    totalVisitors,
+  ]);
+
+  // 📥 Download Excel
+  downloadExcel({
+    fileName: "RL_3_4_SatuSehat",
+    sheet: "react-export-table-to-excel",
+    tablePayload: {
+      header,
+      body,
+    },
+  });
+}
 
   return (
     <div className="container">
