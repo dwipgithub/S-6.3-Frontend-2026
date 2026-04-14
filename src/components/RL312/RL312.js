@@ -459,7 +459,7 @@ const RL312 = () => {
   function handleDownloadExcel() {
     const header = [
       "No",
-      "Kode",
+      // "Kode",
       "Jenis Pelayanan",
       "Khusus",
       "Besar",
@@ -477,8 +477,8 @@ const RL312 = () => {
 
       return [
         index + 1,
-        value.jenis_pelayanan_rl_tiga_titik_dua_belas?.no,
-        value.jenis_pelayanan_rl_tiga_titik_dua_belas?.nama,
+        // value.no,
+        value.nama_spesialisasi,
         value.khusus,
         value.besar,
         value.sedang,
