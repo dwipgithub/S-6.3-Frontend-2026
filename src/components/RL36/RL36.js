@@ -75,8 +75,11 @@ const RL36 = () => {
       } else if (decoded.jenisUserId === 3) {
         getRumahSakit(decoded.satKerId);
       } else if (decoded.jenisUserId === 4) {
-        showRumahSakit(decoded.satKerId, accessToken);
-      }
+  // 🔴 hanya load jika belum ada RS
+          if (!rumahSakit || !rumahSakit.id) {
+            showRumahSakit(decoded.satKerId, accessToken);
+          }
+        }
 
       setExpire(decoded.exp);
     } catch (error) {
@@ -182,9 +185,15 @@ const RL36 = () => {
   };
 
   const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
-  };
+  const rsId = e.target.value;
+
+  // 🔴 cegah reset kalau sama
+  if (rumahSakit && String(rumahSakit.id) === String(rsId)) {
+    return;
+  }
+
+  showRumahSakit(rsId);
+};
 
   const getRumahSakit = async (kabKotaId) => {
     try {
@@ -201,16 +210,24 @@ const RL36 = () => {
   };
 
   const showRumahSakit = async (id, tokenOverride) => {
-    try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
+  try {
+    // 🔴 cegah overwrite jika RS sama
+    if (rumahSakit && String(rumahSakit.id) === String(id)) {
+      return;
+    }
+
+    const response = await axiosJWT.get(
+      "/apisirs6v2/rumahsakit/" + id,
+      {
         headers: {
           Authorization: `Bearer ${tokenOverride || token}`,
         },
-      });
+      }
+    );
 
-      setRumahSakit(response.data.data);
-    } catch (error) {}
-  };
+    setRumahSakit(response.data.data);
+  } catch (error) {}
+};
 
   const getDataRLTigaTitikEnam = async (event) => {
     setSpinner(true);
@@ -827,10 +844,12 @@ const RL36 = () => {
         setShow(true);
         break;
       case 4:
+      if (!rumahSakit || !rumahSakit.id) {
         showRumahSakit(satKerId);
-        setBulan(1);
-        setShow(true);
-        break;
+      }
+
+      setShow(true);
+      break;
       default:
     }
   };
@@ -917,6 +936,7 @@ const RL36 = () => {
         value.nrHidup,
         value.nrMati,
         value.nrTotal,
+        value.dirujuk,
       ];
       return data;
     });
@@ -1124,12 +1144,12 @@ const RL36 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1179,12 +1199,12 @@ const RL36 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1209,12 +1229,12 @@ const RL36 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1689,14 +1709,25 @@ const RL36 = () => {
 
                                 {/* DIBUAT */}
                                 <div style={{ display: "flex" }}>
-                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
-                                    Dibuat
-                                  </div>
-                                  <div style={{ width: "10px" }}>:</div>
-                                  <div>
-                                    {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
-                                  </div>
-                                </div>
+                                        <div
+                                          style={{
+                                            width: "90px",
+                                            textAlign: "left",
+                                            paddingRight: "8px",
+                                            fontWeight: "600",
+                                          }}
+                                        >
+                                          Dibuat
+                                        </div>
+                                        <div style={{ width: "10px" }}>:</div>
+                                        <div>
+                                          {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID", {
+                                            day: "2-digit",
+                                            month: "long",
+                                            year: "numeric",
+                                          })}
+                                        </div>
+                                      </div>
 
                               </div>
                             )}
