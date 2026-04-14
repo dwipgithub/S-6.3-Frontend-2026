@@ -320,28 +320,44 @@ export const RL317 = () => {
       "JUMLAH ITEM OBAT",
       "JUMLAH ITEM OBAT YANG TERSEDIA DI RUMAH SAKIT",
     ];
-    console.log(dataRL);
 
-    const body = dataRL.map((value, index) => {
-      console.log();
-      const data = [
+    let totalItem = 0;
+    let totalItemRS = 0;
+
+    const body = dataRL.map((value) => {
+      const jumlahItem = Number(value.jumlah_item_obat) || 0;
+      const jumlahItemRS = Number(value.jumlah_item_obat_rs) || 0;
+
+      // akumulasi
+      totalItem += jumlahItem;
+      totalItemRS += jumlahItemRS;
+
+      return [
         value.no_golongan_obat,
         value.nama_golongan_obat,
-        value.jumlah_item_obat,
-        value.jumlah_item_obat_rs,
+        jumlahItem,
+        jumlahItemRS,
       ];
-      return data;
     });
+
+    // 🔥 TAMBAHKAN BARIS TOTAL
+    body.push([
+      "", // No kosong
+      "TOTAL",
+      totalItem,
+      totalItemRS,
+    ]);
 
     downloadExcel({
       fileName: "RL317-Farmasi Pengadaan Obat",
       sheet: "Farmasi Pengadaan Obat",
       tablePayload: {
         header,
-        body: body,
+        body,
       },
     });
   }
+
   const getProvinsi = async () => {
     try {
       const customConfig = {

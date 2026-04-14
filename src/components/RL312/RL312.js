@@ -459,7 +459,6 @@ const RL312 = () => {
   function handleDownloadExcel() {
     const header = [
       "No",
-      // "Kode",
       "Jenis Pelayanan",
       "Khusus",
       "Besar",
@@ -468,33 +467,47 @@ const RL312 = () => {
       "Total",
     ];
 
+    let totalKhusus = 0;
+    let totalBesar = 0;
+    let totalSedang = 0;
+    let totalKecil = 0;
+
     const body = dataRL.map((value, index) => {
-      const total =
-        (value.khusus || 0) +
-        (value.besar || 0) +
-        (value.sedang || 0) +
-        (value.kecil || 0);
+      const khusus = value.khusus || 0;
+      const besar = value.besar || 0;
+      const sedang = value.sedang || 0;
+      const kecil = value.kecil || 0;
+
+      const total = khusus + besar + sedang + kecil;
+
+      // akumulasi total
+      totalKhusus += khusus;
+      totalBesar += besar;
+      totalSedang += sedang;
+      totalKecil += kecil;
 
       return [
         index + 1,
-        // value.no,
         value.nama_spesialisasi,
-        value.khusus,
-        value.besar,
-        value.sedang,
-        value.kecil,
+        khusus,
+        besar,
+        sedang,
+        kecil,
         total,
       ];
     });
 
-    // downloadExcel({
-    //   fileName: "RL_3_12",
-    //   sheet: "RL312",
-    //   tablePayload: {
-    //     header,
-    //     body: body,
-    //   },
-    // });
+    const grandTotal = totalKhusus + totalBesar + totalSedang + totalKecil;
+
+    body.push([
+      "",
+      "TOTAL",
+      totalKhusus,
+      totalBesar,
+      totalSedang,
+      totalKecil,
+      grandTotal,
+    ]);
 
     downloadExcel({
       fileName: namafile || "RL_3_12",
