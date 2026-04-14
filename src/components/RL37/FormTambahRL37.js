@@ -403,7 +403,7 @@ const FormTambahRL37 = () => {
 
   const currentYear = new Date().getFullYear();
   const daftarTahun = [];
-  for (let i = 2026; i <= currentYear; i++) {
+  for (let i = 2025; i <= currentYear; i++) {
     daftarTahun.push(i);
   }
 
@@ -532,17 +532,15 @@ const FormTambahRL37 = () => {
           <div className="col-md-12">
             <Link
               to={`/rl37/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/><span style={{color: "gray"}}></span>
-                            <span style={{color:"gray"}}>Tambah data RL 3.5 -  Kunjungan Rawat Jalan</span> */}
-              &lt;
-            </Link>
+              className={style.btnPrimary}
+                                          style={{
+                                            textDecoration: "none",
+                                            display: "inline-block",
+                                            color: "#FFF",
+                                          }}
+                          >
+                            &lt;
+                          </Link>
             <span style={{ color: "gray" }}>
               Kembali RL 3.7 - Neonatal, Bayi, dan Balita
             </span>
@@ -950,11 +948,7 @@ const FormTambahRL37 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button
-            type="submit"
-            disabled={buttonStatus}
-            className="btn btn-outline-success"
-          >
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Simpan
           </button>
         </div>

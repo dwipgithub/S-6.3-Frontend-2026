@@ -1268,7 +1268,7 @@ const RL37 = () => {
     } catch (error) {
       console.log(error);
       toast(
-        `Data tidak bisa disimpan karena: ${
+        `Data tidak bisa disimpan karena: Masih ada yang kosong${
           error.response?.data?.message || error.message
         }`,
         {
@@ -1281,7 +1281,8 @@ const RL37 = () => {
   const handleTabClick = (tab) => {
     setActiveTab(tab);
   };
-
+  const showAksi = user?.jenisUserId === 4;
+  
   return (
     <div className="container" style={{ marginTop: "20px", marginBottom: "70px" }}>
         <h4 className={style.pageHeader}> RL 3.7 - Neonatal, Bayi dan Balita </h4>
@@ -1416,119 +1417,210 @@ const RL37 = () => {
               <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
                 <div className={style["table-container"]}>
                   <div className="table-responsive">
-                    <table className={style.table} ref={tableRef} style={{ width: "200%" }}>
-                      <thead className={style.thead}>
-                        <tr className="main-header-row">
-                          <th className={style["sticky-header-view"]} style={{ width: "2.5%" }}>No.</th>
-                          {user.jenisUserId === 4
-                            ?
-                          <th className={style["sticky-header-view"]} style={{ width: "7%" }}>Aksi</th>
-                          : <>
-                                      
-                                    </>
-                                }
-                          <th className={style["sticky-header-view"]} style={{ width: "10%" }}>Jenis Kegiatan</th>
-                          <th>Rujukan Medis Rumah Sakit</th>
-                          <th>Rujukan Medis Bidan</th>
-                          <th>Rujukan Medis Puskesmas</th>
-                          <th>Rujukan Medis Faskes Lainnya</th>
-                          <th>Rujukan Medis Hidup</th>
-                          <th>Rujukan Medis Mati</th>
-                          <th>Rujukan Medis Total</th>
-                          <th>Rujukan Non Medis Hidup</th>
-                          <th>Rujukan Non Medis Mati</th>
-                          <th>Rujukan Non Medis Total</th>
-                          <th>Non Rujukan Mati</th>
-                          <th>Non Rujukan Total</th>
-                          <th>Dirujuk</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dataRL.map((value, index) => (
-                          <React.Fragment key={index}>
-                            <tr style={{ textAlign: "center", backgroundColor: "#C4DFAA", fontWeight: "bold" }}>
-                              <td className={style["sticky-column-view"]}>{value.groupId}</td>
-                              <td className={style["sticky-column-view"]}></td>
-                              <td className={style["sticky-column-view"]}>{value.groupNama}</td>
-                              <td>{value.groupRmRumahSakit}</td>
-                              <td>{value.groupRmBidan}</td>
-                              <td>{value.groupRmPuskesmas}</td>
-                              <td>{value.groupRmFaskesLainnya}</td>
-                              <td>{value.groupRmHidup}</td>
-                              <td>{value.groupRmMati}</td>
-                              <td>{value.groupRmTotal}</td>
-                              <td>{value.groupRnmHidup}</td>
-                              <td>{value.groupRnmMati}</td>
-                              <td>{value.groupRnmTotal}</td>
-                              <td>{value.groupNrHidup}</td>
-                              <td>{value.groupNrMati}</td>
-                              <td>{value.groupNrTotal}</td>
-                              <td>{value.groupDirujuk}</td>
-                            </tr>
-                            {value.details.map((value2, index2) => (
-                              <React.Fragment key={index2}>
-                                <tr style={{ textAlign: "center", backgroundColor: "#90C8AC", fontWeight: "bold" }}>
-                                  <td className={style["sticky-column-view"]}>{value2.subGroupNo}</td>
+                      <table
+                        className={style.table}
+                        style={{ width: "200%" }}
+                        ref={tableRef}
+                      >
+                        <thead className={style.thead}>
+                          <tr className="main-header-row">
+                            <th
+                              className={style["sticky-header-view"]}
+                              style={{ width: "2.5%" }}
+                            >
+                              No.
+                            </th>
+
+                            {showAksi && (
+                              <th
+                                className={style["sticky-header-view"]}
+                                style={{ width: "6%" }}
+                              >
+                                Aksi
+                              </th>
+                            )}
+
+                            <th
+                              className={style["sticky-header-view"]}
+                              style={{ width: "10%" }}
+                            >
+                              Jenis Kegiatan
+                            </th>
+
+                            <th>Rujukan Medis Rumah Sakit</th>
+                            <th>Rujukan Medis Bidan</th>
+                            <th>Rujukan Medis Puskesmas</th>
+                            <th>Rujukan Medis Faskes Lainnya</th>
+                            <th>Rujukan Medis Hidup</th>
+                            <th>Rujukan Medis Mati</th>
+                            <th>Rujukan Medis Total</th>
+                            <th>Rujukan Non Medis Hidup</th>
+                            <th>Rujukan Non Medis Mati</th>
+                            <th>Rujukan Non Medis Total</th>
+                            <th>Non Rujukan Hidup</th>
+                            <th>Non Rujukan Mati</th>
+                            <th>Non Rujukan Total</th>
+                            <th>Dirujuk</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {dataRL.map((value, index) => (
+                            <React.Fragment key={index}>
+
+                              {/* GROUP */}
+                              <tr
+                                style={{
+                                  textAlign: "center",
+                                  backgroundColor: "#C4DFAA",
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                <td className={style["sticky-column-view"]}>
+                                  {value.groupId}
+                                </td>
+
+                                {showAksi && (
                                   <td className={style["sticky-column-view"]}></td>
-                                  <td className={style["sticky-column-view"]}>{value2.subGroupNama}</td>
-                                  <td>{value2.subGroupRmRumahSakit}</td>
-                                  <td>{value2.subGroupRmBidan}</td>
-                                  <td>{value2.subGroupRmPuskesmas}</td>
-                                  <td>{value2.subGroupRmFaskesLainnya}</td>
-                                  <td>{value2.subGroupRmHidup}</td>
-                                  <td>{value2.subGroupRmMati}</td>
-                                  <td>{value2.subGroupRmTotal}</td>
-                                  <td>{value2.subGroupRnmHidup}</td>
-                                  <td>{value2.subGroupRnmMati}</td>
-                                  <td>{value2.subGroupRnmTotal}</td>
-                                  <td>{value2.subGroupNrHidup}</td>
-                                  <td>{value2.subGroupNrMati}</td>
-                                  <td>{value2.subGroupNrTotal}</td>
-                                  <td>{value2.subGroupDirujuk}</td>
-                                </tr>
-                                {value2.kegiatan.map((value3, index3) => (
-                                  <tr key={index3} style={{ textAlign: "center", fontWeight: "bold" }}>
-                                    <td className={style["sticky-column-view"]}>{value3.jenisKegiatanNo}</td>
-                                    {user.jenisUserId === 4
-                        ?
+                                )}
+
+                                <td className={style["sticky-column-view"]}>
+                                  {value.groupNama}
+                                </td>
+
+                                <td>{value.groupRmRumahSakit}</td>
+                                <td>{value.groupRmBidan}</td>
+                                <td>{value.groupRmPuskesmas}</td>
+                                <td>{value.groupRmFaskesLainnya}</td>
+                                <td>{value.groupRmHidup}</td>
+                                <td>{value.groupRmMati}</td>
+                                <td>{value.groupRmTotal}</td>
+                                <td>{value.groupRnmHidup}</td>
+                                <td>{value.groupRnmMati}</td>
+                                <td>{value.groupRnmTotal}</td>
+                                <td>{value.groupNrHidup}</td>
+                                <td>{value.groupNrMati}</td>
+                                <td>{value.groupNrTotal}</td>
+                                <td>{value.groupDirujuk}</td>
+                              </tr>
+
+                              {value.details.map((value2, index2) => (
+                                <React.Fragment key={index2}>
+
+                                  {/* SUBGROUP */}
+                                  <tr
+                                    style={{
+                                      textAlign: "center",
+                                      backgroundColor: "#90C8AC",
+                                      fontWeight: "bold",
+                                    }}
+                                  >
                                     <td className={style["sticky-column-view"]}>
-                                      <ToastContainer />
-                                      <div style={{ display: "flex" }}>
-                                        <button className="btn btn-danger" style={{ margin: "0 5px 0 0", backgroundColor: "#FF6663", border: "1px solid #FF6663" }} type="button" onClick={() => hapus(value3.id)}>
-                                          Hapus
-                                        </button>
-                                        {value3.jenisKegiatanNo === "0" ? null : (
-                                          <Link to={`/rl37/ubah/${value3.id}`} className="btn btn-warning" style={{ margin: "0 5px 0 0", backgroundColor: "#CFD35E", border: "1px solid #CFD35E", color: "#FFFFFF" }}>Ubah</Link>
-                                        )}
-                                      </div>
+                                      {value2.subGroupNo}
                                     </td>
-                                    : <>
-                                      
-                                    </>
-                                }
-                                    <td className={style["sticky-column-view"]}>{value3.jenisKegiatanNama}</td>
-                                    <td>{value3.rmRumahSakit}</td>
-                                    <td>{value3.rmBidan}</td>
-                                    <td>{value3.rmPuskesmas}</td>
-                                    <td>{value3.rmFaskesLainnya}</td>
-                                    <td>{value3.rmHidup}</td>
-                                    <td>{value3.rmMati}</td>
-                                    <td>{value3.rmTotal}</td>
-                                    <td>{value3.rnmHidup}</td>
-                                    <td>{value3.rnmMati}</td>
-                                    <td>{value3.rnmTotal}</td>
-                                    <td>{value3.nrHidup}</td>
-                                    <td>{value3.nrMati}</td>
-                                    <td>{value3.nrTotal}</td>
-                                    <td>{value3.dirujuk}</td>
+
+                                    {showAksi && (
+                                      <td className={style["sticky-column-view"]}></td>
+                                    )}
+
+                                    <td className={style["sticky-column-view"]}>
+                                      {value2.subGroupNama}
+                                    </td>
+
+                                    <td>{value2.subGroupRmRumahSakit}</td>
+                                    <td>{value2.subGroupRmBidan}</td>
+                                    <td>{value2.subGroupRmPuskesmas}</td>
+                                    <td>{value2.subGroupRmFaskesLainnya}</td>
+                                    <td>{value2.subGroupRmHidup}</td>
+                                    <td>{value2.subGroupRmMati}</td>
+                                    <td>{value2.subGroupRmTotal}</td>
+                                    <td>{value2.subGroupRnmHidup}</td>
+                                    <td>{value2.subGroupRnmMati}</td>
+                                    <td>{value2.subGroupRnmTotal}</td>
+                                    <td>{value2.subGroupNrHidup}</td>
+                                    <td>{value2.subGroupNrMati}</td>
+                                    <td>{value2.subGroupNrTotal}</td>
+                                    <td>{value2.subGroupDirujuk}</td>
                                   </tr>
-                                ))}
-                              </React.Fragment>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
+
+                                  {value2.kegiatan.map((value3, index3) => (
+                                    <tr
+                                      key={index3}
+                                      style={{
+                                        textAlign: "center",
+                                        fontWeight: "bold",
+                                      }}
+                                    >
+                                      <td className={style["sticky-column-view"]}>
+                                        {value3.jenisKegiatanNo}
+                                      </td>
+
+                                      {showAksi && (
+                                        <td className={style["sticky-column-view"]}>
+
+                                          <div style={{ display: "flex" }}>
+                                            <button
+                                              className="btn btn-danger"
+                                              style={{
+                                                marginRight: "5px",
+                                                backgroundColor: "#FF6663",
+                                                border: "1px solid #FF6663",
+                                              }}
+                                              type="button"
+                                              onClick={() =>
+                                                hapus(value3.id, value3.tahun)
+                                              }
+                                            >
+                                              Hapus
+                                            </button>
+
+                                            {value3.jenisKegiatanNo !== "0" && (
+                                              <Link
+                                                to={`/rl37/ubah/${value3.id}`}
+                                                className="btn btn-warning"
+                                                style={{
+                                                  backgroundColor: "#CFD35E",
+                                                  border: "1px solid #CFD35E",
+                                                  color: "#FFFFFF",
+                                                }}
+                                              >
+                                                Ubah
+                                              </Link>
+                                            )}
+                                          </div>
+
+                                        </td>
+                                      )}
+
+                                      <td className={style["sticky-column-view"]}>
+                                        {value3.jenisKegiatanNama}
+                                      </td>
+
+                                      <td>{value3.rmRumahSakit}</td>
+                                      <td>{value3.rmBidan}</td>
+                                      <td>{value3.rmPuskesmas}</td>
+                                      <td>{value3.rmFaskesLainnya}</td>
+                                      <td>{value3.rmHidup}</td>
+                                      <td>{value3.rmMati}</td>
+                                      <td>{value3.rmTotal}</td>
+                                      <td>{value3.rnmHidup}</td>
+                                      <td>{value3.rnmMati}</td>
+                                      <td>{value3.rnmTotal}</td>
+                                      <td>{value3.nrHidup}</td>
+                                      <td>{value3.nrMati}</td>
+                                      <td>{value3.nrTotal}</td>
+                                      <td>{value3.dirujuk}</td>
+
+                                    </tr>
+                                  ))}
+
+                                </React.Fragment>
+                              ))}
+
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
                   </div>
                 </div>
               </div>
