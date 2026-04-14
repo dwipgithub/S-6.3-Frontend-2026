@@ -117,7 +117,7 @@ const RL41 = () => {
       value: "01",
     });
     results.push({
-      key: "Febuari",
+      key: "Februari",
       value: "02",
     });
     results.push({
@@ -712,8 +712,8 @@ const RL41 = () => {
 
   const stickyOffsets =
     user.jenisUserId === 4
-      ? { no: "0px", aksi: "55px", icd: "220px", diag: "325px" }
-      : { no: "0px", icd: "55px", diag: "180px" };
+      ? { no: "0px", aksi: "35px", icd: "100px", diag: "190px" }
+      : { no: "0px", icd: "40px", diag: "140px" };
 
   return (
     <div
@@ -1044,478 +1044,503 @@ const RL41 = () => {
                   activeTab === "tab1" ? "show active" : ""
                 }`}
               >
-                <div className={style["table-container"]}>
-                  <table
-                    className={style["table"]}
-                    style={{ width: "500%" }}
-                    ref={tableRef}
-                  >
-                    <thead className={style["thead"]}>
-                      <tr className="main-header-row">
-                        <th
-                          className={style["sticky-header-view"]}
-                          rowSpan="3"
-                          style={{ width: "1%", left: stickyOffsets.no }}
-                        >
-                          No.
-                        </th>
-                        {user.jenisUserId === 4 && (
-                          <th
-                            className={style["sticky-header-view"]}
-                            rowSpan="3"
-                            style={{ width: "3%", left: stickyOffsets.aksi }}
-                          >
-                            Aksi
-                          </th>
-                        )}
-                        <th
-                          className={style["sticky-header-view"]}
-                          rowSpan="3"
-                          style={{ width: "2%", left: stickyOffsets.icd }}
-                        >
-                          Kode ICD-10
-                        </th>
-                        <th
-                          className={style["sticky-header-view"]}
-                          rowSpan="3"
-                          style={{ width: "5%", left: stickyOffsets.diag }}
-                        >
-                          Diagnosis Penyakit
-                        </th>
-                        <th colSpan={50} style={{ textAlign: "center" }}>
-                          Jumlah Pasien Hidup dan Mati Menurut Kelompok Umur &
-                          Jenis Kelamin{" "}
-                        </th>
-                        <th
-                          colSpan={3}
-                          rowSpan={2}
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          Jumlah Pasien Hidup dan Mati Menurut Jenis Kelamin
-                        </th>
-                        <th
-                          colSpan={3}
-                          rowSpan={2}
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          Jumlah Pasien Keluar Mati
-                        </th>
-                      </tr>
-                      <tr className={style["subheader-row"]}>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          {" "}
-                          &lt; 1 Jam{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          1 - 23 Jam{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          1 - 7 Hari{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          8 - 28 Hari{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          29 Hari - &lt;3 Bulan{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          3 - &lt;6 Bulan{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          6 - 11 Bulan{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          1 - 4 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          5 - 9 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          10 - 14 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          15 - 19 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          20 - 24 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          25 - 29 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          30 - 34 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          35 - 39 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          40 - 44 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          45 - 49 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          50 - 54 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          55 - 59 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          60 - 64 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          65 - 69 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          70 - 74 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          75 - 79 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          80 - 84 Tahun{" "}
-                        </th>
-                        <th colSpan={2} style={{ textAlign: "center" }}>
-                          {" "}
-                          ≥ 85 Tahun{" "}
-                        </th>
-                      </tr>
-                      <tr className={style["subsubheader-row"]}>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Total</th>
-                        <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                        <th style={{ textAlign: "center" }}>Perempuan</th>
-                        <th style={{ textAlign: "center" }}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dataRL.map((value, index) => {
-                        return (
-                          <tr
-                            style={{ verticalAlign: "center" }}
-                            key={value.id}
-                          >
-                            <td
-                              className={style["sticky-column-view"]}
+                <div
+                  className={style["outer-wrapper"]}
+                  style={{ width: "100%", overflowX: "auto" }}
+                >
+                  <div className={style["inner-content"]}>
+                    <div className={style["table-container"]}>
+                      <table
+                        className={style["table"]}
+                        // style={{ width: "500%" }}
+                        ref={tableRef}
+                      >
+                        <thead className={style["thead"]}>
+                          <tr className="main-header-row">
+                            <th
+                              className={style["sticky-header-view"]}
+                              rowSpan="3"
+                              style={{ left: stickyOffsets.no }}
+                            >
+                              No.
+                            </th>
+                            {user.jenisUserId === 4 && (
+                              <th
+                                className={style["sticky-header-view"]}
+                                rowSpan="3"
+                                style={{ left: stickyOffsets.aksi }}
+                              >
+                                Aksi
+                              </th>
+                            )}
+                            <th
+                              className={style["sticky-header-view"]}
+                              rowSpan="3"
+                              style={{ width: "2%", left: stickyOffsets.icd }}
+                            >
+                              Kode ICD-10
+                            </th>
+                            <th
+                              className={style["sticky-header-view"]}
+                              rowSpan="3"
+                              style={{ left: stickyOffsets.diag }}
+                            >
+                              Diagnosis Penyakit
+                            </th>
+                            <th colSpan={50} style={{ textAlign: "center" }}>
+                              Jumlah Pasien Hidup dan Mati Menurut Kelompok Umur
+                              & Jenis Kelamin{" "}
+                            </th>
+                            <th
+                              colSpan={3}
+                              rowSpan={2}
                               style={{
                                 textAlign: "center",
-                                left: stickyOffsets.no,
+                                verticalAlign: "middle",
                               }}
                             >
-                              <label>{(page - 1) * limit + index + 1}</label>
-                            </td>
-                            {user.jenisUserId === 4 && (
-                              <td
-                                className={style["sticky-column-view"]}
-                                style={{
-                                  textAlign: "center",
-                                  verticalAlign: "middle",
-                                  left: stickyOffsets.aksi,
-                                }}
+                              Jumlah Pasien Hidup dan Mati Menurut Jenis Kelamin
+                            </th>
+                            <th
+                              colSpan={3}
+                              rowSpan={2}
+                              style={{
+                                textAlign: "center",
+                                verticalAlign: "middle",
+                              }}
+                            >
+                              Jumlah Pasien Keluar Mati
+                            </th>
+                          </tr>
+                          <tr className={style["subheader-row"]}>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              {" "}
+                              &lt; 1 Jam{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              1 - 23 Jam{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              1 - 7 Hari{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              8 - 28 Hari{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              29 Hari - &lt;3 Bulan{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              3 - &lt;6 Bulan{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              6 - 11 Bulan{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              1 - 4 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              5 - 9 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              10 - 14 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              15 - 19 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              20 - 24 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              25 - 29 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              30 - 34 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              35 - 39 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              40 - 44 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              45 - 49 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              50 - 54 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              55 - 59 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              60 - 64 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              65 - 69 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              70 - 74 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              75 - 79 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              80 - 84 Tahun{" "}
+                            </th>
+                            <th colSpan={2} style={{ textAlign: "center" }}>
+                              {" "}
+                              ≥ 85 Tahun{" "}
+                            </th>
+                          </tr>
+                          <tr className={style["subsubheader-row"]}>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Total</th>
+                            <th style={{ textAlign: "center" }}>Laki-Laki</th>
+                            <th style={{ textAlign: "center" }}>Perempuan</th>
+                            <th style={{ textAlign: "center" }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dataRL.map((value, index) => {
+                            return (
+                              <tr
+                                style={{ verticalAlign: "center" }}
+                                key={value.id}
                               >
-                                <div
+                                <td
+                                  className={style["sticky-column-view"]}
                                   style={{
-                                    alignItems: "center",
-                                    width: "100%",
+                                    textAlign: "center",
+                                    left: stickyOffsets.no,
                                   }}
                                 >
-                                  <button
-                                    className="btn btn-danger"
+                                  <label>
+                                    {(page - 1) * limit + index + 1}
+                                  </label>
+                                </td>
+                                {user.jenisUserId === 4 && (
+                                  <td
+                                    className={style["sticky-column-view"]}
                                     style={{
-                                      margin: "0 5px 0 0",
-                                      backgroundColor: "#FF6663",
-                                      border: "1px solid #FF6663",
+                                      textAlign: "center",
+                                      verticalAlign: "middle",
+                                      left: stickyOffsets.aksi,
                                     }}
-                                    type="button"
-                                    onClick={(e) => Delete(value.id)}
                                   >
-                                    Hapus
-                                  </button>
-                                  {value.icd.icd_code != 0 && (
-                                    <Link
-                                      to={`/rl41/ubah/${value.id}`}
-                                      className="btn btn-warning"
+                                    <div
                                       style={{
-                                        margin: "0 5px 0 0",
-                                        backgroundColor: "#CFD35E",
-                                        border: "1px solid #CFD35E",
-                                        color: "#FFFFFF",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: "6px",
+                                        flexWrap: "nowrap",
                                       }}
                                     >
-                                      Ubah
-                                    </Link>
-                                  )}
-                                </div>
-                              </td>
-                            )}
-                            <td
-                              className={style["sticky-column-view"]}
-                              style={{
-                                textAlign: "center",
-                                left: stickyOffsets.icd,
-                              }}
-                            >
-                              <label>{value.icd.icd_code}</label>
-                            </td>
-                            <td
-                              className={style["sticky-column-view"]}
-                              style={{
-                                textAlign: "left",
-                                left: stickyOffsets.diag,
-                              }}
-                            >
-                              <label>{value.icd.description_code}</label>
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_0_1jam_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_0_1jam_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_1_7hr_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_1_7hr_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_8_28hr_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_8_28hr_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_3_6bln_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_3_6bln_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_1_4th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_1_4th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_5_9th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_5_9th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_10_14th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_10_14th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_15_19th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_15_19th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_20_24th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_20_24th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_25_29th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_25_29th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_30_34th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_30_34th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_35_39th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_35_39th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_40_44th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_40_44th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_45_49th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_45_49th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_50_54th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_50_54th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_55_59th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_55_59th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_60_64th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_60_64th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_65_69th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_65_69th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_70_74th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_70_74th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_75_79th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_75_79th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_80_84th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_80_84th_p}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_lebih85th_l}
-                            </td>
-                            <td>
-                              {value.jmlh_pas_hidup_mati_umur_gen_lebih85th_p}
-                            </td>
-                            <td>{value.jmlh_pas_hidup_mati_gen_l}</td>
-                            <td>{value.jmlh_pas_hidup_mati_gen_p}</td>
-                            <td>{value.total_pas_hidup_mati}</td>
-                            <td>{value.jmlh_pas_keluar_mati_gen_l}</td>
-                            <td>{value.jmlh_pas_keluar_mati_gen_p}</td>
-                            <td>{value.total_pas_keluar_mati}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {totalPages > 1 && (
-                  <div
-                    style={{
-                      bottom: 0,
-                      background: "#fff",
-                      padding: "12px 0",
-                      display: "flex",
-                      justifyContent: "center",
-                      gap: 12,
-                      borderTop: "1px solid #ddd",
-                    }}
-                  >
-                    <button
-                      disabled={page === 1}
-                      onClick={() => fetchRL(page - 1)}
-                    >
-                      ◀ Prev
-                    </button>
+                                      <button
+                                        className="btn btn-danger"
+                                        style={{
+                                          backgroundColor: "#FF6663",
+                                          border: "1px solid #FF6663",
+                                          whiteSpace: "nowrap",
+                                          padding: "4px 10px",
+                                          fontSize: "12px",
+                                        }}
+                                        type="button"
+                                        onClick={(e) => Delete(value.id)}
+                                      >
+                                        Hapus
+                                      </button>
 
-                    <span>
-                      Halaman {page} / {totalPages}
-                    </span>
+                                      {value.icd.icd_code != 0 && (
+                                        <Link
+                                          to={`/rl41/ubah/${value.id}`}
+                                          className="btn btn-warning"
+                                          style={{
+                                            backgroundColor: "#CFD35E",
+                                            border: "1px solid #CFD35E",
+                                            color: "#FFFFFF",
+                                            whiteSpace: "nowrap",
+                                            padding: "4px 10px",
+                                            fontSize: "12px",
+                                          }}
+                                        >
+                                          Ubah
+                                        </Link>
+                                      )}
+                                    </div>
+                                  </td>
+                                )}
+                                <td
+                                  className={style["sticky-column-view"]}
+                                  style={{
+                                    textAlign: "center",
+                                    left: stickyOffsets.icd,
+                                  }}
+                                >
+                                  <label>{value.icd.icd_code}</label>
+                                </td>
+                                <td
+                                  className={style["sticky-column-view"]}
+                                  style={{
+                                    textAlign: "left",
+                                    left: stickyOffsets.diag,
+                                  }}
+                                >
+                                  <label>{value.icd.description_code}</label>
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_0_1jam_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_0_1jam_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_1_7hr_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_1_7hr_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_8_28hr_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_8_28hr_p}
+                                </td>
+                                <td>
+                                  {
+                                    value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l
+                                  }
+                                </td>
+                                <td>
+                                  {
+                                    value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p
+                                  }
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_3_6bln_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_3_6bln_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_1_4th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_1_4th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_5_9th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_5_9th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_10_14th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_10_14th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_15_19th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_15_19th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_20_24th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_20_24th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_25_29th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_25_29th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_30_34th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_30_34th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_35_39th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_35_39th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_40_44th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_40_44th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_45_49th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_45_49th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_50_54th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_50_54th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_55_59th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_55_59th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_60_64th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_60_64th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_65_69th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_65_69th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_70_74th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_70_74th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_75_79th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_75_79th_p}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_80_84th_l}
+                                </td>
+                                <td>
+                                  {value.jmlh_pas_hidup_mati_umur_gen_80_84th_p}
+                                </td>
+                                <td>
+                                  {
+                                    value.jmlh_pas_hidup_mati_umur_gen_lebih85th_l
+                                  }
+                                </td>
+                                <td>
+                                  {
+                                    value.jmlh_pas_hidup_mati_umur_gen_lebih85th_p
+                                  }
+                                </td>
+                                <td>{value.jmlh_pas_hidup_mati_gen_l}</td>
+                                <td>{value.jmlh_pas_hidup_mati_gen_p}</td>
+                                <td>{value.total_pas_hidup_mati}</td>
+                                <td>{value.jmlh_pas_keluar_mati_gen_l}</td>
+                                <td>{value.jmlh_pas_keluar_mati_gen_p}</td>
+                                <td>{value.total_pas_keluar_mati}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {totalPages > 1 && (
+                      <div
+                        style={{
+                          bottom: 0,
+                          background: "#fff",
+                          padding: "12px 0",
+                          display: "flex",
+                          justifyContent: "center",
+                          gap: 12,
+                          borderTop: "1px solid #ddd",
+                        }}
+                      >
+                        <button
+                          disabled={page === 1}
+                          onClick={() => fetchRL(page - 1)}
+                        >
+                          ◀ Prev
+                        </button>
 
-                    <button
-                      disabled={page === totalPages}
-                      onClick={() => fetchRL(page + 1)}
-                    >
-                      Next ▶
-                    </button>
+                        <span>
+                          Halaman {page} / {totalPages}
+                        </span>
+
+                        <button
+                          disabled={page === totalPages}
+                          onClick={() => fetchRL(page + 1)}
+                        >
+                          Next ▶
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
 
               <div

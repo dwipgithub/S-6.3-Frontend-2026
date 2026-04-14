@@ -842,7 +842,7 @@ function TabOne() {
   const stickyOffsets =
     user.jenisUserId === 4
       ? { no: "0px", aksi: "40px", icd: "202px", diag: "307px" }
-      : { no: "0px", icd: "52px", diag: "134px" };
+      : { no: "0px", icd: "52px", diag: "180px" };
 
   return (
     <div className="container-fluid">
