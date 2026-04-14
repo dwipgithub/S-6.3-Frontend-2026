@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate } from "react-router-dom";
@@ -41,10 +41,28 @@ const RL52 = () => {
   const [loadingRS, setLoadingRS] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [selectedRsID, setSelectedRsID] = useState(null);
+  const tableRef = useRef(null);
 
   useEffect(() => {
     refreshToken();
     getBulan();
+
+    const headerRow = tableRef.current?.querySelector("thead tr:first-child");
+
+    if (!headerRow) return;
+
+    const updateHeight = () => {
+      const height = headerRow.getBoundingClientRect().height;
+      tableRef.current.style.setProperty("--header-height", `${height}px`);
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(headerRow);
+
+    return () => observer.disconnect();
+
     // const getLastYear = async () => {
     //   const date = new Date();
     //   setTahun(date.getFullYear() );
@@ -109,7 +127,7 @@ const RL52 = () => {
       value: "01",
     });
     results.push({
-      key: "Febuari",
+      key: "Februari",
       value: "02",
     });
     results.push({
@@ -747,7 +765,7 @@ const RL52 = () => {
                 }`}
               >
                 <div className={style["table-container"]}>
-                  <table className={style["table"]}>
+                  <table ref={tableRef} className={style["table"]}>
                     <thead>
                       <tr>
                         <th rowSpan={3} style={{ verticalAlign: "middle" }}>
@@ -791,7 +809,7 @@ const RL52 = () => {
                           Jumlah Kunjungan
                         </th>
                       </tr>
-                      <tr>
+                      <tr className={style["subheader-row"]}>
                         <th style={{ textAlign: "center" }}>Laki-Laki</th>
                         <th style={{ textAlign: "center" }}>Perempuan</th>
                         <th style={{ textAlign: "center" }}>Total</th>

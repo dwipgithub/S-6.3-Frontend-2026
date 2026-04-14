@@ -77,8 +77,10 @@
 }
 
 .table-container {
-  max-height: 520px;
-  overflow: auto;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  display: block;
   border: 1px solid #d4d4d4;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -86,12 +88,12 @@
 }
 
 .table {
-  width: 400%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 13px;
-  /* font-family: Calibri, "Segoe UI", Arial, sans-serif; */
-  background: #fff;
+  /* width: 400%; */
+  min-width: 1500px; /* Sesuaikan dengan total lebar kolom agar kolom umur punya ruang */
+  table-layout: fixed; /* WAJIB: agar lebar kolom konsisten */
+  width: max-content; /* Jangan 100%, biarkan meluas ke kanan */
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .table th,
@@ -239,6 +241,18 @@
   left: 0;
   z-index: 0; /* Ensures sticky column is above other content */
   background-color: #fbfefe;
+}
+
+/* Mode Desktop Normal */
+.inner-content {
+  width: 100%; /* Defaultnya full layar */
+}
+
+/* Mode HP atau Zoom Besar (Layar < 1200px misalnya) */
+@media screen and (max-width: 1200px) {
+  .inner-content {
+    width: 2200px; /* Paksa lebar hanya jika layar mengecil */
+  }
 }
 
 /* ========== Form Validasi (tab Validasi) ========== */
