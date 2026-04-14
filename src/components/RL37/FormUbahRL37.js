@@ -898,14 +898,10 @@ export const FormUbahRL37 = () => {
           </div>
         </div>
         <div className="mt-3 mb-3">
-          <ToastContainer />
-          <button
-            type="submit"
-            disabled={buttonStatus}
-            className="btn btn-outline-success"
-          >
-            <HiSaveAs /> Update
-          </button>
+           <ToastContainer />
+                    <button type="submit" className={style.btnPrimary}>
+                      <HiSaveAs /> Simpan
+                    </button>
         </div>
       </form>
     </div>

@@ -1062,7 +1062,7 @@ const RL38 = () => {
                                 }`}
                               >
                                 <div className={style.validasiCard}>
-                                    <h3 className={style.validasiCardTitle}>Validasi RL 3.6</h3>
+                                    <h3 className={style.validasiCardTitle}>Validasi RL 3.8</h3>
                 
                                     {/* =========================
                                         1️⃣ DATA RL KOSONG

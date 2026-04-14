@@ -12,7 +12,6 @@
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 13px;
-  font-family: Calibri, "Segoe UI", Arial, sans-serif;
   background: #fff;
 }
 
@@ -141,7 +140,7 @@
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #e2e8f0;
-  font-family: 'Times New Roman', Times, serif;
+  /* font-family: 'Times New Roman', Times, serif; */
   font-size: 0.95rem;
 }
 

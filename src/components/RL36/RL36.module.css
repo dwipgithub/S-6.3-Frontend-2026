@@ -93,7 +93,6 @@
     border-collapse: collapse;
     table-layout: fixed;
     font-size: 15px;
-    font-family: 'Times New Roman', Times, serif; /* Set font family */
     /* Ensures column widths are consistent */
 }
 
