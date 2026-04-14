@@ -30,7 +30,7 @@ export const RL317 = () => {
   const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [filterLabel, setFilterLabel] = useState([]);
   // const [daftarBulan, setDaftarBulan] = useState([])
-  const [rumahSakit, setRumahSakit] = useState("");
+  const [rumahSakit, setRumahSakit] = useState(null);
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
@@ -50,6 +50,7 @@ export const RL317 = () => {
   const [loadingRS, setLoadingRS] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -125,11 +126,22 @@ export const RL317 = () => {
   };
 
   const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
   };
 
   const getRumahSakit = async (kabKotaId) => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
+
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
         headers: {
@@ -139,8 +151,11 @@ export const RL317 = () => {
           kabKotaId: kabKotaId,
         },
       });
+
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -157,6 +172,16 @@ export const RL317 = () => {
 
   const getRL = async (e) => {
     e.preventDefault();
+
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
+    }
+
     if (rumahSakit == null) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
@@ -165,7 +190,8 @@ export const RL317 = () => {
     }
     const filter = [];
     filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun)));
+    // filter.push("periode: ".concat(String(tahun)));
+    filter.push("Periode ".concat(String(tahun)));
     setFilterLabel(filter);
 
     setSpinner(true);
@@ -359,6 +385,19 @@ export const RL317 = () => {
     }
   };
 
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
+  };
+
   const getValidasi = async () => {
     setSpinner(true);
     try {
@@ -380,7 +419,16 @@ export const RL317 = () => {
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
+
+        // 🔥 KUNCI UTAMA (WAJIB!)
+        if (user.jenisUserId === 3) {
+          setStatusValidasi(1);
+        } else if (user.jenisUserId === 4) {
+          setStatusValidasi(2);
+        } else {
+          setStatusValidasi("");
+        }
+
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
@@ -398,7 +446,7 @@ export const RL317 = () => {
   };
 
   const statusValidasiChangeHadler = (e) => {
-    setStatusValidasi(e.target.value);
+    setStatusValidasi(Number(e.target.value));
   };
 
   const keteranganValidasiChangeHadler = (e) => {
@@ -437,7 +485,10 @@ export const RL317 = () => {
         await axiosJWT.patch(
           "/apisirs6v2/rltigatitiktujuhbelasvalidasi/" + idValidasi,
           {
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -448,7 +499,10 @@ export const RL317 = () => {
           {
             rsId: rumahSakit.id,
             periode: `${tahun}-12-01`,
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -520,7 +574,7 @@ export const RL317 = () => {
                     onChange={(e) => provinsiChangeHandler(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarProvinsi.map((nilai) => {
                       return (
@@ -545,7 +599,7 @@ export const RL317 = () => {
                     onChange={(e) => kabKotaChangeHandler(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarKabKota.map((nilai) => {
                       return (
@@ -567,10 +621,12 @@ export const RL317 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    // onChange={(e) => rumahSakitChangeHandler(e)}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -600,7 +656,7 @@ export const RL317 = () => {
                     onChange={(e) => kabKotaChangeHandler(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarKabKota.map((nilai) => {
                       return (
@@ -622,10 +678,12 @@ export const RL317 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    // onChange={(e) => rumahSakitChangeHandler(e)}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -652,10 +710,12 @@ export const RL317 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    // onChange={(e) => rumahSakitChangeHandler(e)}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (

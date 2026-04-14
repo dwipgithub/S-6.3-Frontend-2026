@@ -18,7 +18,7 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 const RL311 = () => {
   const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [filterLabel, setFilterLabel] = useState([]);
-  const [rumahSakit, setRumahSakit] = useState("");
+  const [rumahSakit, setRumahSakit] = useState(null);
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
@@ -42,6 +42,7 @@ const RL311 = () => {
   const [loadingRS, setLoadingRS] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -118,12 +119,28 @@ const RL311 = () => {
     getRumahSakit(kabKotaId);
   };
 
-  const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
+  // const rumahSakitChangeHandler = (e) => {
+  //   const rsId = e.target.value;
+  //   showRumahSakit(rsId);
+  // };
+
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
   };
 
   const getRumahSakit = async (kabKotaId) => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
+
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
         headers: {
@@ -135,6 +152,8 @@ const RL311 = () => {
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -151,6 +170,16 @@ const RL311 = () => {
 
   const getRL = async (e) => {
     e.preventDefault();
+
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
+    }
+
     if (rumahSakit == null) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
@@ -158,8 +187,8 @@ const RL311 = () => {
       return;
     }
     const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun)));
+    filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
+    filter.push("Periode ".concat(String(tahun)));
     setFilterLabel(filter);
     try {
       const customConfig = {
@@ -376,7 +405,16 @@ const RL311 = () => {
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
+
+        // 🔥 FIX PENTING
+        if (user.jenisUserId === 3) {
+          setStatusValidasi(1);
+        } else if (user.jenisUserId === 4) {
+          setStatusValidasi(2);
+        } else {
+          setStatusValidasi("");
+        }
+
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
@@ -394,7 +432,7 @@ const RL311 = () => {
   };
 
   const statusValidasiChangeHadler = (e) => {
-    setStatusValidasi(e.target.value);
+    setStatusValidasi(Number(e.target.value));
   };
 
   const keteranganValidasiChangeHadler = (e) => {
@@ -433,7 +471,10 @@ const RL311 = () => {
         await axiosJWT.patch(
           "/apisirs6v2/rltigatitiksebelasvalidasi/" + idValidasi,
           {
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -444,7 +485,10 @@ const RL311 = () => {
           {
             rsId: rumahSakit.id,
             periode: `${tahun}-12-01`,
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -558,13 +602,12 @@ const RL311 = () => {
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -613,13 +656,12 @@ const RL311 = () => {
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -643,13 +685,12 @@ const RL311 = () => {
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
