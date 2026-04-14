@@ -933,213 +933,174 @@ const RL35 = () => {
                   >
                     No.
                   </th>
-                  {user.jenisUserId === 4
-                        ?
-                  <th
-                    rowSpan={2}
-                    style={{ width: "8%", verticalAlign: "middle" }}
-                  >
-                    Aksi
-                  </th>
-                  : <>
-                                      
-                                    </>
-                                }
+
+                  {user?.jenisUserId === 4 && (
+                    <th
+                      rowSpan={2}
+                      style={{ width: "8%", verticalAlign: "middle" }}
+                    >
+                      Aksi
+                    </th>
+                  )}
+
                   <th
                     rowSpan={2}
                     style={{ width: "12%", verticalAlign: "middle" }}
                   >
                     Jenis Kegiatan
                   </th>
+
                   <th colSpan={2} style={{ textAlign: "center" }}>
                     Kunjungan Pasien Dalam Kota
                   </th>
+
                   <th colSpan={2} style={{ textAlign: "center" }}>
                     Kunjungan Pasien Luar Kota
                   </th>
+
                   <th rowSpan={2} style={{ verticalAlign: "middle" }}>
-                    Total Kunjungan{" "}
+                    Total Kunjungan
                   </th>
                 </tr>
+
                 <tr className={style["subheader-row"]}>
-                  <th style={{ verticalAlign: "middle" }}>Laki-Laki</th>
-                  <th style={{ verticalAlign: "middle" }}>Perempuan</th>
-                  <th style={{ verticalAlign: "middle" }}>Laki-Laki</th>
-                  <th style={{ verticalAlign: "middle" }}>Perempuan</th>
+                  <th>Laki-Laki</th>
+                  <th>Perempuan</th>
+                  <th>Laki-Laki</th>
+                  <th>Perempuan</th>
                 </tr>
               </thead>
+
               <tbody>
-                {dataRL.map((value, index) => {
-                  return (
-                    <tr key={value.id}>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {index + 1}
-                      </td>
-                      {user.jenisUserId === 4
-                        ?
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
+                {dataRL.map((value, index) => (
+                  <tr key={value.id}>
+                    <td style={{ textAlign: "center" }}>
+                      {index + 1}
+                    </td>
+
+                    {user?.jenisUserId === 4 && (
+                      <td style={{ textAlign: "center" }}>
                         <ToastContainer />
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            width: "100%",
-                          }}
-                        >
-                          {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
+
+                        <div style={{ display: "flex" }}>
                           <button
                             className="btn btn-danger"
                             style={{
-                              margin: "0 5px 0 0",
+                              marginRight: "5px",
                               backgroundColor: "#FF6663",
                               border: "1px solid #FF6663",
-                              flex: "1",
                             }}
                             type="button"
-                            onClick={(e) => hapus(value.id)}
+                            onClick={() => hapus(value.id)}
                           >
                             Hapus
                           </button>
+
                           <Link
                             to={`/rl35/ubah/${value.id}`}
                             className="btn btn-warning"
                             style={{
-                              margin: "0 5px 0 0",
                               backgroundColor: "#CFD35E",
                               border: "1px solid #CFD35E",
                               color: "#FFFFFF",
-                              flex: "1",
                             }}
                           >
                             Ubah
                           </Link>
                         </div>
                       </td>
-                       : <>
-                                      
-                                    </>
-                                }
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.jenis_kegiatan_rl_tiga_titik_lima.nama}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.kunjungan_pasien_dalam_kabkota_laki}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.kunjungan_pasien_dalam_kabkota_perempuan}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.kunjungan_pasien_luar_kabkota_laki}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.kunjungan_pasien_luar_kabkota_perempuan}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.total_kunjungan}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {total_kunjungan != 0 ? (
-                  <tr>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {99}
+                    )}
+
+                    <td style={{ textAlign: "center" }}>
+                      {value.jenis_kegiatan_rl_tiga_titik_lima.nama}
                     </td>
-                    <td></td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
+                      {value.kunjungan_pasien_dalam_kabkota_laki}
+                    </td>
+
+                    <td style={{ textAlign: "center" }}>
+                      {value.kunjungan_pasien_dalam_kabkota_perempuan}
+                    </td>
+
+                    <td style={{ textAlign: "center" }}>
+                      {value.kunjungan_pasien_luar_kabkota_laki}
+                    </td>
+
+                    <td style={{ textAlign: "center" }}>
+                      {value.kunjungan_pasien_luar_kabkota_perempuan}
+                    </td>
+
+                    <td style={{ textAlign: "center" }}>
+                      {value.total_kunjungan}
+                    </td>
+                  </tr>
+                ))}
+
+                {/* TOTAL */}
+                {total_kunjungan !== 0 && (
+                  <tr>
+                    <td style={{ textAlign: "center" }}>99</td>
+
+                    {user?.jenisUserId === 4 && <td></td>}
+
+                    <td style={{ textAlign: "center" }}>
                       Total
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[0].kunjungan_pasien_dalam_kabkota_laki}
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[0].kunjungan_pasien_dalam_kabkota_perempuan}
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[0].kunjungan_pasien_luar_kabkota_laki}
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[0].kunjungan_pasien_luar_kabkota_perempuan}
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[0].total_kunjungan}
                     </td>
                   </tr>
-                ) : (
-                  <></>
                 )}
-                {rata_kunjungan != 0 ? (
+
+                {/* RATA-RATA */}
+                {rata_kunjungan !== 0 && (
                   <tr>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {77}
-                    </td>
-                    <td></td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+                    <td style={{ textAlign: "center" }}>77</td>
+
+                    {user?.jenisUserId === 4 && <td></td>}
+
+                    <td style={{ textAlign: "center" }}>
                       Rata-rata kunjungan per hari
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[1].kunjungan_pasien_dalam_kabkota_laki}
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[1].kunjungan_pasien_dalam_kabkota_perempuan}
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[1].kunjungan_pasien_luar_kabkota_laki}
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[1].kunjungan_pasien_luar_kabkota_perempuan}
                     </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
+
+                    <td style={{ textAlign: "center" }}>
                       {dataCount[1].total_kunjungan}
                     </td>
                   </tr>
-                ) : (
-                  <></>
                 )}
               </tbody>
             </table>
