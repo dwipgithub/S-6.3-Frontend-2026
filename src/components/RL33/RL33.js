@@ -548,90 +548,108 @@ const handleShow = () => {
     setKeteranganValidasi(e.target.value);
   };
 
-  const simpanValidasi = async (e) => {
-    e.preventDefault();
-    
-    if (!rumahSakit || !rumahSakit.id) {
-      toast("Rumah sakit harus dipilih terlebih dahulu", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
+const simpanValidasi = async (e) => {
+  e.preventDefault();
+
+  if (!rumahSakit || !rumahSakit.id) {
+    toast("Rumah sakit harus dipilih terlebih dahulu", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
+    return;
+  }
+
+  if (parseInt(statusValidasi) === 0) {
+    toast("Status harus dipilih terlebih dahulu", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
+    return;
+  }
+
+  try {
+    const customConfig = {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "XSRF-TOKEN": CSRFToken,
+      },
+    };
+
+    // ✅ payload dibedakan berdasarkan jenis user
+    let payload = {
+      statusValidasiId: parseInt(statusValidasi),
+    };
+
+    // ✅ HANYA VALIDATOR kirim catatan
+    if (user.jenisUserId !== 4) {
+      payload.catatan = keteranganValidasi;
     }
 
-    if (parseInt(statusValidasi) === 0) {
-      toast("Status harus dipilih terlebih dahulu", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
+    console.log("Payload yang dikirim:", payload);
+    console.log("ValidasiId:", validasiId);
 
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "XSRF-TOKEN": CSRFToken,
-        },
-      };
-
-      const payload = {
-        statusValidasiId: parseInt(statusValidasi),
-        catatan: keteranganValidasi,
-      };
-
-      console.log("Payload yang dikirim:", payload);
-      console.log("ValidasiId:", validasiId);
-
-      if (validasiId) {
-        // Update existing validation
-        const response = await axiosJWT.patch(
-          `/apisirs6v2/rltigatitiktigavalidasi/${validasiId}`,
-          payload,
-          customConfig
-        );
-        console.log("Response PATCH:", response.data);
-        toast("Data Validasi Berhasil Diperbarui", {
-          position: toast.POSITION.TOP_RIGHT,
-        });
-        // Refresh validasi data tanpa reload halaman
-        setTimeout(() => {
-          getValidasi();
-        }, 1500);
-      } else {
-        // Create new validation
-        const createPayload = {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
-          jenisPeriode: 1,
-          statusValidasiId: parseInt(statusValidasi),
-          catatan: keteranganValidasi,
-        };
-        const response = await axiosJWT.post(
-          "/apisirs6v2/rltigatitiktigavalidasi",
-          createPayload,
-          customConfig
-        );
-        setValidasiId(response.data.data.id);
-        toast("Data Validasi Berhasil Disimpan", {
-          position: toast.POSITION.TOP_RIGHT,
-        });
-        // Refresh validasi data tanpa reload halaman
-        setTimeout(() => {
-          getValidasi();
-        }, 1500);
-      }
-    } catch (error) {
-      console.log(error);
-      toast(
-        `Data tidak bisa disimpan karena: ${
-          error.response?.data?.message || error.message
-        }`,
-        {
-          position: toast.POSITION.TOP_RIGHT,
-        }
+    if (validasiId) {
+      // UPDATE
+      const response = await axiosJWT.patch(
+        `/apisirs6v2/rltigatitiktigavalidasi/${validasiId}`,
+        payload,
+        customConfig
       );
+
+      console.log("Response PATCH:", response.data);
+
+      toast("Data Validasi Berhasil Diperbarui", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+
+      setTimeout(() => {
+        getValidasi();
+      }, 1500);
+
+    } else {
+
+      // CREATE
+      let createPayload = {
+        rsId: rumahSakit.id,
+        periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+        jenisPeriode: 1,
+        statusValidasiId: parseInt(statusValidasi),
+      };
+
+      // ✅ hanya validator kirim catatan
+      if (user.jenisUserId !== 4) {
+        createPayload.catatan = keteranganValidasi;
+      }
+
+      const response = await axiosJWT.post(
+        "/apisirs6v2/rltigatitiktigavalidasi",
+        createPayload,
+        customConfig
+      );
+
+      setValidasiId(response.data.data.id);
+
+      toast("Data Validasi Berhasil Disimpan", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+
+      setTimeout(() => {
+        getValidasi();
+      }, 1500);
     }
-  };
+
+  } catch (error) {
+    console.log(error);
+
+    toast(
+      `Data tidak bisa disimpan karena: ${
+        error.response?.data?.message || error.message
+      }`,
+      {
+        position: toast.POSITION.TOP_RIGHT,
+      }
+    );
+  }
+};
 
   const handleTabClick = (tab) => {
 
@@ -851,7 +869,7 @@ const handleShow = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
 
-                  
+
                   <select
                     name="kabKota"
                     id="kabKota"
