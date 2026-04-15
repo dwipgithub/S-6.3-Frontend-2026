@@ -14,9 +14,7 @@ import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL312 = () => {
-  // const [tahun, setTahun] = useState("");
-  const [bulan, setBulan] = useState(1);
-  // const [tahun, setTahun] = useState("2025");
+  const [bulan, setBulan] = useState("1");
   const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [filterLabel, setFilterLabel] = useState([]);
@@ -252,7 +250,9 @@ const RL312 = () => {
     }
     const filter = [];
     filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
-    filter.push("Periode ".concat(String(tahun).concat("-").concat(bulan)));
+    filter.push(
+      "Periode ".concat(`${tahun}-${bulan.toString().padStart(2, "0")}`),
+    );
     setFilterLabel(filter);
     try {
       const customConfig = {
@@ -262,8 +262,7 @@ const RL312 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          // periode: String(tahun),
-          periode: String(tahun).concat("-").concat(bulan),
+          periode: `${tahun}-${bulan.toString().padStart(2, "0")}`,
         },
       };
       const results = await axiosJWT.get(
@@ -367,22 +366,22 @@ const RL312 = () => {
     switch (jenisUserId) {
       case 1:
         getProvinsi();
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 2:
         getKabKota(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 3:
         getRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 4:
         showRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       default:
@@ -529,7 +528,7 @@ const RL312 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          periode: tahun,
+          periode: `${tahun}-${bulan.toString().padStart(2, "0")}`,
         },
       };
       const results = await axiosJWT.get(
@@ -619,7 +618,7 @@ const RL312 = () => {
           "/apisirs6v2/rltigatitikduabelasvalidasi",
           {
             rsId: rumahSakit.id,
-            periode: `${tahun}-12-01`,
+            periode: `${tahun}-${bulan.toString().padStart(2, "0")}-01`,
             statusValidasiId:
               statusValidasi === "" || statusValidasi === null
                 ? idValidasiSubmited
