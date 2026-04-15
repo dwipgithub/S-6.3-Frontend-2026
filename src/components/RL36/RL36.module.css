@@ -152,14 +152,17 @@
     position: -webkit-sticky; /* For Safari */
     position: sticky;
     top: 0; /* Sticky header */
-    z-index: 2; /* Above table content */
+    z-index: 2;
+    background-color: #fff; /* Above table content */
 }
 
 .table .sticky-column {
-    position: -webkit-sticky; /* For Safari */
+    position: -webkit-sticky; /* Safari */
     position: sticky;
     left: 0;
-    z-index: 1; /* Ensures sticky column is above other content */
+    z-index: 2;              /* Lebih tinggi dari kolom lain */
+    background-color: #fff;  /* 🔴 Supaya tidak transparan */
+    border-right: 1px solid #dee2e6; /* Opsional: garis pemisah */
 }
 
 
