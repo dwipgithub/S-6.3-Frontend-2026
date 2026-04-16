@@ -35,16 +35,19 @@ const RL36 = () => {
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
   const [activeTab, setActiveTab] = useState("tab1");
+  const [submittedBulan, setSubmittedBulan] = useState(null);
+  const [submittedTahun, setSubmittedTahun] = useState(null);
+  const [submittedRumahSakit, setSubmittedRumahSakit] = useState(null);
   const { CSRFToken } = useCSRFTokenContext();
   const tableRef = useRef(null);
 
-  // Load validasi data when user opens Validasi tab or when filters change
+  // Load validasi data when user opens Validasi tab or when submitted filters change
   useEffect(() => {
-    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
+    if (activeTab === "tab2" && submittedRumahSakit && submittedRumahSakit.id && submittedBulan !== 0 && submittedTahun) {
       getValidasi();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bulan, tahun, rumahSakit, activeTab]);
+  }, [submittedBulan, submittedTahun, submittedRumahSakit, activeTab]);
 
   useEffect(() => {
     refreshToken();
@@ -584,6 +587,11 @@ const RL36 = () => {
       setDataRL(data);
       handleClose();
 
+      // Simpan filter yang di-submit
+      setSubmittedBulan(bulan);
+      setSubmittedTahun(tahun);
+      setSubmittedRumahSakit(rumahSakit);
+      
       // Load validasi data setelah filter diterapkan
       try {
         const validasiConfig = {
@@ -959,8 +967,8 @@ const RL36 = () => {
           Authorization: `Bearer ${token}`,
         },
         params: {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          rsId: submittedRumahSakit.id,
+          periode: String(submittedTahun).concat("-").concat(String(submittedBulan).padStart(2, "0")),
         },
       };
       const response = await axiosJWT.get(
@@ -1000,8 +1008,8 @@ const RL36 = () => {
   const simpanValidasi = async (e) => {
     e.preventDefault();
 
-    if (!rumahSakit || !rumahSakit.id) {
-      toast("Rumah sakit harus dipilih terlebih dahulu", {
+    if (!submittedRumahSakit || !submittedRumahSakit.id) {
+      toast("Rumah sakit harus dipilih dan filter diterapkan terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
@@ -1044,8 +1052,8 @@ const RL36 = () => {
         const response = await axiosJWT.post(
           "/apisirs6v2/rltigatitikenamvalidasi",
           {
-            rsId: rumahSakit.id,
-            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+            rsId: submittedRumahSakit.id,
+            periode: String(submittedTahun).concat("-").concat(String(submittedBulan).padStart(2, "0")),
             ...payload,
           },
           customConfig
