@@ -14,8 +14,7 @@ import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL314 = () => {
-  const [bulan, setBulan] = useState(1);
-  // const [tahun, setTahun] = useState("");
+  const [bulan, setBulan] = useState("1");
   const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [total, setTotal] = useState("");
@@ -56,14 +55,9 @@ const RL314 = () => {
   useEffect(() => {
     refreshToken();
     getBulan();
-    const getLastYear = async () => {
-      const date = new Date();
-      setTahun("2025");
-      return date.getFullYear();
-    };
-    getLastYear().then((results) => {});
-    // getRLTigaTitikEmpatBelasTemplate()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    const currentYear = new Date().getFullYear().toString();
+    setTahun(currentYear);
   }, []);
 
   const refreshToken = async () => {
@@ -207,11 +201,6 @@ const RL314 = () => {
     getRumahSakit(kabKotaId);
   };
 
-  // const rumahSakitChangeHandler = (e) => {
-  //   const rsId = e.target.value;
-  //   showRumahSakit(rsId);
-  // };
-
   const handleSelectRumahSakit = (e) => {
     const id = e.target.value;
     const selected = daftarRumahSakit.find((item) => item.id == id);
@@ -277,7 +266,10 @@ const RL314 = () => {
     }
     const filter = [];
     filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
-    filter.push("Periode ".concat(String(tahun).concat("-").concat(bulan)));
+    // filter.push("Periode ".concat(String(tahun).concat("-").concat(bulan)));
+    filter.push(
+      "Periode ".concat(`${tahun}-${bulan.toString().padStart(2, "0")}`),
+    );
     setFilterLabel(filter);
     try {
       const customConfig = {
@@ -287,7 +279,7 @@ const RL314 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          tahun: date,
+          tahun: `${tahun}-${bulan.toString().padStart(2, "0")}-01`,
         },
       };
       const results = await axiosJWT.get(
@@ -379,18 +371,22 @@ const RL314 = () => {
     switch (jenisUserId) {
       case 1:
         getProvinsi();
+        setBulan("1");
         setShow(true);
         break;
       case 2:
         getKabKota(satKerId);
+        setBulan("1");
         setShow(true);
         break;
       case 3:
         getRumahSakit(satKerId);
+        setBulan("1");
         setShow(true);
         break;
       case 4:
         showRumahSakit(satKerId);
+        setBulan("1");
         setShow(true);
         break;
       default:
@@ -494,7 +490,7 @@ const RL314 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          periode: tahun,
+          periode: `${tahun}-${bulan.toString().padStart(2, "0")}`,
         },
       };
       const results = await axiosJWT.get(
@@ -584,7 +580,7 @@ const RL314 = () => {
           "/apisirs6v2/rltigatitikempatbelasvalidasi",
           {
             rsId: rumahSakit.id,
-            periode: `${tahun}-12-01`,
+            periode: `${tahun}-${bulan.toString().padStart(2, "0")}-01`,
             statusValidasiId:
               statusValidasi === "" || statusValidasi === null
                 ? idValidasiSubmited

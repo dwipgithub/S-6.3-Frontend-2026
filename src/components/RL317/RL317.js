@@ -871,11 +871,11 @@ export const RL317 = () => {
                         )}
 
                         <th style={{ textAlign: "center" }}>Golongan Obat</th>
-                        <th style={{ width: "15%", textAlign: "center" }}>
+                        <th style={{ width: "27%", textAlign: "center" }}>
                           Jumlah Item Obat
                         </th>
-                        <th style={{ width: "20%", textAlign: "center" }}>
-                          Jumlah Item Obat Yang Tersedia di Rumah Sakit
+                        <th style={{ width: "27%", textAlign: "center" }}>
+                          Jumlah Item Obat yang Tersedia di Rumah Sakit
                         </th>
                       </tr>
                     </thead>

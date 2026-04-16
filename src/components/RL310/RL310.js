@@ -16,7 +16,7 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL310 = () => {
   const [tahun, setTahun] = useState(1);
-  const [bulan, setBulan] = useState("");
+  const [bulan, setBulan] = useState("1");
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [filterLabel, setFilterLabel] = useState([]);
   const [rumahSakit, setRumahSakit] = useState(null);
@@ -338,22 +338,22 @@ const RL310 = () => {
     switch (jenisUserId) {
       case 1:
         getProvinsi();
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 2:
         getKabKota(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 3:
         getRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 4:
         showRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       default:
@@ -520,7 +520,7 @@ const RL310 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          periode: tahun,
+          periode: `${tahun}-${bulan.toString().padStart(2, "0")}`,
         },
       };
       const results = await axiosJWT.get(
@@ -611,7 +611,7 @@ const RL310 = () => {
           "/apisirs6v2/rltigatitiksepuluhvalidasi",
           {
             rsId: rumahSakit.id,
-            periode: `${tahun}-12-01`,
+            periode: `${tahun}-${bulan.toString().padStart(2, "0")}-01`,
             statusValidasiId:
               statusValidasi === "" || statusValidasi === null
                 ? idValidasiSubmited
