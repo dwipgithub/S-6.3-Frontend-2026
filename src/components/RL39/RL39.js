@@ -13,7 +13,7 @@ import "react-confirm-alert/src/react-confirm-alert.css";
 import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
-import { DownloadTableExcel } from "react-export-table-to-excel";
+import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 export const RL39 = () => {
@@ -38,28 +38,24 @@ export const RL39 = () => {
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
+  const [submittedBulan, setSubmittedBulan] = useState(null);
+  const [submittedTahun, setSubmittedTahun] = useState(null);
+  const [submittedRumahSakit, setSubmittedRumahSakit] = useState(null);
   const tableRef = useRef(null);
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
     refreshToken();
-    // getDataRS()
-    // getRL39();
-    setTotal(0);
+    setTotal();
     getBulan();
-    // const getLastYear = async () => {
-    //     const date = new Date()
-    //     setTahun(date.getFullYear())
-    //     return date.getFullYear()
-    // }
-    // getLastYear().then((results) => {
-
-    // })
-    // getCariTahun(202y2)
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "tab2" && submittedRumahSakit && submittedRumahSakit.id && submittedBulan !== 0 && submittedTahun) {
+      getValidasi();
+    }
+  }, [submittedBulan, submittedTahun, submittedRumahSakit, activeTab]);
 
   const refreshToken = async () => {
     try {
@@ -69,11 +65,21 @@ export const RL39 = () => {
         },
       };
       const response = await axios.get("/apisirs6v2/token", customConfig);
-      setToken(response.data.accessToken);
-      const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
-      setExpire(decoded.exp);
+      const accessToken = response.data.accessToken;
+      setToken(accessToken);
+      const decoded = jwt_decode(accessToken);
       setUser(decoded);
+      if (decoded.jenisUserId === 2) {
+        getKabKota(decoded.satKerId);
+      } else if (decoded.jenisUserId === 3) {
+        getRumahSakit(decoded.satKerId);
+      } else if (decoded.jenisUserId === 4) {
+        if (!rumahSakit || !rumahSakit.id) {
+          showRumahSakit(decoded.satKerId, accessToken);
+        }
+      }
+
+      setExpire(decoded.exp);
     } catch (error) {
       if (error.response) {
         navigate("/");
@@ -111,7 +117,7 @@ export const RL39 = () => {
       value: "1",
     });
     results.push({
-      key: "Febuari",
+      key: "Februari",
       value: "2",
     });
     results.push({
@@ -194,11 +200,11 @@ export const RL39 = () => {
     } catch (error) {}
   };
 
-  const showRumahSakit = async (id) => {
+  const showRumahSakit = async (id, tokenOverride) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenOverride || token}`,
         },
       });
 
@@ -209,18 +215,18 @@ export const RL39 = () => {
   const getRL = async (e) => {
     e.preventDefault();
     setSpinner(true);
-    if (!rumahSakit || !rumahSakit.id) {
+    if (rumahSakit == null) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
       });
       setSpinner(false);
       return;
     }
 
-    const periode = String(tahun).concat("-").concat(String(bulan).padStart(2, "0"));
     const filter = [];
-    filter.push("Nama: ".concat(rumahSakit.nama));
-    filter.push("Periode: ".concat(periode));
+    filter.push("filtered by nama: ".concat(rumahSakit.nama));
+    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
     setFilterLabel(filter);
 
     setValidasiId(null);
@@ -236,7 +242,7 @@ export const RL39 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          periode: periode,
+          periode: String(tahun).concat("-").concat(bulan),
         },
       };
       const results = await axiosJWT.get(
@@ -244,29 +250,12 @@ export const RL39 = () => {
         customConfig
       );
 
-      const responseData = results.data.data || [];
-      if (responseData.length === 0) {
-        setDataRL([]);
-        setTotal(0);
-        setSpinner(false);
-        handleClose();
-        toast("Data RL tidak ditemukan", {
-          position: toast.POSITION.TOP_RIGHT,
-        });
-        return;
-      }
+      console.log(results);
 
-      const rlTigaTitikSembilanDetails = responseData.map((value) => {
+      const rlTigaTitikSembilanDetails = results.data.data.map((value) => {
         return value;
       });
-      //   console.log(rlTigaTitikSembilanDetails)
 
-      //   let dataRLTigaTitikSembilanDetails = [];
-      //   rlTigaTitikSembilanDetails.forEach((element) => {
-      //     element.forEach((value) => {
-      //       dataRLTigaTitikSembilanDetails.push(value);
-      //     });
-      //   });
       let sortedProducts = rlTigaTitikSembilanDetails.sort((p1, p2) =>
         p1.jenis_kegiatan_id > p2.jenis_kegiatan_id
           ? 1
@@ -274,7 +263,6 @@ export const RL39 = () => {
           ? -1
           : 0
       );
-      // console.log(sortedProducts)
       let groups = [];
       sortedProducts.reduce(function (res, value) {
         if (!res[value.group_jenis_kegiatan_id]) {
@@ -315,10 +303,15 @@ export const RL39 = () => {
       setNamaFile(
         "RL39_" +
           rumahSakit.id +
-          "_".concat(String(tahun).concat("-").concat(String(bulan).padStart(2, "0")).concat("-01"))
+          "_".concat(String(tahun).concat("-").concat(bulan).concat("-01"))
       );
       setSpinner(false);
       handleClose();
+      
+      setSubmittedBulan(bulan);
+      setSubmittedTahun(tahun);
+      setSubmittedRumahSakit(rumahSakit);
+      
       if (activeTab === "tab2") {
         getValidasi();
       }
@@ -327,6 +320,7 @@ export const RL39 = () => {
       setSpinner(false);
       toast("Gagal mengambil data RL", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
       });
     }
   };
@@ -339,7 +333,6 @@ export const RL39 = () => {
         "XSRF-TOKEN": CSRFToken,
       },
     };
-    const response = await axios.get("/apisirs6v2/token", customConfig);
     try {
       await axiosJWT.delete(
         `/apisirs6v2/rltigatitiksembilan/${id}`,
@@ -347,11 +340,8 @@ export const RL39 = () => {
       );
       toast("Data Berhasil Dihapus", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
       });
-      // getRL()
-      // setDataRL((current) =>
-      //     current.filter((value) => value.id !== id)
-      // )
       try {
         const customConfig = {
           headers: {
@@ -368,19 +358,10 @@ export const RL39 = () => {
           customConfig
         );
 
-        console.log(results);
-
         const rlTigaTitikSembilanDetails = results.data.data.map((value) => {
           return value;
         });
-        //   console.log(rlTigaTitikSembilanDetails)
 
-        //   let dataRLTigaTitikSembilanDetails = [];
-        //   rlTigaTitikSembilanDetails.forEach((element) => {
-        //     element.forEach((value) => {
-        //       dataRLTigaTitikSembilanDetails.push(value);
-        //     });
-        //   });
         let sortedProducts = rlTigaTitikSembilanDetails.sort((p1, p2) =>
           p1.jenis_kegiatan_id > p2.jenis_kegiatan_id
             ? 1
@@ -388,7 +369,6 @@ export const RL39 = () => {
             ? -1
             : 0
         );
-        // console.log(sortedProducts)
         let groups = [];
         sortedProducts.reduce(function (res, value) {
           if (!res[value.group_jenis_kegiatan_id]) {
@@ -433,23 +413,24 @@ export const RL39 = () => {
       console.log(error);
       toast("Data Gagal Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
       });
     }
   };
 
   const getValidasi = async () => {
     try {
-      if (!rumahSakit || !rumahSakit.id) {
+      if (!submittedRumahSakit || !submittedRumahSakit.id) {
         return;
       }
-      const periode = String(tahun).concat("-").concat(String(bulan).padStart(2, "0"));
+      const periode = String(submittedTahun).concat("-").concat(String(submittedBulan).padStart(2, "0"));
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         params: {
-          rsId: rumahSakit.id,
+          rsId: submittedRumahSakit.id,
           periode: periode,
         },
       };
@@ -479,12 +460,6 @@ export const RL39 = () => {
     }
   };
 
-  useEffect(() => {
-    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
-      getValidasi();
-    }
-  }, [bulan, tahun, rumahSakit, activeTab]);
-
   const statusValidasiChangeHadler = (e) => {
     setStatusValidasi(e.target.value);
   };
@@ -496,9 +471,10 @@ export const RL39 = () => {
   const simpanValidasi = async (e) => {
     e.preventDefault();
 
-    if (!rumahSakit || !rumahSakit.id) {
-      toast("Rumah sakit harus dipilih terlebih dahulu", {
+    if (!submittedRumahSakit || !submittedRumahSakit.id) {
+      toast("Rumah sakit harus dipilih dan filter diterapkan terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
       });
       return;
     }
@@ -506,6 +482,7 @@ export const RL39 = () => {
     if (parseInt(statusValidasi, 10) === 0) {
       toast("Status harus dipilih terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
       });
       return;
     }
@@ -519,49 +496,73 @@ export const RL39 = () => {
         },
       };
 
-      const payload = {
+      let payload = {
         statusValidasiId: parseInt(statusValidasi, 10),
-        catatan: keteranganValidasi,
       };
 
+      if (user.jenisUserId !== 4) {
+        payload.catatan = keteranganValidasi;
+      }
+
+      console.log("Payload yang dikirim:", payload);
+      console.log("ValidasiId:", validasiId);
+
       if (validasiId) {
-        await axiosJWT.patch(
+        const response = await axiosJWT.patch(
           `/apisirs6v2/rltigatitiksembilanvalidasi/${validasiId}`,
           payload,
           customConfig
         );
+
+        console.log("Response PATCH:", response.data);
+
         toast("Data Validasi Berhasil Diperbarui", {
           position: toast.POSITION.TOP_RIGHT,
+          autoClose: 3000,
         });
+
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
       } else {
-        await axiosJWT.post(
+        let createPayload = {
+          rsId: submittedRumahSakit.id,
+          periode: String(submittedTahun).concat("-").concat(String(submittedBulan).padStart(2, "0")),
+          jenisPeriode: 1,
+          statusValidasiId: parseInt(statusValidasi, 10),
+        };
+
+        if (user.jenisUserId !== 4) {
+          createPayload.catatan = keteranganValidasi;
+        }
+
+        const response = await axiosJWT.post(
           "/apisirs6v2/rltigatitiksembilanvalidasi",
-          {
-            rsId: rumahSakit.id,
-            periode: String(tahun)
-              .concat("-")
-              .concat(String(bulan).padStart(2, "0")),
-            jenisPeriode: 1,
-            ...payload,
-          },
+          createPayload,
           customConfig
         );
+
+        setValidasiId(response.data.data.id);
+
         toast("Data Validasi Berhasil Disimpan", {
           position: toast.POSITION.TOP_RIGHT,
+          autoClose: 3000,
         });
-      }
 
-      setTimeout(() => {
-        getValidasi();
-      }, 1500);
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
+      }
     } catch (error) {
       console.log(error);
+
       toast(
         `Data tidak bisa disimpan karena: ${
           error.response?.data?.message || error.message
         }`,
         {
           position: toast.POSITION.TOP_RIGHT,
+          autoClose: 3000,
         }
       );
     }
@@ -657,15 +658,46 @@ export const RL39 = () => {
     }
   };
 
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
+
+  const handleDownloadExcel = () => {
+    const header = ["No", "Jenis Kegiatan", "Jumlah"];
+    const body = [];
+    let counter = 1;
+
+    dataRL.forEach(value => {
+      if (value.groupNama != null) {
+        value.details.forEach(value2 => {
+          body.push([
+            value2.no_jenis_kegiatan,
+            value2.nama_jenis_kegiatan,
+            value2.jumlah
+          ]);
+          counter++;
+        });
+      }
+    });
+
+    body.push(["99", "TOTAL", total]);
+
+    downloadExcel({
+      fileName: "RL_3_9",
+      sheet: "Data RL 39",
+      tablePayload: {
+        header,
+        body,
+      },
+    });
+  };
+
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h4 style={{ color: "grey" }}>
-        {" "}
-        <span> RL 3.9-Radiologi</span>
-      </h4>
+      <ToastContainer autoClose={3000} hideProgressBar={false} newestOnTop={true} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>
@@ -730,12 +762,12 @@ export const RL39 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -785,12 +817,12 @@ export const RL39 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -815,12 +847,12 @@ export const RL39 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -880,7 +912,6 @@ export const RL39 = () => {
           </Modal.Body>
           <Modal.Footer>
             <div className="mt-3 mb-3">
-              <ToastContainer />
               <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
@@ -888,248 +919,238 @@ export const RL39 = () => {
           </Modal.Footer>
         </form>
       </Modal>
-
       <div className="row">
         <div className="col-md-12">
+            <h4 className={style.pageHeader}> RL. 3.9 - Radiologi</h4>
           <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                className={style.btnPrimary}
                 to={`/rl39/tambah/`}
-                style={{ textDecoration: "none" }}
+                 type="button"
+                 className={style.btnPrimary}
+                 style={{ textDecoration: "none" }}
               >
                 Tambah
               </Link>
-            ) : null}
-            <button type="button" className={style.btnPrimary} onClick={handleShow}>
+            ) : (
+              <></>
+            )}
+            <button
+               type="button"
+               className={style.btnPrimary}
+              onClick={handleShow}
+            >
               Filter
             </button>
-            <DownloadTableExcel
-              filename={namafile}
-              sheet="Data RL 39"
-              currentTableRef={tableRef.current}
+            <button
+               type="button"
+               className={style.btnPrimary}
+               onClick={handleDownloadExcel}
             >
-              <button type="button" className={style.btnPrimary}>
-                Download
-              </button>
-            </DownloadTableExcel>
+              Download
+            </button>
           </div>
+
+          {filterLabel.length > 0 ? (
+            <div>
+              <h5 style={{ fontSize: "14px" }}>
+                filtered by{" "}
+                {filterLabel
+                  .map((value) => {
+                    return value;
+                  })
+                  .join(", ")}
+              </h5>
+            </div>
+          ) : (
+            <></>
+          )}
 
           <div>
-            <h5 style={{ fontSize: "14px" }}>
-              {filterLabel
-                .map((value) => {
-                  return value;
-                })
-                .join(", ")}
-            </h5>
-          </div>
-
-          <ul className={`nav nav-tabs ${style.navTabs}`}>
-            <li className={`nav-item ${style.navItem}`}>
-              <button
-                type="button"
-                className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
-                onClick={() => setActiveTab("tab1")}
-              >
-                Data
-              </button>
-            </li>
-            <li className={`nav-item ${style.navItem}`}>
-              <button
-                type="button"
-                className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
-                onClick={() => setActiveTab("tab2")}
-              >
-                Validasi
-              </button>
-            </li>
-          </ul>
-
-          <div className={`tab-content ${style.tabContent}`}>
-            <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
-              <div className="row mt-3 mb-3">
-            <div className="col-md-12">
-              <div className="container" style={{ textAlign: "center" }}>
-                {spinner && (
-                  <Spinner animation="grow" variant="success"></Spinner>
-                )}
-                {spinner && (
-                  <Spinner animation="grow" variant="success"></Spinner>
-                )}
-                {spinner && (
-                  <Spinner animation="grow" variant="success"></Spinner>
-                )}
-                {spinner && (
-                  <Spinner animation="grow" variant="success"></Spinner>
-                )}
-                {spinner && (
-                  <Spinner animation="grow" variant="success"></Spinner>
-                )}
-                {spinner && (
-                  <Spinner animation="grow" variant="success"></Spinner>
-                )}
-              </div>
-              <table className={style.table} ref={tableRef}>
-                <thead>
-                  <tr>
-                    <th style={{ width: "6%" }}>No</th>
-                    <th style={{ width: "12%" }}> </th>
-                    <th>Jenis Kegiatan</th>
-                    <th>Jumlah</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {
-                    // eslint-disable-next-line
-                    dataRL.map((value, index) => {
-                      // const sum = dataRL.reduce((accumulator, object) => {
-                      //   return accumulator + object.subTotal;
-                      // }, 0);
-
-                      // console.log(sum);
-
-                      if (value.groupNama != null) {
-                        return (
-                          <React.Fragment key={index}>
-                            <tr>
-                              <td>{value.groupNomor}</td>
-                              <td></td>
-                              <td style={{ textAlign: "left" }}>
-                                {value.groupNama}
-                              </td>
-                              <td>{value.subTotal}</td>
-                            </tr>
-                            {value.details.map((value2, index2) => {
-                              return (
-                                <tr key={index2}>
-                                  <td>{value2.no_jenis_kegiatan}</td>
-                                  <td>
-                                    <ToastContainer />
-                                    {user.jenisUserId === 4 ? (
-                                      <div style={{ display: "flex" }}>
-                                        <button
-                                          className={style.btnDanger}
-                                          type="button"
-                                          onClick={(e) => hapus(value2.id)}
-                                        >
-                                          Hapus
-                                        </button>
-                                        {value2.no_jenis_kegiatan === "0" ? (
-                                          ""
-                                        ) : (
-                                          <Link
-                                            to={`/rl39/ubah/${value2.id}`}
-                                            className={style.btnWarning}
-                                          >
-                                            Ubah
-                                          </Link>
-                                        )}
-                                      </div>
-                                    ) : null}
-                                  </td>
-                                  <td style={{ textAlign: "left" }}>
-                                    &emsp;{value2.nama_jenis_kegiatan}
-                                  </td>
-                                  <td>{value2.jumlah}</td>
-                                </tr>
-                              );
-                            })}
-                          </React.Fragment>
-                        );
-                      } else if (value.groupNama == null) {
-                        return (
-                          <React.Fragment key={index}>
-                            <tr>
-                              <td style={{ textAlign: "left" }}>
-                                {value.details[0].nama}
-                              </td>
-                              <td>{value.details[0].nilai}</td>
-                            </tr>
-                          </React.Fragment>
-                        );
+            <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button type="button" className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`} onClick={() => handleTabClick("tab1")}>Data</button>
+              </li>
+              <li className={`nav-item ${style.navItem}`}>
+                <button type="button" className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`} onClick={() => handleTabClick("tab2")}>Validasi</button>
+              </li>
+            </ul>
+            <div className={`tab-content ${style.tabContent}`}>
+              <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
+                <div className={style["table-container"]}>
+                   <table className={style["table"]} ref={tableRef}>
+                      <thead className={style["thead"]}>
+                <tr className="main-header-row">
+                  <th
+                    style={{ width: "6%" }}
+                    rowSpan={2}
+                    className={style["sticky-header-view"]}
+                  >
+                    No.
+                  </th>
+                  {user.jenisUserId === 4
+                   ?
+                  <th
+                    style={{ width: "15%" }}
+                    rowSpan={2}
+                    className={style["sticky-header-view"]}
+                  >
+                    Aksi
+                  </th>
+                  : <>
+                     </>
                       }
-                    })
-                  }
-
-                  {dataRL.length > 0 ? (
-                    <tr>
-                      <td colSpan={1}>99</td>
-                      <td colSpan={2}>TOTAL</td>
-                      <td>{total}</td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-            <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
-              <div className={style.validasiCard}>
-                <h3 className={style.validasiCardTitle}>Validasi RL 3.9</h3>
-
-                {dataRL.length === 0 ? (
-                  <div
-                    style={{
-                      backgroundColor: "#fff3cd",
-                      border: "1px solid #ffc107",
-                      color: "#856404",
-                      padding: "15px",
-                      borderRadius: "4px",
-                      textAlign: "center",
-                    }}
+                  <th
+                    style={{ width: "50%", textAlign: "center" }}
+                    rowSpan={2}
+                    className={style["sticky-header-view"]}
                   >
-                    <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
-                  </div>
-                ) : !dataValidasi && user.jenisUserId === 4 ? (
-                  <div
-                    style={{
-                      backgroundColor: "#fff3cd",
-                      border: "1px solid #ffc107",
-                      color: "#856404",
-                      padding: "15px",
-                      borderRadius: "4px",
-                      textAlign: "center",
-                    }}
+                    Jenis Kegiatan
+                  </th>
+                  <th
+                    style={{ width: "22%" }}
+                    rowSpan={2}
+                    className={style["sticky-header-view"]}
                   >
-                    <strong>Data Belum di Validasi</strong>
-                  </div>
-                ) : (
-                  <>
-                    {dataValidasi && (
-                      <div
-                        style={{
-                          backgroundColor: "#f0f0f0",
-                          padding: "12px",
-                          borderRadius: "4px",
-                          marginBottom: "15px",
-                        }}
-                      >
-                        <div style={{ display: "flex", marginBottom: "4px" }}>
-                          <div
+                    Jumlah
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {
+                  //eslint-disable-next-line
+                  dataRL.map((value, index) => {
+                    if (value.groupNama != null) {
+                      return (
+                        <React.Fragment key={index}>
+                          <tr
                             style={{
-                              width: "90px",
-                              textAlign: "left",
-                              paddingRight: "8px",
-                              fontWeight: "600",
+                              textAlign: "center",
+                              backgroundColor: "#C4DFAA",
+                              fontWeight: "bold",
                             }}
                           >
-                            Status
-                          </div>
-                          <div style={{ width: "10px" }}>:</div>
-                          <div>
-                            {dataValidasi.statusValidasiId === 1
-                              ? "Perlu Perbaikan"
-                              : dataValidasi.statusValidasiId === 2
-                              ? "Selesai Diperbaiki"
-                              : dataValidasi.statusValidasiId === 3
-                              ? "Disetujui"
-                              : "-"}
-                          </div>
-                        </div>
+                            <td className={style["sticky-column"]}>
+                              {value.groupNomor}
+                            </td>
+                            {user.jenisUserId === 4
+                   ?
+                            <td className={style["sticky-column"]}></td>
+                            : <>
+                     </>
+                      }
+                            <td className={style["sticky-column"]}>
+                              {value.groupNama}
+                            </td>
+                            <td>{value.subTotal}</td>
+                          </tr>
+                          {value.details.map((value2, index2) => {
+                            return (
+                              <tr key={index2}>
+                                <td className={style["sticky-column"]}>
+                                  {value2.no_jenis_kegiatan}
+                                </td>
+                                {user.jenisUserId === 4
+                   ?
+                                <td
+                                  className={style["sticky-column"]}
+                                  style={{
+                                    textAlign: "center",
+                                    verticalAlign: "middle",
+                                  }}
+                                >
+                                  <div style={{ display: "flex", gap: "8px" }}>
+                                    <button
+                                      className={style.btnDanger}
+                                      type="button"
+                                      onClick={(e) => hapus(value2.id)}
+                                    >
+                                      Hapus
+                                    </button>
+                                    {value2.nama_jenis_kegiatan !== "Tidak Ada Data" && (
+                                      <Link
+                                        to={`/rl39/ubah/${value2.id}`}
+                                        className={style.btnWarning}
+                                        style={{ textDecoration: "none" }}
+                                      >
+                                        Ubah
+                                      </Link>
+                                    )}
+                                  </div>
+                                </td>
+                                : <>
+                     </>
+                      }
+                                <td className={style["sticky-column"]}>
+                                  &emsp;{value2.nama_jenis_kegiatan}
+                                </td>
+                                <td>{value2.jumlah}</td>
+                              </tr>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    }
+                  })
+                }
 
-                        {(dataValidasi.keteranganValidasi || dataValidasi.catatan || dataValidasi.keterangan) && (
+                {dataRL.length > 0 ? (
+                  <tr>
+                    <td colSpan={1}>99</td>
+                    {user.jenisUserId === 4 ?
+                    <td colSpan={2}>TOTAL</td>
+                    :
+                    <td colSpan={1}>TOTAL</td>
+                    }
+                    <td>{total}</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+                </div>
+              </div>
+
+              <div className={`tab-pane fade ${activeTab === "tab2" ? "show active" : ""}`}>
+                <div className={style.validasiCard}>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.9</h3>
+
+                  {dataRL.length === 0 ? (
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
+                    </div>
+                  ) : !dataValidasi && user.jenisUserId === 4 ? (
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>Data Belum di Validasi</strong>
+                    </div>
+                  ) : (
+                    <>
+                      {dataValidasi && (
+                        <div
+                          style={{
+                            backgroundColor: "#f0f0f0",
+                            padding: "12px",
+                            borderRadius: "4px",
+                            marginBottom: "15px",
+                          }}
+                        >
                           <div style={{ display: "flex", marginBottom: "4px" }}>
                             <div
                               style={{
@@ -1139,84 +1160,107 @@ export const RL39 = () => {
                                 fontWeight: "600",
                               }}
                             >
-                              Catatan
+                              Status
                             </div>
                             <div style={{ width: "10px" }}>:</div>
                             <div>
-                              {dataValidasi.keteranganValidasi || dataValidasi.catatan || dataValidasi.keterangan}
+                              {dataValidasi.statusValidasiId === 1
+                                ? "Perlu Perbaikan"
+                                : dataValidasi.statusValidasiId === 2
+                                ? "Selesai Diperbaiki"
+                                : dataValidasi.statusValidasiId === 3
+                                ? "Disetujui"
+                                : "-"}
                             </div>
                           </div>
-                        )}
 
-                        <div style={{ display: "flex" }}>
-                          <div
-                            style={{
-                              width: "90px",
-                              textAlign: "left",
-                              paddingRight: "8px",
-                              fontWeight: "600",
-                            }}
-                          >
-                            Dibuat
-                          </div>
-                          <div style={{ width: "10px" }}>:</div>
-                          <div>
-                            {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                          {(dataValidasi.keteranganValidasi || dataValidasi.catatan || dataValidasi.keterangan) && (
+                            <div style={{ display: "flex", marginBottom: "4px" }}>
+                              <div
+                                style={{
+                                  width: "90px",
+                                  textAlign: "left",
+                                  paddingRight: "8px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                Catatan
+                              </div>
+                              <div style={{ width: "10px" }}>:</div>
+                              <div>
+                                {dataValidasi.keteranganValidasi || dataValidasi.catatan || dataValidasi.keterangan}
+                              </div>
+                            </div>
+                          )}
+
+                          <div style={{ display: "flex" }}>
+                            <div
+                              style={{
+                                width: "90px",
+                                textAlign: "left",
+                                paddingRight: "8px",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Dibuat
+                            </div>
+                            <div style={{ width: "10px" }}>:</div>
+                            <div>
+                              {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
-                      <div
-                        style={{
-                          backgroundColor: "#fff3cd",
-                          border: "1px solid #ffc107",
-                          color: "#856404",
-                          padding: "15px",
-                          borderRadius: "4px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <strong>Data telah divalidasi.</strong>
-                      </div>
-                    ) : (
-                      <form onSubmit={simpanValidasi}>
-                        <ToastContainer />
-
-                        <div className={style.validasiFormGroup}>
-                          <label>Status</label>
-                          <select value={statusValidasi} onChange={statusValidasiChangeHadler}>
-                            <option value={0}>Pilih</option>
-                            {user.jenisUserId === 4 ? (
-                              <option value="2">Selesai Diperbaiki</option>
-                            ) : (
-                              <>
-                                <option value="1">Perlu Perbaikan</option>
-                                <option value="3">Disetujui</option>
-                              </>
-                            )}
-                          </select>
+                      {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                        <div
+                          style={{
+                            backgroundColor: "#fff3cd",
+                            border: "1px solid #ffc107",
+                            color: "#856404",
+                            padding: "15px",
+                            borderRadius: "4px",
+                            textAlign: "center",
+                          }}
+                        >
+                          <strong>Data telah divalidasi.</strong>
                         </div>
-
-                        {user.jenisUserId !== 4 && (
+                      ) : (
+                        <form onSubmit={simpanValidasi}>
                           <div className={style.validasiFormGroup}>
-                            <label>Catatan</label>
-                            <textarea
-                              onChange={keteranganValidasiChangeHadler}
-                              rows={4}
-                              value={keteranganValidasi}
-                            />
+                            <label>Status</label>
+                            <select value={statusValidasi} onChange={statusValidasiChangeHadler}>
+                              <option value={0}>Pilih</option>
+                              {user.jenisUserId === 4 ? (
+                                <option value="2">Selesai Diperbaiki</option>
+                              ) : (
+                                <>
+                                  <option value="1">Perlu Perbaikan</option>
+                                  <option value="3">Disetujui</option>
+                                </>
+                              )}
+                            </select>
                           </div>
-                        )}
 
-                        <button type="submit" className={style.btnPrimary}>
-                          <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
-                        </button>
-                      </form>
-                    )}
-                  </>
-                )}
+                          {user.jenisUserId !== 4 && (
+                            <div className={style.validasiFormGroup}>
+                              <label>Catatan</label>
+                              <textarea
+                                onChange={keteranganValidasiChangeHadler}
+                                rows={4}
+                                value={keteranganValidasi}
+                              />
+                            </div>
+                          )}
+
+                          <button type="submit" className={style.btnPrimary}>
+                            <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                          </button>
+                        </form>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
