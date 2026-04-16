@@ -849,50 +849,44 @@ export const RL318 = () => {
                             </td>
                             {user.jenisUserId === 4 && (
                               <td className={style["sticky-column"]}>
-                                {value.no_golongan_obat != 4 &&
-                                value.no_golongan_obat != 2 ? (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: "center",
-                                    }}
-                                  >
-                                    {user.jenisUserId === 4 ? (
-                                      <>
-                                        <button
-                                          className="btn btn-danger"
-                                          style={{
-                                            margin: "0 5px 0 0",
-                                            backgroundColor: "#FF6663",
-                                            border: "1px solid #FF6663",
-                                          }}
-                                          type="button"
-                                          onClick={(e) =>
-                                            deleteConfirmation(value.id)
-                                          }
-                                        >
-                                          Hapus
-                                        </button>
-                                        <Link
-                                          to={`/rl318/ubah/${value.id}`}
-                                          className="btn btn-warning"
-                                          style={{
-                                            margin: "0 5px 0 0",
-                                            backgroundColor: "#CFD35E",
-                                            border: "1px solid #CFD35E",
-                                            color: "#FFFFFF",
-                                          }}
-                                        >
-                                          Ubah
-                                        </Link>
-                                      </>
-                                    ) : (
-                                      <></>
-                                    )}
-                                  </div>
-                                ) : (
-                                  ""
-                                )}
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  {user.jenisUserId === 4 ? (
+                                    <>
+                                      <button
+                                        className="btn btn-danger"
+                                        style={{
+                                          margin: "0 5px 0 0",
+                                          backgroundColor: "#FF6663",
+                                          border: "1px solid #FF6663",
+                                        }}
+                                        type="button"
+                                        onClick={(e) =>
+                                          deleteConfirmation(value.id)
+                                        }
+                                      >
+                                        Hapus
+                                      </button>
+
+                                      <Link
+                                        to={`/rl318/ubah/${value.id}`}
+                                        className="btn btn-warning"
+                                        style={{
+                                          margin: "0 5px 0 0",
+                                          backgroundColor: "#CFD35E",
+                                          border: "1px solid #CFD35E",
+                                          color: "#FFFFFF",
+                                        }}
+                                      >
+                                        Ubah
+                                      </Link>
+                                    </>
+                                  ) : null}
+                                </div>
                               </td>
                             )}
                             <td style={{ textAlign: "left" }}>

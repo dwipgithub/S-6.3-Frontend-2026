@@ -91,7 +91,7 @@
   width: 200%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 13px;
+  font-size: 15px;
   font-family: Calibri, "Segoe UI", Arial, sans-serif;
   background: #fff;
 }
@@ -123,7 +123,7 @@
   background: linear-gradient(180deg, #f2f2f2 0%, #e6e6e6 100%);
   color: #333;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 15px;
   position: -webkit-sticky;
   position: sticky;
   top: 29px;
@@ -188,7 +188,7 @@
 .table .form-control {
   border: 1px solid #d4d4d4;
   border-radius: 2px;
-  font-size: 13px;
+  font-size: 15px;
   font-family: Calibri, "Segoe UI", Arial, sans-serif;
   min-height: 32px;
   padding: 4px 6px;
@@ -359,5 +359,5 @@
 
 .backText {
   color: gray;
-  font-size: 16px;
+  font-size: 15px;
 }

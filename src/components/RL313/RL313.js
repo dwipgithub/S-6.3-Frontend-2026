@@ -801,7 +801,7 @@ const RL313 = () => {
                       <tr>
                         <th style={{ width: "5%" }}>No</th>
                         {user.jenisUserId === 4 && (
-                          <th style={{ width: "12%" }}>Aksi</th>
+                          <th style={{ width: "15%" }}>Aksi</th>
                         )}
                         <th className="text-center">Kelompok</th>
                         <th className="text-center">Jenis Tindakan</th>

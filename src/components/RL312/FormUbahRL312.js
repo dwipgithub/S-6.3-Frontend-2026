@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import style from "./FormTambahRL312.module.css";
+import style from "./RL312.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,6 +10,8 @@ import Table from "react-bootstrap/Table";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 export const FormEditRL312 = () => {
+  const [tahun, setTahun] = useState("");
+  const [bulan, setBulan] = useState("");
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
   const [namaPropinsi, setNamaPropinsi] = useState("");
@@ -71,7 +73,7 @@ export const FormEditRL312 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getRumahSakit = async (id) => {
@@ -96,8 +98,10 @@ export const FormEditRL312 = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
+    setTahun(response.data.data.tahun);
+    setBulan(response.data.data.bulan);
     setNamaSpesialis(response.data.data.nama_spesialisasi);
     setKhusus(response.data.data.khusus);
     setBesar(response.data.data.besar);
@@ -166,7 +170,7 @@ export const FormEditRL312 = () => {
           sedang,
           kecil,
         },
-        customConfig
+        customConfig,
       );
       toast("Data Berhasil Diupdate", {
         position: toast.POSITION.TOP_RIGHT,
@@ -206,13 +210,25 @@ export const FormEditRL312 = () => {
     if (object.target.value.length > object.target.maxLength) {
       object.target.value = object.target.value.slice(
         0,
-        object.target.maxLength
+        object.target.maxLength,
       );
     }
   };
 
   return (
-    <div className="container" style={{ marginTop: "70px" }}>
+    <div
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
+    >
+      <div className={style.headerAction}>
+        <Link to="/rl312">
+          <button type="button" className={style.btnPrimary}>
+            ←
+          </button>
+        </Link>
+
+        <h4 className={style.pageHeader}>RL 3.12 - Pembedahan</h4>
+      </div>
       <form onSubmit={UpdateRLTigaTitikDuaBelas}>
         <div className="row">
           <div className="col-md-6">
@@ -274,140 +290,118 @@ export const FormEditRL312 = () => {
               </div>
             </div>
           </div>
+          {/* <div className="col-md-6">
+            <div className="col-md-12">
+              <div className="card">
+                <div className="card-body">
+                  <h5 className="card-title h5">Periode Laporan</h5>
+
+                  <div
+                    className="form-floating"
+                    style={{ width: "50%", display: "inline-block" }}
+                  >
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={bulan}
+                      disabled
+                    />
+                    <label>Bulan</label>
+                  </div>
+
+                  <div
+                    className="form-floating"
+                    style={{ width: "50%", display: "inline-block" }}
+                  >
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={tahun}
+                      disabled
+                    />
+                    <label>Tahun</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div> */}
         </div>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl312/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
+            <table
+              className={style.table}
+              style={{ width: "100%", tableLayout: "fixed" }}
             >
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}> Kembali RL 3.12 Pembedahan</span>
-            {/* <div className="container" style={{ textAlign: "center" }}>
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-            </div> */}
-            <Table className={style.rlTable}>
-              <thead>
+              <thead className={style.thead}>
                 <tr>
-                  <th style={{ width: "20%" }}>Jenis Spesialisasi</th>
+                  <th className={style["sticky-col-1"]} style={{ width: "5%" }}>
+                    No
+                  </th>
+                  <th
+                    className={style["sticky-col-3"]}
+                    style={{ width: "25%" }}
+                  >
+                    Jenis Spesialisasi
+                  </th>
                   <th>Khusus</th>
                   <th>Besar</th>
                   <th>Sedang</th>
                   <th>Kecil</th>
                 </tr>
               </thead>
+
               <tbody>
                 <tr>
-                  <td>
-                    <input
-                      name="nama"
-                      type="text"
-                      className="form-control"
-                      id="nama"
-                      placeholder="Jenis Spesialisasi"
-                      value={setSpesialis}
-                      // onChange={(e) => changeHandler(e)}
-                      disabled={true}
-                    />
+                  {/* NO */}
+                  <td className={`${style.center} ${style["sticky-col-1"]}`}>
+                    1
                   </td>
-                  <td>
-                    <input
-                      type="number"
-                      name="Khusus"
-                      className="form-control"
-                      value={khusus}
-                      min={0}
-                      maxLength={7}
-                      onInput={(e) => maxLengthCheck(e)}
-                      // onChange={(e) => setKhusus(parseInt(e.target.value))}
-                      onChange={(e) => changeHandler(e)}
-                      onPaste={preventPasteNegative}
-                      onKeyPress={preventMinus}
-                      onFocus={handleFocus}
-                    />
+
+                  {/* NAMA */}
+                  <td className={`${style.left} ${style["sticky-col-3"]}`}>
+                    {setSpesialis}
                   </td>
-                  <td>
-                    <input
-                      type="number"
-                      name="Besar"
-                      className="form-control"
-                      value={besar}
-                      min={0}
-                      maxLength={7}
-                      onInput={(e) => maxLengthCheck(e)}
-                      // onChange={(e) => setBesar(parseInt(e.target.value))}
-                      onChange={(e) => changeHandler(e)}
-                      onPaste={preventPasteNegative}
-                      onKeyPress={preventMinus}
-                      onFocus={handleFocus}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      name="Sedang"
-                      className="form-control"
-                      value={sedang}
-                      min={0}
-                      maxLength={7}
-                      onInput={(e) => maxLengthCheck(e)}
-                      // onChange={(e) => setSedang(parseInt(e.target.value))}
-                      onChange={(e) => changeHandler(e)}
-                      onPaste={preventPasteNegative}
-                      onKeyPress={preventMinus}
-                      onFocus={handleFocus}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      name="Kecil"
-                      className="form-control"
-                      value={kecil}
-                      min={0}
-                      maxLength={7}
-                      onInput={(e) => maxLengthCheck(e)}
-                      // onChange={(e) => setKecil(parseInt(e.target.value))}
-                      onChange={(e) => changeHandler(e)}
-                      onPaste={preventPasteNegative}
-                      onKeyPress={preventMinus}
-                      onFocus={handleFocus}
-                    />
-                  </td>
+
+                  {/* INPUT */}
+                  {[
+                    { name: "Khusus", value: khusus },
+                    { name: "Besar", value: besar },
+                    { name: "Sedang", value: sedang },
+                    { name: "Kecil", value: kecil },
+                  ].map((item) => (
+                    <td key={item.name} style={{ padding: 0 }}>
+                      <input
+                        type="number"
+                        name={item.name}
+                        min={0}
+                        maxLength={7}
+                        onInput={(e) => maxLengthCheck(e)}
+                        onPaste={preventPasteNegative}
+                        onKeyPress={preventMinus}
+                        value={item.value}
+                        onChange={(e) => changeHandler(e)}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          textAlign: "center",
+                          backgroundColor: "#ffffff",
+                          border: "none",
+                          outline: "none",
+                          boxShadow: "none",
+                          margin: 0,
+                          padding: "8px 4px",
+                          display: "block",
+                        }}
+                      />
+                    </td>
+                  ))}
                 </tr>
               </tbody>
-            </Table>
+            </table>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button
-                type="submit"
-                disabled={buttonStatus}
-                className="btn btn-outline-success"
-              >
-                <HiSaveAs /> Simpan
+              <button type="submit" className={style.btnPrimary}>
+                <HiSaveAs /> Update
               </button>
             </div>
           </div>
