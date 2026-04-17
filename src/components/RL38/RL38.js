@@ -8,7 +8,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { confirmAlert } from "react-confirm-alert";
 import { Modal, Table, Spinner } from "react-bootstrap";
-import { DownloadTableExcel } from "react-export-table-to-excel";
+import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL38 = () => {
@@ -41,6 +41,13 @@ const RL38 = () => {
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
+  const [submittedBulan, setSubmittedBulan] = useState(null);
+  const [submittedTahun, setSubmittedTahun] = useState(null);
+  const [submittedRumahSakit, setSubmittedRumahSakit] = useState(null);
+  const [totalJumlahLaki, setTotalJumlahLaki] = useState(0);
+  const [totalJumlahPerempuan, setTotalJumlahPerempuan] = useState(0);
+  const [totalRataLaki, setTotalRataLaki] = useState(0);
+  const [totalRataPerempuan, setTotalRataPerempuan] = useState(0);
 
   useEffect(() => {
     refreshToken();
@@ -55,10 +62,10 @@ const RL38 = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== "" && tahun) {
+    if (activeTab === "tab2" && submittedRumahSakit && submittedRumahSakit.id && submittedBulan !== null && submittedTahun) {
       getValidasi();
     }
-  }, [bulan, tahun, rumahSakit, activeTab]);
+  }, [submittedBulan, submittedTahun, submittedRumahSakit, activeTab]);
 
   const refreshToken = async () => {
     try {
@@ -219,6 +226,7 @@ const RL38 = () => {
     if (rumahSakit == null) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
       });
       return;
     }
@@ -344,6 +352,29 @@ const RL38 = () => {
         });
       });
 
+      let tJumlahLaki = 0;
+      let tJumlahPerempuan = 0;
+      let tRataLaki = 0;
+      let tRataPerempuan = 0;
+      
+      satu.forEach(value => {
+        if (value.groupNama != null) {
+          value.details.forEach(value2 => {
+            value2.kegiatan.forEach(value3 => {
+              tJumlahLaki += Number(value3.jumlahLaki || 0);
+              tJumlahPerempuan += Number(value3.jumlahPerempuan || 0);
+              tRataLaki += Number(value3.rataLaki || 0);
+              tRataPerempuan += Number(value3.rataPerempuan || 0);
+            });
+          });
+        }
+      });
+
+      setTotalJumlahLaki(tJumlahLaki);
+      setTotalJumlahPerempuan(tJumlahPerempuan);
+      setTotalRataLaki(tRataLaki);
+      setTotalRataPerempuan(tRataPerempuan);
+
       setDataRL(satu);
       setNamaFile(
         "rl38_" +
@@ -353,47 +384,40 @@ const RL38 = () => {
       handleClose();
       setSpinner(false);
 
-      try {
-        const validasiConfig = {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            rsId: rumahSakit.id,
-            periode: String(tahun).concat("-").concat(bulan),
-          },
-        };
-        const validasiResponse = await axiosJWT.get(
-          "/apisirs6v2/rltigatitikdelapanvalidasi",
-          validasiConfig
-        );
-
-        if (validasiResponse.data.data && validasiResponse.data.data.length > 0) {
-          const validasi = validasiResponse.data.data[0];
-          setValidasiId(validasi.id);
-          setStatusValidasi(validasi.statusValidasiId);
-          setKeteranganValidasi(validasi.catatan || "");
-          setDataValidasi(validasi);
-        }
-      } catch (error) {
-        console.log(error);
+      setSubmittedBulan(bulan);
+      setSubmittedTahun(tahun);
+      setSubmittedRumahSakit(rumahSakit);
+      
+      if (activeTab === "tab2") {
+        getValidasi();
       }
+
+      toast("Data Berhasil Diambil", { 
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
+      });
     } catch (error) {
       console.log(error);
+      toast("Gagal mengambil data RL", { 
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
+      });
     }
   };
 
   const getValidasi = async () => {
     try {
+      if (!submittedRumahSakit || !submittedRumahSakit.id) {
+        return;
+      }
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         params: {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(bulan),
+          rsId: submittedRumahSakit.id,
+          periode: String(submittedTahun).concat("-").concat(submittedBulan),
         },
       };
       const response = await axiosJWT.get(
@@ -432,15 +456,17 @@ const RL38 = () => {
 
   const simpanValidasi = async (e) => {
     e.preventDefault();
-    if (!rumahSakit || !rumahSakit.id) {
-      toast("Rumah sakit harus dipilih terlebih dahulu", {
+    if (!submittedRumahSakit || !submittedRumahSakit.id) {
+      toast("Rumah sakit harus dipilih dan filter diterapkan terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
       });
       return;
     }
-    if (parseInt(statusValidasi) === 0) {
+    if (parseInt(statusValidasi, 10) === 0) {
       toast("Status harus dipilih terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
       });
       return;
     }
@@ -452,36 +478,64 @@ const RL38 = () => {
           "XSRF-TOKEN": CSRFToken,
         },
       };
-      const payload = {
-        statusValidasiId: parseInt(statusValidasi),
-        catatan: keteranganValidasi,
+
+      let payload = {
+        statusValidasiId: parseInt(statusValidasi, 10),
       };
+
+      if (user.jenisUserId !== 4) {
+        payload.catatan = keteranganValidasi;
+      }
+
       if (validasiId) {
-        await axiosJWT.patch(
+        const response = await axiosJWT.patch(
           `/apisirs6v2/rltigatitikdelapanvalidasi/${validasiId}`,
           payload,
           customConfig
         );
-        toast("Data Validasi Berhasil Diperbarui", { position: toast.POSITION.TOP_RIGHT });
+        toast("Data Validasi Berhasil Diperbarui", { 
+          position: toast.POSITION.TOP_RIGHT,
+          autoClose: 3000,
+        });
+
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
       } else {
-        const createPayload = {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(bulan),
+        let createPayload = {
+          rsId: submittedRumahSakit.id,
+          periode: String(submittedTahun).concat("-").concat(submittedBulan),
           jenisPeriode: 1,
-          ...payload,
+          statusValidasiId: parseInt(statusValidasi, 10),
         };
+
+        if (user.jenisUserId !== 4) {
+          createPayload.catatan = keteranganValidasi;
+        }
+
         const response = await axiosJWT.post(
           "/apisirs6v2/rltigatitikdelapanvalidasi",
           createPayload,
           customConfig
         );
+
         setValidasiId(response.data.data.id);
-        toast("Data Validasi Berhasil Disimpan", { position: toast.POSITION.TOP_RIGHT });
+
+        toast("Data Validasi Berhasil Disimpan", { 
+          position: toast.POSITION.TOP_RIGHT,
+          autoClose: 3000,
+        });
+
+        setTimeout(() => {
+          getValidasi();
+        }, 1500);
       }
-      setTimeout(() => getValidasi(), 1500);
     } catch (error) {
       console.log(error);
-      toast(`Data tidak bisa disimpan karena: ${error.response?.data?.message || error.message}`, { position: toast.POSITION.TOP_RIGHT });
+      toast(`Data tidak bisa disimpan karena: ${error.response?.data?.message || error.message}`, { 
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
+      });
     }
   };
 
