@@ -298,6 +298,19 @@ const RL314 = () => {
           jumlah: value.jumlah,
         };
       });
+
+      // 🔥 SORT FUNCTION (WAJIB DI SINI)
+      const sortByNo = (a, b) => {
+        const aParts = a.no.toString().split(".").map(Number);
+        const bParts = b.no.toString().split(".").map(Number);
+
+        for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+          const diff = (aParts[i] || 0) - (bParts[i] || 0);
+          if (diff !== 0) return diff;
+        }
+        return 0;
+      };
+
       const total16 = rlTigaTitikEmpatBelasDetails
         .filter(
           (rlTigaTitikEmpatBelasDetails) =>
@@ -335,7 +348,7 @@ const RL314 = () => {
         rlTigaTitikEmpatBelasDetails.forEach((item) => {
           if (
             parseInt(item.jenisKegiatanRLTigaTitikEmpatBelasId) < 15 ||
-            parseInt(item.jenisKegiatanRLTigaTitikEmpatBelasId > 16)
+            parseInt(item.jenisKegiatanRLTigaTitikEmpatBelasId) > 16
           ) {
             below15Above16.push(item);
           } else {
@@ -346,13 +359,19 @@ const RL314 = () => {
         below15Above16.push(newObj);
 
         const newData = [...below15Above16, ...restOfData];
+
+        newData.sort(sortByNo);
+
         setDataRL(newData);
         // setRumahSakit(null);
         handleClose();
         setSpinner(false);
       } else {
-        setDataRL(rlTigaTitikEmpatBelasDetails);
-        // setRumahSakit(null);
+        const sorted = [...rlTigaTitikEmpatBelasDetails];
+
+        sorted.sort(sortByNo);
+
+        setDataRL(sorted);
         handleClose();
         setSpinner(false);
       }
