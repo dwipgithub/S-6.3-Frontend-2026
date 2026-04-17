@@ -36,7 +36,7 @@ const RL313 = () => {
 
   const [idValidasi, setidValidasi] = useState("");
   const [idValidasiSubmited, setidValidasiSubmited] = useState("");
-  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [statusValidasi, setStatusValidasi] = useState("");
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
@@ -383,21 +383,14 @@ const RL313 = () => {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
 
-        // 🔥 KUNCI UTAMA
-        if (user.jenisUserId === 3) {
-          setStatusValidasi(1);
-        } else if (user.jenisUserId === 4) {
-          setStatusValidasi(2);
-        } else {
-          setStatusValidasi("");
-        }
+        setStatusValidasi("");
 
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
       } else {
         setidValidasi("");
-        setStatusValidasi(1);
+        setStatusValidasi("");
         setKeteranganValidasi("");
         setTglValidasi("");
         setIsValidated(false);
@@ -880,7 +873,7 @@ const RL313 = () => {
                 }`}
               >
                 <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Validasi RL 3.18</h3>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.13</h3>
                   {!isFilterApplied ? (
                     <div
                       style={{
@@ -987,17 +980,22 @@ const RL313 = () => {
                             <select
                               id="statusValidasi"
                               name="statusValidasi"
-                              value={statusValidasi}
+                              value={statusValidasi || ""}
                               required
                               onChange={(e) => statusValidasiChangeHadler(e)}
                             >
                               {user.jenisUserId === 4 ? (
                                 <>
-                                  <option value="">Pilih Status</option>
+                                  <option value="" disabled>
+                                    Pilih Status
+                                  </option>
                                   <option value="2">Selesai Diperbaiki</option>
                                 </>
                               ) : (
                                 <>
+                                  <option value="" disabled>
+                                    Pilih Status
+                                  </option>
                                   <option value="1">Perlu Perbaikan</option>
                                   <option value="3">Disetujui</option>
                                 </>
