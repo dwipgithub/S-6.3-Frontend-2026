@@ -1442,16 +1442,16 @@ const RL36 = () => {
                               // color:"#354259"
                             }}
                           >
-                            <td className={style["sticky-column"]}>
+                            <td className={style["sticky-column-view"]}>
                               {value.groupNo}
                             </td>
                             {user.jenisUserId === 4
                    ?
-                            <td className={style["sticky-column"]}></td>
+                            <td className={style["sticky-column-view"]}></td>
                             : <>
                      </>
                       }
-                            <td className={style["sticky-column"]}>
+                            <td className={style["sticky-column-view"]}>
                               {/* {value.groupNama} */}
                               {value.groupNama}
                             </td>
@@ -1502,7 +1502,7 @@ const RL36 = () => {
                           {value.details.map((value2, index2) => {
                             return (
                               <tr key={index2}>
-                                <td className={style["sticky-column"]}>
+                                <td className={style["sticky-column-view"]}>
                                   {
                                       value2.jenis_kegiatan_rl_tiga_titik_enam
                                         .no
@@ -1511,7 +1511,7 @@ const RL36 = () => {
                                 {user.jenisUserId === 4
                    ?
                                 <td
-                                  className={style["sticky-column"]}
+                                  className={style["sticky-column-view"]}
                                   style={{
                                     textAlign: "center",
                                     verticalAlign: "middle",
@@ -1552,7 +1552,7 @@ const RL36 = () => {
                                 : <>
                      </>
                       }
-                                <td className={style["sticky-column"]}>
+                                <td className={style["sticky-column-view"]}>
                                   {/* {
                                     value2.jenis_kegiatan_rl_tiga_titik_enam
                                       .nama

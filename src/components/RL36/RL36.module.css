@@ -166,60 +166,46 @@
 
 
 /* view */
-.table thead th.sticky-header-view:nth-child(1)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 4; /* Above both header and body content */
+.table thead th.sticky-header-view:nth-child(1) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 0;
+  z-index: 4;
 }
-.table thead th.sticky-header-view:nth-child(2)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0px;
-    z-index: 4; /* Above both header and body content */
+
+.table thead th.sticky-header-view:nth-child(2) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 52px;
+  z-index: 4;
 }
+
 .table thead th.sticky-header-view:nth-child(3) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0px;
-    z-index: 4; /* Above both header and body content */
+  position: -webkit-sticky;
+  position: sticky;
+  left: 205px;
+  z-index: 4;
 }
 
-.table thead th.sticky-header-view:nth-child(4) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0px;
-    z-index: 4; /* Above both header and body content */
+.table tbody tr td.sticky-column-view:nth-child(1) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 0;
+  z-index: 3;
 }
 
-.table tbody tr td.sticky-column-view:nth-child(1)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 3; /* Above both header and body content */
+.table tbody tr td.sticky-column-view:nth-child(2) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 52px;
+  z-index: 3;
 }
-.table tbody tr td.sticky-column-view:nth-child(2)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 52px;
-    z-index: 3; /* Above both header and body content */
-}
+
 .table tbody tr td.sticky-column-view:nth-child(3) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 205px;
-    z-index: 3; /* Above both header and body content */
-}
-
-.table tbody tr td.sticky-column-view:nth-child(4) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 287px;
-    z-index: 3; /* Above both header and body content */
+  position: -webkit-sticky;
+  position: sticky;
+  left: 205px;
+  z-index: 3;
 }
 
 .table .sticky-header-view {
