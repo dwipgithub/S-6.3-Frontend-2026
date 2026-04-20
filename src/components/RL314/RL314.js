@@ -34,7 +34,7 @@ const RL314 = () => {
   // untuk validasi
   const [idValidasi, setidValidasi] = useState("");
   const [idValidasiSubmited, setidValidasiSubmited] = useState("");
-  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [statusValidasi, setStatusValidasi] = useState("");
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
@@ -298,6 +298,19 @@ const RL314 = () => {
           jumlah: value.jumlah,
         };
       });
+
+      // 🔥 SORT FUNCTION (WAJIB DI SINI)
+      const sortByNo = (a, b) => {
+        const aParts = a.no.toString().split(".").map(Number);
+        const bParts = b.no.toString().split(".").map(Number);
+
+        for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+          const diff = (aParts[i] || 0) - (bParts[i] || 0);
+          if (diff !== 0) return diff;
+        }
+        return 0;
+      };
+
       const total16 = rlTigaTitikEmpatBelasDetails
         .filter(
           (rlTigaTitikEmpatBelasDetails) =>
@@ -335,7 +348,7 @@ const RL314 = () => {
         rlTigaTitikEmpatBelasDetails.forEach((item) => {
           if (
             parseInt(item.jenisKegiatanRLTigaTitikEmpatBelasId) < 15 ||
-            parseInt(item.jenisKegiatanRLTigaTitikEmpatBelasId > 16)
+            parseInt(item.jenisKegiatanRLTigaTitikEmpatBelasId) > 16
           ) {
             below15Above16.push(item);
           } else {
@@ -346,13 +359,19 @@ const RL314 = () => {
         below15Above16.push(newObj);
 
         const newData = [...below15Above16, ...restOfData];
+
+        newData.sort(sortByNo);
+
         setDataRL(newData);
         // setRumahSakit(null);
         handleClose();
         setSpinner(false);
       } else {
-        setDataRL(rlTigaTitikEmpatBelasDetails);
-        // setRumahSakit(null);
+        const sorted = [...rlTigaTitikEmpatBelasDetails];
+
+        sorted.sort(sortByNo);
+
+        setDataRL(sorted);
         handleClose();
         setSpinner(false);
       }
@@ -502,21 +521,14 @@ const RL314 = () => {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
 
-        // 🔥 KUNCI UTAMA (SAMA SEPERTI RL3.19)
-        if (user.jenisUserId === 3) {
-          setStatusValidasi(1);
-        } else if (user.jenisUserId === 4) {
-          setStatusValidasi(2);
-        } else {
-          setStatusValidasi("");
-        }
+        setStatusValidasi("");
 
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
       } else {
         setidValidasi("");
-        setStatusValidasi(1);
+        setStatusValidasi("");
         setKeteranganValidasi("");
         setTglValidasi("");
         setIsValidated(false);
@@ -1178,17 +1190,22 @@ const RL314 = () => {
                           <select
                             id="statusValidasi"
                             name="statusValidasi"
-                            value={statusValidasi}
+                            value={statusValidasi || ""}
                             required
                             onChange={(e) => statusValidasiChangeHadler(e)}
                           >
                             {user.jenisUserId === 4 ? (
                               <>
-                                <option value="">Pilih Status</option>
+                                <option value="" disabled>
+                                  Pilih Status
+                                </option>
                                 <option value="2">Selesai Diperbaiki</option>
                               </>
                             ) : (
                               <>
+                                <option value="" disabled>
+                                  Pilih Status
+                                </option>
                                 <option value="1">Perlu Perbaikan</option>
                                 <option value="3">Disetujui</option>
                               </>
