@@ -76,7 +76,7 @@ const Login = () => {
                                         /> */}
                                         <div className="mt-3">
                                             <ToastContainer />
-                                            <button className="btn btn-outline-success"><BoxArrowDownRight/> Login</button>
+                                            <button className={style.btnPrimary}><BoxArrowDownRight/> Login</button>
                                         </div>
                                     </form>
                                 </div>
