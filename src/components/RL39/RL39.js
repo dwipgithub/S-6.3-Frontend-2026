@@ -215,10 +215,9 @@ export const RL39 = () => {
   const getRL = async (e) => {
     e.preventDefault();
     setSpinner(true);
-    if (rumahSakit == null) {
-      toast(`Rumah sakit harus dipilih`, {
+    if (!rumahSakit || !rumahSakit.id) {
+      toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
-        autoClose: 3000,
       });
       setSpinner(false);
       return;
@@ -249,8 +248,16 @@ export const RL39 = () => {
         "/apisirs6v2/rltigatitiksembilan",
         customConfig
       );
-
-      console.log(results);
+      if (!results.data.data || results.data.data.length === 0) {
+        setDataRL([]);
+        setTotal(0);
+        toast("Data RL tidak ditemukan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setSpinner(false);
+        handleClose();
+        return;
+      }
 
       const rlTigaTitikSembilanDetails = results.data.data.map((value) => {
         return value;
@@ -318,10 +325,6 @@ export const RL39 = () => {
     } catch (error) {
       console.log(error);
       setSpinner(false);
-      toast("Gagal mengambil data RL", {
-        position: toast.POSITION.TOP_RIGHT,
-        autoClose: 3000,
-      });
     }
   };
 
