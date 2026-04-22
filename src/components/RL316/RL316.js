@@ -367,6 +367,7 @@ const RL316 = () => {
       "Drop Out",
     ];
 
+    // body data
     const body = dataRL.map((value, index) => [
       index + 1,
       value.nama,
@@ -380,12 +381,38 @@ const RL316 = () => {
       value.drop_out,
     ]);
 
+    // hitung total
+    const totalRow = [
+      "",
+      "TOTAL",
+      dataRL.reduce(
+        (sum, val) => sum + Number(val.pelayanan_kb_paska_persalinan || 0),
+        0,
+      ),
+      dataRL.reduce(
+        (sum, val) => sum + Number(val.pelayanan_kb_paska_keguguran || 0),
+        0,
+      ),
+      dataRL.reduce(
+        (sum, val) => sum + Number(val.pelayanan_kb_interval || 0),
+        0,
+      ),
+      dataRL.reduce((sum, val) => sum + Number(val.pelayanan_kb_total || 0), 0),
+      dataRL.reduce((sum, val) => sum + Number(val.komplikasi_kb || 0), 0),
+      dataRL.reduce((sum, val) => sum + Number(val.kegagalan_kb || 0), 0),
+      dataRL.reduce((sum, val) => sum + Number(val.efek_samping || 0), 0),
+      dataRL.reduce((sum, val) => sum + Number(val.drop_out || 0), 0),
+    ];
+
+    // gabungkan body + total
+    const finalBody = [...body, totalRow];
+
     downloadExcel({
       fileName: namafile,
       sheet: "RL316",
       tablePayload: {
         header,
-        body,
+        body: finalBody,
       },
     });
   }
