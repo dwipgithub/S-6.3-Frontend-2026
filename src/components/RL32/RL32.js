@@ -276,7 +276,6 @@ const RL32 = () => {
   const getRL = async (e) => {
     e.preventDefault();
     if (!rumahSakit) {
-      console.log("rumah sakit harus dipilih");
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -998,7 +997,7 @@ const RL32 = () => {
             <div className="mt-3 mb-3">
               <ToastContainer />
               <button type="submit" className={style.btnPrimary}>
-                <HiSaveAs size={20} /> Terapkan SS
+                <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
           </Modal.Footer>
