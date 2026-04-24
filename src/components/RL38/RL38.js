@@ -388,7 +388,6 @@ export const RL38 = () => {
           rumahSakit.id +
           "_".concat(String(tahun).concat("-").concat(bulan).concat("-01"))
       );
-      setRumahSakit(null);
       handleClose();
       setSpinner(false);
 
