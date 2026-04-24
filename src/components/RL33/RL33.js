@@ -584,9 +584,6 @@ const simpanValidasi = async (e) => {
       payload.catatan = keteranganValidasi;
     }
 
-    console.log("Payload yang dikirim:", payload);
-    console.log("ValidasiId:", validasiId);
-
     if (validasiId) {
       // UPDATE
       const response = await axiosJWT.patch(
