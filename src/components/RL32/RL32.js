@@ -1079,8 +1079,8 @@ const RL32 = () => {
                         <tr>
                           <th rowSpan="2">No.</th>
 
-                          {/* ✅ kolom SELALU ADA */}
-                          <th rowSpan="2">Aksi</th>
+                          {/* ✅ kolom kondisional */}
+                          {isAksi && <th rowSpan="2">Aksi</th>}
 
                           <th rowSpan="2">Jenis Pelayanan</th>
                           <th rowSpan="2">Pasien Awal Bulan</th>
@@ -1120,9 +1120,9 @@ const RL32 = () => {
                           <tr key={value.id}>
                             <td>{index + 1}</td>
 
-                            {/* ✅ kolom tetap ada */}
-                            <td>
-                              {isAksi && (
+                            {/* ✅ kolom kondisional */}
+                            {isAksi && (
+                              <td>
                                 <div style={{ display: "flex" }}>
                                   <button
                                     className="btn btn-danger"
@@ -1138,8 +1138,8 @@ const RL32 = () => {
                                     Ubah
                                   </Link>
                                 </div>
-                              )}
-                            </td>
+                              </td>
+                            )}
 
                             <td>{value.nama_jenis_pelayanan}</td>
                             <td>{value.pasien_awal_bulan}</td>
