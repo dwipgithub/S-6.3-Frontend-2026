@@ -996,7 +996,7 @@ const RL32 = () => {
             <div className="mt-3 mb-3">
               <ToastContainer />
               <button type="submit" className={style.btnPrimary}>
-                <HiSaveAs size={20} /> Terapkan
+                <HiSaveAs size={20} /> Terapkan SS
               </button>
             </div>
           </Modal.Footer>
