@@ -64,7 +64,9 @@ const RL32 = () => {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
+      if (decoded.jenisUserId === 4) {
       showRumahSakit(decoded.satKerId);
+      };
       setExpire(decoded.exp);
       setUser(decoded);
     } catch (error) {
