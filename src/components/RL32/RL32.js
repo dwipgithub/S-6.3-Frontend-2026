@@ -274,6 +274,7 @@ const RL32 = () => {
   const getRL = async (e) => {
     e.preventDefault();
     if (rumahSakit == null) {
+      console.log("rumah sakit harus dipilih");
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
