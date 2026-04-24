@@ -18,7 +18,7 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 export const RL38 = () => {
   const [bulan, setBulan] = useState("01");
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState("2026");
   const [filterLabel, setFilterLabel] = useState([]);
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [rumahSakit, setRumahSakit] = useState("");
@@ -217,7 +217,7 @@ export const RL38 = () => {
   const getRL = async (e) => {
     e.preventDefault();
     setSpinner(true);
-    if (rumahSakit == null) {
+    if (!rumahSakit || !rumahSakit.id || rumahSakit.id === 0) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
         autoClose: 3000,
@@ -251,6 +251,17 @@ export const RL38 = () => {
         "/apisirs6v2/rltigatitikdelapan",
         customConfig
       );
+
+      // ⭐ GUARD kalau backend return kosong
+      if (!detailkegiatan.data.data || detailkegiatan.data.data.length === 0) {
+        setDataRL([]);
+        toast("Data RL tidak ditemukan", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setSpinner(false);
+        handleClose();
+        return;
+      }
 
       const rlTemplate = detailkegiatan.data.data.map((value, index) => {
         return {
@@ -1195,8 +1206,8 @@ export const RL38 = () => {
                             <td className={style["sticky-column"]}>
                               {value.groupNama}
                             </td>
-                            <td>{value.groupJumlahLaki}</td>
-                            <td>{value.groupJumlahPerempuan}</td>
+                            <td>{parseInt(value.groupJumlahLaki || 0)}</td>
+                            <td>{parseInt(value.groupJumlahPerempuan || 0)}</td>
                             <td></td>
                             <td></td>
                           </tr>
@@ -1222,8 +1233,8 @@ export const RL38 = () => {
                                   <td className={style["sticky-column"]}>
                                     {value2.subGroupNama}
                                   </td>
-                                  <td>{value2.subGroupJumlahLaki}</td>
-                                  <td>{value2.subGroupJumlahPerempuan}</td>
+                                  <td>{parseInt(value2.subGroupJumlahLaki || 0)}</td>
+                                  <td>{parseInt(value2.subGroupJumlahPerempuan || 0)}</td>
                                   <td></td>
                                   <td></td>
                                 </tr>
@@ -1267,10 +1278,10 @@ export const RL38 = () => {
                                       <td className={style["sticky-column"]}>
                                         &emsp;{value3.jenisKegiatanNama}
                                       </td>
-                                      <td>{value3.jumlahLaki}</td>
-                                      <td>{value3.jumlahPerempuan}</td>
-                                      <td>{value3.rataLaki}</td>
-                                      <td>{value3.rataPerempuan}</td>
+                                      <td>{parseInt(value3.jumlahLaki || 0)}</td>
+                                      <td>{parseInt(value3.jumlahPerempuan || 0)}</td>
+                                      <td>{parseFloat(value3.rataLaki || 0).toFixed(3)}</td>
+                                      <td>{parseFloat(value3.rataPerempuan || 0).toFixed(3)}</td>
                                     </tr>
                                   );
                                 })}
@@ -1284,17 +1295,23 @@ export const RL38 = () => {
                 }
 
                 {dataRL.length > 0 ? (
-                  <tr>
-                    <td colSpan={1}>99</td>
+                  <tr
+                    style={{
+                      textAlign: "center",
+                      backgroundColor: "#C4DFAA",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    <td></td>
                     {user.jenisUserId === 4 ?
                     <td colSpan={2}>TOTAL</td>
                     :
                     <td colSpan={1}>TOTAL</td>
                     }
-                    <td>{totalJumlahLaki}</td>
-                    <td>{totalJumlahPerempuan}</td>
-                    <td>{totalRataLaki}</td>
-                    <td>{totalRataPerempuan}</td>
+                    <td>{parseInt(totalJumlahLaki || 0)}</td>
+                    <td>{parseInt(totalJumlahPerempuan || 0)}</td>
+                    <td>{parseFloat(totalRataLaki || 0).toFixed(3)}</td>
+                    <td>{parseFloat(totalRataPerempuan || 0).toFixed(3)}</td>
                   </tr>
                 ) : null}
               </tbody>
