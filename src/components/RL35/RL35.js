@@ -334,6 +334,7 @@ const getRLSatusehat = async (e) => {
   try {
     const headers = {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     };
 
     const apiKey = process.env.REACT_APP_SATUSEHAT_API_KEY;
