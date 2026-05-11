@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
@@ -9,15 +9,16 @@ import "react-toastify/dist/ReactToastify.css";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import Modal from "react-bootstrap/Modal";
+import Spinner from "react-bootstrap/Spinner";
 // import Table from "react-bootstrap/Table";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import { useMemo } from "react";
 
 const RL319 = () => {
   const [tahun, setTahun] = useState("");
-  const [bulan, setBulan] = useState("");
   const [filterLabel, setFilterLabel] = useState([]);
-  const [rumahSakit, setRumahSakit] = useState("");
+  const [rumahSakit, setRumahSakit] = useState(null);
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
@@ -27,17 +28,42 @@ const RL319 = () => {
   const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
   const navigate = useNavigate();
+
+  const [idValidasi, setidValidasi] = useState("");
+  const [idValidasiSubmited, setidValidasiSubmited] = useState("");
+  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [KeteranganValidasiDb, setKeteranganValidasiDb] = useState("");
+  const [tglValidasi, setTglValidasi] = useState("");
+  const [isValidated, setIsValidated] = useState(false);
+  const [loadingRS, setLoadingRS] = useState(false);
+  const [spinner, setSpinner] = useState(false);
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
+  const [selectedRsID, setSelectedRsID] = useState(null);
+  const tableRef = useRef(null);
 
   useEffect(() => {
     refreshToken();
-    const date = new Date();
-    setTahun("2025");
-    setBulan(date.getMonth() + 1);
+    const currentYear = new Date().getFullYear();
+    setTahun(currentYear.toString());
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const headerRow = tableRef.current?.querySelector("thead tr:first-child");
+
+    if (!headerRow) return;
+
+    const updateHeight = () => {
+      const height = headerRow.getBoundingClientRect().height;
+      tableRef.current.style.setProperty("--header-height", `${height}px`);
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(headerRow);
+
+    return () => observer.disconnect();
   }, []);
-
   const refreshToken = async () => {
     try {
       const customConfig = {
@@ -48,7 +74,9 @@ const RL319 = () => {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
+      if (decoded.jenisUserId == 4) {
+        showRumahSakit(decoded.satKerId);
+      }
       setExpire(decoded.exp);
       setUser(decoded);
     } catch (error) {
@@ -81,18 +109,25 @@ const RL319 = () => {
     },
   );
 
-  const getRumahSakit = async (kabKotaId) => {
+  const getRumahSakit = async (id, type = "kabkota") => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
     try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+      let params = {};
+      if (type === "provinsi") {
+        params.provinsiId = id;
+      } else {
+        params.kabKotaId = id;
+      }
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params: {
-          kabKotaId: kabKotaId,
-        },
+        params: params,
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -107,20 +142,21 @@ const RL319 = () => {
     } catch (error) {}
   };
 
-  const getDataRLTigaTitikSembilanBelas = async (e) => {
-    e.preventDefault();
-    if (rumahSakit == null) {
-      toast(`rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
     }
+  };
 
-    const filter = [];
-    filter.push("Nama: ".concat(rumahSakit.nama));
-    filter.push("Periode ".concat(String(tahun)));
-    setFilterLabel(filter);
-
+  const getValidasi = async () => {
+    setSpinner(true);
     try {
       const customConfig = {
         headers: {
@@ -128,6 +164,69 @@ const RL319 = () => {
           Authorization: `Bearer ${token}`,
         },
         params: {
+          rsId: rumahSakit.id,
+          periode: tahun,
+        },
+      };
+      const results = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiksembilanbelasvalidasi",
+        customConfig,
+      );
+
+      if (results.data.data != null && results.data.data.length > 0) {
+        setidValidasi(results.data.data[0].id);
+        setidValidasiSubmited(results.data.data[0].statusValidasiId);
+        if (user.jenisUserId === 3) {
+          setStatusValidasi(1);
+        } else if (user.jenisUserId === 4) {
+          setStatusValidasi(2);
+        } else {
+          setStatusValidasi("");
+        }
+        setKeteranganValidasi(results.data.data[0].catatan || "");
+        setKeteranganValidasiDb(results.data.data[0].catatan || "");
+        setTglValidasi(results.data.data[0].modifiedAt);
+        setIsValidated(results.data.data[0].statusValidasiId === 3);
+      } else {
+        setidValidasi("");
+        setStatusValidasi(1);
+        setKeteranganValidasi("");
+        setKeteranganValidasiDb("");
+        setTglValidasi("");
+        setIsValidated(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setSpinner(false);
+  };
+
+  const getDataRLTigaTitikSembilanBelas = async (e) => {
+    e.preventDefault();
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
+    }
+
+    const filter = [];
+
+    filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
+    filter.push("Periode ".concat(String(tahun)));
+    setFilterLabel(filter);
+
+    setSpinner(true);
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          rsId: rumahSakit.id,
           tahun: tahun,
         },
       };
@@ -141,35 +240,97 @@ const RL319 = () => {
       });
 
       let dataRLTigaTitikSembilanBelasDetails = [];
+
       rlTigaTitikSembilanBelasDetails.forEach((element) => {
         element.forEach((value) => {
           dataRLTigaTitikSembilanBelasDetails.push(value);
         });
       });
-      const hasChildren2 = dataRLTigaTitikSembilanBelasDetails.some((item) => {
-        const no = item.golongan_obat_rl_tiga_titik_sembilan_belas?.no;
-        return no && String(no).startsWith("2.");
-      });
-      const hasChildren4 = dataRLTigaTitikSembilanBelasDetails.some((item) => {
-        const no = item.golongan_obat_rl_tiga_titik_sembilan_belas?.no;
-        return no && String(no).startsWith("4.");
-      });
-      const filteredData = dataRLTigaTitikSembilanBelasDetails.filter(
-        (item) => {
-          const no = String(
-            item.golongan_obat_rl_tiga_titik_sembilan_belas?.no,
-          );
-          if (no === "2" && !hasChildren2) return false;
-          if (no === "4" && !hasChildren4) return false;
-          return true;
-        },
-      );
-      setDataRL(filteredData);
-      setRumahSakit(null);
+
+      const normalizeData = dataRLTigaTitikSembilanBelasDetails
+        .map((item) => {
+          return {
+            ...item,
+            no: item.golongan_obat_rl_tiga_titik_sembilan_belas?.no,
+            nama: item.golongan_obat_rl_tiga_titik_sembilan_belas?.nama,
+          };
+        })
+        .filter((item) => item.no !== "2" && item.no !== "4"); // 🔥 hanya buang header DB
+
+      setDataRL(normalizeData);
+      // setRumahSakit(null);
       handleClose();
+      setActiveTab("tab1");
+      setIsFilterApplied(true);
+      await getValidasi();
     } catch (error) {
       console.log(error);
     }
+    setSpinner(false);
+  };
+
+  const generateWithHeader = (data) => {
+    const result = [...data];
+
+    // Helper: ambil child berdasarkan prefix no
+    const getChildren = (prefix) =>
+      data.filter((item) => item.no?.startsWith(prefix + "."));
+
+    const sumFields = (items) => {
+      return items.reduce(
+        (acc, curr) => {
+          acc.ranap_pasien_keluar += curr.ranap_pasien_keluar || 0;
+          acc.ranap_lama_dirawat += curr.ranap_lama_dirawat || 0;
+          acc.jumlah_pasien_rajal += curr.jumlah_pasien_rajal || 0;
+          acc.rajal_lab += curr.rajal_lab || 0;
+          acc.rajal_radiologi += curr.rajal_radiologi || 0;
+          acc.rajal_lain_lain += curr.rajal_lain_lain || 0;
+          return acc;
+        },
+        {
+          ranap_pasien_keluar: 0,
+          ranap_lama_dirawat: 0,
+          jumlah_pasien_rajal: 0,
+          rajal_lab: 0,
+          rajal_radiologi: 0,
+          rajal_lain_lain: 0,
+        },
+      );
+    };
+
+    // ===== HEADER 2 (Asuransi)
+    const children2 = getChildren("2");
+    if (children2.length) {
+      result.push({
+        golonganObatTigaTitikSembilanBelasId: 2,
+        no: "2",
+        nama: "Asuransi",
+        ...sumFields(children2),
+        isHeader: true,
+      });
+    }
+
+    // ===== HEADER 4 (Gratis)
+    const children4 = getChildren("4");
+    if (children4.length) {
+      result.push({
+        golonganObatTigaTitikSembilanBelasId: 8,
+        no: "4",
+        nama: "Gratis",
+        ...sumFields(children4),
+        isHeader: true,
+      });
+    }
+
+    // Sorting berdasarkan no
+    result.sort((a, b) => {
+      const noA = a.golongan_obat_rl_tiga_titik_sembilan_belas?.no || "";
+      const noB = b.golongan_obat_rl_tiga_titik_sembilan_belas?.no || "";
+
+      return noA.localeCompare(noB, undefined, { numeric: true });
+    });
+
+    return result;
   };
 
   const hapusData = async (id) => {
@@ -180,69 +341,20 @@ const RL319 = () => {
         "XSRF-TOKEN": CSRFToken,
       },
     };
+
     try {
-      let parent;
-      const currentData = await getRLTigaTitikSembilanBelasById(id);
-
-      if (
-        currentData.golongan_obat_rl_tiga_titik_sembilan_belas.no.includes("4.")
-      ) {
-        parent = await getParent(4, id);
-      } else if (
-        currentData.golongan_obat_rl_tiga_titik_sembilan_belas.no.includes("2.")
-      ) {
-        parent = await getParent(2, id);
-      }
-
-      if (parent) {
-        await axiosJWT.patch(
-          "/apisirs6v2/rltigatitiksembilanbelasdetail/" + parent.id,
-          parent.data,
-          customConfig,
-        );
-      }
       await axiosJWT.delete(
         `/apisirs6v2/rltigatitiksembilanbelas/${id}`,
         customConfig,
       );
 
-      setDataRL((prevData) => {
-        const updatedData = prevData.filter((item) => item.id !== id);
-
-        const hasChildren2 = updatedData.some((item) => {
-          const no = item.golongan_obat_rl_tiga_titik_sembilan_belas?.no;
-          return no && String(no).startsWith("2.");
-        });
-        const hasChildren4 = updatedData.some((item) => {
-          const no = item.golongan_obat_rl_tiga_titik_sembilan_belas?.no;
-          return no && String(no).startsWith("4.");
-        });
-        const filteredData = updatedData.filter((item) => {
-          const no = String(
-            item.golongan_obat_rl_tiga_titik_sembilan_belas?.no,
-          );
-          if (no === "2" && !hasChildren2) return false;
-          if (no === "4" && !hasChildren4) return false;
-          return true;
-        });
-
-        if (parent) {
-          return filteredData.map((item) => {
-            if (item.id === parent.id) {
-              return { ...item, ...parent.data };
-            }
-            return item;
-          });
-        }
-        return filteredData;
-      });
+      setDataRL((prev) => prev.filter((item) => item.id !== id));
 
       toast("Data Berhasil Dihapus", {
         position: toast.POSITION.TOP_RIGHT,
       });
     } catch (error) {
-      console.log(error);
-      toast("Data Gagal Disimpan", {
+      toast("Data Gagal Dihapus", {
         position: toast.POSITION.TOP_RIGHT,
       });
     }
@@ -266,81 +378,82 @@ const RL319 = () => {
     });
   };
 
-  const getParent = async (filter, id) => {
-    const response = await axiosJWT.get(
-      "/apisirs6v2/rltigatitiksembilanbelasdetail/" + id,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+  // const getParent = async (filter, id) => {
+  //   const response = await axiosJWT.get(
+  //     "/apisirs6v2/rltigatitiksembilanbelasdetail/" + id,
+  //     {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     },
+  //   );
 
-    const newResponse = await axiosJWT.get(
-      "/apisirs6v2/rltigatitiksembilanbelas",
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          tahun: tahun,
-        },
-      },
-    );
+  //   const newResponse = await axiosJWT.get(
+  //     "/apisirs6v2/rltigatitiksembilanbelas",
+  //     {
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       params: {
+  //         rsId: rumahSakit.id,
+  //         tahun: tahun,
+  //       },
+  //     },
+  //   );
 
-    let dataRLTigaTitikSembilanBelasDetails = [];
-    const rlTigaTitikSembilanBelasDetails = newResponse.data.data.map(
-      (value) => {
-        return value.rl_tiga_titik_sembilan_belas_details;
-      },
-    );
-    rlTigaTitikSembilanBelasDetails.forEach((element) => {
-      element.forEach((value) => {
-        dataRLTigaTitikSembilanBelasDetails.push(value);
-      });
-    });
+  //   let dataRLTigaTitikSembilanBelasDetails = [];
+  //   const rlTigaTitikSembilanBelasDetails = newResponse.data.data.map(
+  //     (value) => {
+  //       return value.rl_tiga_titik_sembilan_belas_details;
+  //     },
+  //   );
+  //   rlTigaTitikSembilanBelasDetails.forEach((element) => {
+  //     element.forEach((value) => {
+  //       dataRLTigaTitikSembilanBelasDetails.push(value);
+  //     });
+  //   });
 
-    const parent = dataRLTigaTitikSembilanBelasDetails
-      .filter((value) => {
-        return value.golongan_obat_rl_tiga_titik_sembilan_belas.no == filter;
-      })
-      .map((value) => {
-        return {
-          id: value.id,
-          data: {
-            ranap_pasien_keluar:
-              value.ranap_pasien_keluar -
-              response.data.data.ranap_pasien_keluar,
-            ranap_lama_dirawat:
-              value.ranap_lama_dirawat - response.data.data.ranap_lama_dirawat,
-            jumlah_pasien_rajal:
-              value.jumlah_pasien_rajal -
-              response.data.data.jumlah_pasien_rajal,
-            rajal_lab: value.rajal_lab - response.data.data.rajal_lab,
-            rajal_radiologi:
-              value.rajal_radiologi - response.data.data.rajal_radiologi,
-            rajal_lain_lain:
-              value.rajal_lain_lain - response.data.data.rajal_lain_lain,
-          },
-        };
-      });
+  //   const parent = dataRLTigaTitikSembilanBelasDetails
+  //     .filter((value) => {
+  //       return value.golongan_obat_rl_tiga_titik_sembilan_belas.no == filter;
+  //     })
+  //     .map((value) => {
+  //       return {
+  //         id: value.id,
+  //         data: {
+  //           ranap_pasien_keluar:
+  //             value.ranap_pasien_keluar -
+  //             response.data.data.ranap_pasien_keluar,
+  //           ranap_lama_dirawat:
+  //             value.ranap_lama_dirawat - response.data.data.ranap_lama_dirawat,
+  //           jumlah_pasien_rajal:
+  //             value.jumlah_pasien_rajal -
+  //             response.data.data.jumlah_pasien_rajal,
+  //           rajal_lab: value.rajal_lab - response.data.data.rajal_lab,
+  //           rajal_radiologi:
+  //             value.rajal_radiologi - response.data.data.rajal_radiologi,
+  //           rajal_lain_lain:
+  //             value.rajal_lain_lain - response.data.data.rajal_lain_lain,
+  //         },
+  //       };
+  //     });
 
-    return parent[0];
-  };
+  //   return parent[0];
+  // };
 
-  const getRLTigaTitikSembilanBelasById = async (id) => {
-    const response = await axiosJWT.get(
-      "/apisirs6v2/rltigatitiksembilanbelasdetail/" + id,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+  // const getRLTigaTitikSembilanBelasById = async (id) => {
+  //   const response = await axiosJWT.get(
+  //     "/apisirs6v2/rltigatitiksembilanbelasdetail/" + id,
+  //     {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     },
+  //   );
 
-    return response.data.data;
-  };
+  //   return response.data.data;
+  // };
 
   const handleClose = () => setShow(false);
 
@@ -350,22 +463,18 @@ const RL319 = () => {
     switch (jenisUserId) {
       case 1:
         getProvinsi();
-        setBulan(1);
         setShow(true);
         break;
       case 2:
         getKabKota(satKerId);
-        setBulan(1);
         setShow(true);
         break;
       case 3:
         getRumahSakit(satKerId);
-        setBulan(1);
         setShow(true);
         break;
       case 4:
         showRumahSakit(satKerId);
-        setBulan(1);
         setShow(true);
         break;
       default:
@@ -415,48 +524,23 @@ const RL319 = () => {
     }
   };
 
-  let total = {
-    ranap_pasien_keluar: 0,
-    ranap_lama_dirawat: 0,
-    jumlah_pasien_rajal: 0,
-    rajal_lab: 0,
-    rajal_radiologi: 0,
-    rajal_lain_lain: 0,
-  };
-
-  dataRL
-    .filter((value) => {
-      return (
-        value.golongan_obat_rl_tiga_titik_sembilan_belas.no != 4 &&
-        value.golongan_obat_rl_tiga_titik_sembilan_belas.no != 2
-      );
-    })
-    .map((value, index) => {
-      total.ranap_lama_dirawat += parseInt(value.ranap_lama_dirawat);
-      total.ranap_pasien_keluar += parseInt(value.ranap_pasien_keluar);
-      total.jumlah_pasien_rajal += parseInt(value.jumlah_pasien_rajal);
-      total.rajal_lab += parseInt(value.rajal_lab);
-      total.rajal_lain_lain += parseInt(value.rajal_lain_lain);
-      total.rajal_radiologi += parseInt(value.rajal_radiologi);
-    });
-
   function handleDownloadExcel() {
     const header = [
       "No",
       "No. Cara Bayar",
       "Cara Pembayaran",
-      "Pasien Rawat Inap Jumlah Pasien Dirawat",
+      "Pasien Rawat Inap Jumlah Pasien Keluar",
       "Pasien Rawat Inap Jumlah Lama Dirawat",
       "Jumlah Pasien Rawat Jalan",
       "Jumlah Pasien Rawat Jalan Laboratorium",
       "Jumlah Pasien Rawat Jalan Radiologi",
-      "Jumlah Pasien Rawat Jalan Radiologi Lain-lain",
+      "Jumlah Pasien Rawat Jalan Lain-lain",
     ];
-    const body = dataRL.map((value, index) => {
+    const body = finalData.map((value, index) => {
       const data = [
         index + 1,
-        value.golongan_obat_rl_tiga_titik_sembilan_belas.no,
-        value.golongan_obat_rl_tiga_titik_sembilan_belas.nama,
+        value.no,
+        value.nama,
         value.ranap_pasien_keluar,
         value.ranap_lama_dirawat,
         value.jumlah_pasien_rajal,
@@ -466,9 +550,15 @@ const RL319 = () => {
       ];
       return data;
     });
+
+    const safeNamaRS = rumahSakit.nama
+      ?.replace(/\./g, "") // hapus titik
+      ?.replace(/[^a-zA-Z0-9-_ ]/g, "") // hapus karakter aneh
+      ?.replace(/\s+/g, "_"); // ganti spasi jadi underscore
+
     downloadExcel({
-      fileName: "RL_3_19",
-      sheet: "react-export-table-to-excel",
+      fileName: `RL_3_19_${safeNamaRS}`,
+      sheet: "RL 3.19",
       tablePayload: {
         header,
         body: body,
@@ -476,8 +566,198 @@ const RL319 = () => {
     });
   }
 
+  const statusValidasiChangeHadler = (e) => {
+    setStatusValidasi(Number(e.target.value)); // ✅ FIX
+  };
+
+  const keteranganValidasiChangeHadler = (e) => {
+    setKeteranganValidasi(e.target.value);
+  };
+
+  const simpanValidasi = async (e) => {
+    setSpinner(true);
+    e.preventDefault();
+    if (rumahSakit == null) {
+      toast(`Rumah sakit harus dipilih`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    if (statusValidasi == 1 && keteranganValidasi == "") {
+      toast(`Keterangan tidak boleh kosong`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
+    }
+
+    try {
+      const customConfig = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      };
+
+      if (idValidasi != "") {
+        await axiosJWT.patch(
+          "/apisirs6v2/rltigatitiksembilanbelasvalidasi/" + idValidasi,
+          {
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      } else {
+        await axiosJWT.post(
+          "/apisirs6v2/rltigatitiksembilanbelasvalidasi",
+          {
+            rsId: rumahSakit.id,
+            periode: `${tahun}-12-01`,
+            statusValidasiId: statusValidasi,
+            catatan: keteranganValidasi,
+          },
+          customConfig,
+        );
+      }
+      toast("Data Berhasil Disimpan", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setIsValidated(statusValidasi == 3);
+      await getValidasi();
+    } catch (error) {
+      toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    }
+    setSpinner(false);
+  };
+
+  const [activeTab, setActiveTab] = useState("tab1");
+
+  const handleTabClick = (tab) => {
+    if (tab === "tab2") {
+      getValidasi();
+    }
+    setActiveTab(tab);
+  };
+
+  const finalData = useMemo(() => {
+    const data = [...dataRL];
+
+    const getChildren = (prefix) =>
+      data.filter((item) => item.no?.startsWith(prefix + "."));
+
+    const sumFields = (items) => {
+      return items.reduce(
+        (acc, curr) => {
+          acc.ranap_pasien_keluar += curr.ranap_pasien_keluar || 0;
+          acc.ranap_lama_dirawat += curr.ranap_lama_dirawat || 0;
+          acc.jumlah_pasien_rajal += curr.jumlah_pasien_rajal || 0;
+          acc.rajal_lab += curr.rajal_lab || 0;
+          acc.rajal_radiologi += curr.rajal_radiologi || 0;
+          acc.rajal_lain_lain += curr.rajal_lain_lain || 0;
+          return acc;
+        },
+        {
+          ranap_pasien_keluar: 0,
+          ranap_lama_dirawat: 0,
+          jumlah_pasien_rajal: 0,
+          rajal_lab: 0,
+          rajal_radiologi: 0,
+          rajal_lain_lain: 0,
+        },
+      );
+    };
+
+    let result = [...data];
+
+    const children2 = getChildren("2");
+    if (children2.length) {
+      result.push({
+        no: "2",
+        nama: "Asuransi",
+        ...sumFields(children2),
+        isHeader: true,
+      });
+    }
+
+    const children4 = getChildren("4");
+    if (children4.length) {
+      result.push({
+        no: "4",
+        nama: "Gratis",
+        ...sumFields(children4),
+        isHeader: true,
+      });
+    }
+
+    // SORTING
+    const parseNo = (no) => (no || "0").split(".").map(Number);
+
+    return result.sort((a, b) => {
+      const aParts = parseNo(a.no);
+      const bParts = parseNo(b.no);
+
+      for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+        const diff = (aParts[i] || 0) - (bParts[i] || 0);
+        if (diff !== 0) return diff;
+      }
+      return 0;
+    });
+  }, [dataRL]);
+
+  const total = useMemo(() => {
+    return finalData
+      .filter((v) => !v.isHeader)
+      .reduce(
+        (acc, v) => {
+          acc.ranap_pasien_keluar += Number(v.ranap_pasien_keluar) || 0;
+          acc.ranap_lama_dirawat += Number(v.ranap_lama_dirawat) || 0;
+          acc.jumlah_pasien_rajal += Number(v.jumlah_pasien_rajal) || 0;
+          acc.rajal_lab += Number(v.rajal_lab) || 0;
+          acc.rajal_radiologi += Number(v.rajal_radiologi) || 0;
+          acc.rajal_lain_lain += Number(v.rajal_lain_lain) || 0;
+          return acc;
+        },
+        {
+          ranap_pasien_keluar: 0,
+          ranap_lama_dirawat: 0,
+          jumlah_pasien_rajal: 0,
+          rajal_lab: 0,
+          rajal_radiologi: 0,
+          rajal_lain_lain: 0,
+        },
+      );
+  }, [finalData]);
+
   return (
-    <div className="container" style={{ marginTop: "70px" }}>
+    <div
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
+    >
+      {spinner && (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            zIndex: 9999,
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+          }}
+        >
+          <Spinner animation="border" variant="primary" />
+        </div>
+      )}
       <ToastContainer />
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
@@ -486,7 +766,7 @@ const RL319 = () => {
 
         <form onSubmit={getDataRLTigaTitikSembilanBelas}>
           <Modal.Body>
-            {user.jenisUserId === 1 ? (
+            {user.jenisUserId === 1 || user.jenisUserId === 99 ? (
               <>
                 <div
                   className="form-floating"
@@ -497,11 +777,12 @@ const RL319 = () => {
                     id="provinsi"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => getKabKota(e.target.value)}
+                    onChange={(e) => {
+                      getKabKota(e.target.value);
+                      getRumahSakit(e.target.value, "provinsi");
+                    }}
                   >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
+                    <option>Pilih</option>
                     {daftarProvinsi.map((nilai) => {
                       return (
                         <option key={nilai.id} value={nilai.id}>
@@ -524,9 +805,7 @@ const RL319 = () => {
                     className="form-select"
                     onChange={(e) => getRumahSakit(e.target.value)}
                   >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
+                    <option>Pilih</option>
                     {daftarKabKota.map((nilai) => {
                       return (
                         <option key={nilai.id} value={nilai.id}>
@@ -547,10 +826,11 @@ const RL319 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => showRumahSakit(e.target.value)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -579,9 +859,7 @@ const RL319 = () => {
                     className="form-select"
                     onChange={(e) => getRumahSakit(e.target.value)}
                   >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
+                    <option>Pilih</option>
                     {daftarKabKota.map((nilai) => {
                       return (
                         <option key={nilai.id} value={nilai.id}>
@@ -602,10 +880,11 @@ const RL319 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => showRumahSakit(e.target.value)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -632,10 +911,11 @@ const RL319 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => showRumahSakit(e.target.value)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -671,7 +951,7 @@ const RL319 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className="btn btn-outline-success">
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -680,255 +960,395 @@ const RL319 = () => {
       </Modal>
 
       <div className="row">
-        <div className="col-sm-12">
-          <h4>
-            <span style={{ color: "gray" }}>RL. 3.19 Cara Bayar</span>
-          </h4>
-          <div style={{ marginBottom: "10px" }}>
+        <div className="col-md-12">
+          <div className="d-flex justify-content-between align-items-center">
+            <h4 className={style.pageHeader}>RL 3.19 - Cara Bayar</h4>
+          </div>
+          <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
-                className="btn"
                 to={`/rl319/tambah/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
+                className={style.btnPrimary}
+                style={{ textDecoration: "none" }}
               >
-                +
+                Tambah
               </Link>
             ) : (
               <></>
             )}
-            <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-              onClick={handleShow}
-            >
+            <button className={style.btnPrimary} onClick={handleShow}>
               Filter
             </button>
-            <button
-              className="btn"
-              style={{
-                fontSize: "18px",
-                marginLeft: "5px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-              onClick={handleDownloadExcel}
-            >
+            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
               Download
             </button>
           </div>
 
-          {filterLabel.length > 0 ? (
-            <div>
-              <h5 style={{ fontSize: "14px" }}>
-                Filtered By{" "}
-                {filterLabel
-                  .map((value) => {
-                    return value;
-                  })
-                  .join(", ")}
-              </h5>
+          <div className={style.filterLabel}>
+            {filterLabel.length > 0 ? (
+              <div>
+                <h5 style={{ fontSize: "14px" }}>
+                  Filtered By{" "}
+                  {filterLabel
+                    .map((value) => {
+                      return value;
+                    })
+                    .join(", ")}
+                </h5>
+              </div>
+            ) : (
+              <></>
+            )}
+          </div>
+
+          <div>
+            <ul className={`nav nav-tabs ${style.navTabs}`}>
+              <li className={`nav-item ${style.navItem}`}>
+                <button
+                  type="button"
+                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                  onClick={() => handleTabClick("tab1")}
+                >
+                  Data
+                </button>
+              </li>
+              {user.jenisUserId === 1 ||
+              user.jenisUserId === 2 ||
+              user.jenisUserId === 3 ||
+              user.jenisUserId === 4 ? (
+                //   &&
+                // dataRL.length > 0 &&
+                // rumahSakit != null
+                <li className={`nav-item ${style.navItem}`}>
+                  <button
+                    type="button"
+                    className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                    onClick={() => handleTabClick("tab2")}
+                  >
+                    Validasi
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+
+            <div className={`tab-content ${style.tabContent}`}>
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab1" ? "show active" : ""
+                }`}
+              >
+                <div className={style["table-container"]}>
+                  <table ref={tableRef} className={style.table}>
+                    <thead className={style.thead}>
+                      <tr className="">
+                        <th rowSpan={2}>No.</th>
+
+                        {user.jenisUserId === 4 && <th rowSpan={2}>Aksi</th>}
+
+                        <th rowSpan={2}>Cara Pembayaran</th>
+
+                        <th colSpan={2}>Pasien Rawat Inap</th>
+
+                        <th style={{ verticalAlign: "middle" }} rowSpan={2}>
+                          Jumlah Pasien Rawat Jalan
+                        </th>
+
+                        <th colSpan={3}>Jumlah Pasien Rawat Jalan</th>
+                      </tr>
+                      <tr className={style["subheader-row"]}>
+                        <th>Jumlah Pasien Keluar</th>
+                        <th>Jumlah Lama Dirawat</th>
+
+                        <th>Laboratorium</th>
+                        <th>Radiologi</th>
+                        <th>Lain-lain</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dataRL.length > 0 ? (
+                        <>
+                          {finalData.map((value) => {
+                            const no = value.no || "";
+                            const nama = value.nama || "";
+                            const isHeader =
+                              value.isHeader || no === "2" || no === "4";
+
+                            return (
+                              <tr
+                                key={value.id || no}
+                                style={{
+                                  fontWeight: isHeader ? "normal" : "normal",
+                                  backgroundColor: isHeader
+                                    ? "#f5f5f5"
+                                    : "transparent",
+                                }}
+                              >
+                                {/* NO */}
+                                <td>{no}</td>
+
+                                {/* AKSI */}
+                                {user.jenisUserId === 4 && (
+                                  <td>
+                                    {!isHeader && (
+                                      <div style={{ display: "flex" }}>
+                                        <button
+                                          className="btn btn-danger"
+                                          style={{
+                                            margin: "0 5px 0 0",
+                                            backgroundColor: "#FF6663",
+                                            border: "1px solid #FF6663",
+                                          }}
+                                          type="button"
+                                          onClick={() => hapus(value.id)}
+                                        >
+                                          Hapus
+                                        </button>
+
+                                        <Link
+                                          to={`/rl319/ubah/${value.id}`}
+                                          className="btn btn-warning"
+                                          style={{
+                                            margin: "0 5px 0 0",
+                                            backgroundColor: "#CFD35E",
+                                            border: "1px solid #CFD35E",
+                                            color: "#FFFFFF",
+                                          }}
+                                        >
+                                          Ubah
+                                        </Link>
+                                      </div>
+                                    )}
+                                  </td>
+                                )}
+
+                                {/* NAMA */}
+                                <td
+                                  style={{
+                                    textAlign: "left",
+                                    paddingLeft: no.includes(".")
+                                      ? "20px"
+                                      : "5px",
+                                  }}
+                                >
+                                  {nama}
+                                </td>
+
+                                {/* DATA */}
+                                <td>{value.ranap_pasien_keluar}</td>
+                                <td>{value.ranap_lama_dirawat}</td>
+                                <td>{value.jumlah_pasien_rajal}</td>
+                                <td>{value.rajal_lab}</td>
+                                <td>{value.rajal_radiologi}</td>
+                                <td>{value.rajal_lain_lain}</td>
+                              </tr>
+                            );
+                          })}
+
+                          <tr>
+                            <td colSpan={user.jenisUserId === 4 ? 3 : 2}>
+                              <strong>TOTAL</strong>
+                            </td>
+                            <td className="text-center">
+                              {total.ranap_pasien_keluar}
+                            </td>
+                            <td className="text-center">
+                              {total.ranap_lama_dirawat}
+                            </td>
+                            <td className="text-center">
+                              {total.jumlah_pasien_rajal}
+                            </td>
+                            <td className="text-center">{total.rajal_lab}</td>
+                            <td className="text-center">
+                              {total.rajal_radiologi}
+                            </td>
+                            <td className="text-center">
+                              {total.rajal_lain_lain}
+                            </td>
+                          </tr>
+                        </>
+                      ) : (
+                        <></>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div
+                className={`tab-pane fade ${
+                  activeTab === "tab2" ? "show active" : ""
+                }`}
+              >
+                <div className={style.validasiCard}>
+                  <h3 className={style.validasiCardTitle}>Validasi RL 3.19</h3>
+
+                  {!isFilterApplied ? (
+                    // 🔸 BELUM FILTER
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>
+                        Silakan pilih filter terlebih dahulu untuk menampilkan
+                        data.
+                      </strong>
+                    </div>
+                  ) : dataRL.length === 0 ? (
+                    // 🔸 DATA KOSONG
+                    <div
+                      style={{
+                        backgroundColor: "#fff3cd",
+                        border: "1px solid #ffc107",
+                        color: "#856404",
+                        padding: "15px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>Tidak ada data untuk proses validasi</strong>
+                    </div>
+                  ) : idValidasi ? (
+                    <div
+                      style={{
+                        backgroundColor: "#E9ECEF",
+                        padding: "15px",
+                        borderRadius: "5px",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      <p style={{ margin: "0" }}>
+                        <strong
+                          style={{ width: "100px", display: "inline-block" }}
+                        >
+                          Status
+                        </strong>
+                        :{" "}
+                        {idValidasiSubmited == 1
+                          ? "Perlu Perbaikan"
+                          : idValidasiSubmited == 2
+                            ? "Selesai Diperbaiki"
+                            : "Disetujui"}
+                      </p>
+                      <p style={{ margin: "0" }}>
+                        <strong
+                          style={{ width: "100px", display: "inline-block" }}
+                        >
+                          Catatan
+                        </strong>
+                        : {KeteranganValidasiDb || "-"}
+                      </p>
+                      <p style={{ margin: "0" }}>
+                        <strong
+                          style={{ width: "100px", display: "inline-block" }}
+                        >
+                          Tanggal
+                        </strong>
+                        :{" "}
+                        {tglValidasi
+                          ? new Date(tglValidasi).toLocaleString("id-ID", {
+                              day: "2-digit",
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : "-"}
+                      </p>
+                    </div>
+                  ) : (
+                    dataRL.length > 0 &&
+                    user.jenisUserId !== 3 && (
+                      <div
+                        style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <strong>Data Belum di Validasi</strong>
+                      </div>
+                    )
+                  )}
+
+                  {/* 🔽 FORM VALIDASI */}
+                  {dataRL.length > 0 && rumahSakit?.id ? (
+                    isValidated ? (
+                      <div
+                        style={{
+                          backgroundColor: "#fff3cd",
+                          border: "1px solid #ffc107",
+                          color: "#856404",
+                          padding: "15px",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <strong>Data telah di validasi</strong>
+                      </div>
+                    ) : (
+                      (user.jenisUserId === 3 ||
+                        (user.jenisUserId === 4 && idValidasi)) && (
+                        <form onSubmit={simpanValidasi}>
+                          <ToastContainer />
+
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="statusValidasi">Status</label>
+                            <select
+                              id="statusValidasi"
+                              name="statusValidasi"
+                              value={statusValidasi}
+                              required
+                              onChange={(e) => statusValidasiChangeHadler(e)}
+                            >
+                              {user.jenisUserId === 4 ? (
+                                <>
+                                  <option value="">Pilih Status</option>
+                                  <option value="2">Selesai Diperbaiki</option>
+                                </>
+                              ) : (
+                                <>
+                                  <option value="1">Perlu Perbaikan</option>
+                                  <option value="3">Disetujui</option>
+                                </>
+                              )}
+                            </select>
+                          </div>
+
+                          {user.jenisUserId === 3 && (
+                            <div className={style.validasiFormGroup}>
+                              <label htmlFor="keteranganValidasi">
+                                Catatan
+                              </label>
+                              <textarea
+                                id="keteranganValidasi"
+                                name="keteranganValidasi"
+                                value={keteranganValidasi}
+                                onChange={(e) =>
+                                  keteranganValidasiChangeHadler(e)
+                                }
+                                placeholder="Tambahkan catatan (opsional)"
+                                rows={4}
+                              />
+                            </div>
+                          )}
+
+                          <button type="submit" className={style.btnPrimary}>
+                            <HiSaveAs size={20} /> Simpan
+                          </button>
+                        </form>
+                      )
+                    )
+                  ) : null}
+                </div>
+              </div>
             </div>
-          ) : (
-            <></>
-          )}
-
-          <div className={style["table-container"]}>
-            <table className={style.table}>
-              <thead className={style.thead}>
-                <tr className="">
-                  <th
-                    className={style["sticky-header"]}
-                    style={{ width: "4%" }}
-                    rowSpan={2}
-                  >
-                    No. Cara Bayar
-                  </th>
-                  <th
-                    className={style["sticky-header"]}
-                    style={{ width: "6%" }}
-                    rowSpan={2}
-                  >
-                    Aksi
-                  </th>
-                  <th
-                    className={style["sticky-header"]}
-                    style={{ width: "20%" }}
-                    rowSpan={2}
-                  >
-                    Cara Pembayaran
-                  </th>
-                  <th colSpan={2}>Pasien Rawat Inap</th>
-                  <th
-                    style={{ width: "10%", verticalAlign: "middle" }}
-                    rowSpan={2}
-                  >
-                    Jumlah Pasien Rawat Jalan
-                  </th>
-                  <th colSpan={3}>Jumlah Pasien Rawat Jalan</th>
-                </tr>
-                <tr className={style["subheader-row"]}>
-                  <th style={{ width: "8%" }}>Jumlah Pasien Keluar</th>
-                  <th style={{ width: "8%" }}>Jumlah Lama Dirawat</th>
-                  <th style={{ width: "8%" }}>Laboratorium</th>
-                  <th style={{ width: "8%" }}>Radiologi</th>
-                  <th style={{ width: "8%" }}>Lain-lain</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dataRL.length > 0 ? (
-                  <>
-                    {dataRL.map((value, index) => {
-                      return (
-                        <tr key={value.id}>
-                          <td className={style["sticky-column"]}>
-                            <input
-                              type="text"
-                              name="no"
-                              className="form-control"
-                              value={
-                                value.golongan_obat_rl_tiga_titik_sembilan_belas
-                                  .no
-                              }
-                              disabled={true}
-                            />
-                          </td>
-                          <td className={style["sticky-column"]}>
-                            {value.golongan_obat_rl_tiga_titik_sembilan_belas
-                              .no != 4 &&
-                            value.golongan_obat_rl_tiga_titik_sembilan_belas
-                              .no != 2 ? (
-                              <div style={{ display: "flex" }}>
-                                <button
-                                  className="btn btn-danger"
-                                  style={{
-                                    margin: "0 5px 0 0",
-                                    backgroundColor: "#FF6663",
-                                    border: "1px solid #FF6663",
-                                  }}
-                                  type="button"
-                                  onClick={(e) => hapus(value.id)}
-                                >
-                                  Hapus
-                                </button>
-                                <Link
-                                  to={`/rl319/ubah/${value.id}`}
-                                  className="btn btn-warning"
-                                  style={{
-                                    margin: "0 5px 0 0",
-                                    backgroundColor: "#CFD35E",
-                                    border: "1px solid #CFD35E",
-                                    color: "#FFFFFF",
-                                  }}
-                                >
-                                  Ubah
-                                </Link>
-                              </div>
-                            ) : (
-                              ""
-                            )}
-                          </td>
-                          <td className={style["sticky-column"]}>
-                            <input
-                              type="text"
-                              name="golonganObat"
-                              className="form-control"
-                              value={
-                                value.golongan_obat_rl_tiga_titik_sembilan_belas
-                                  .nama
-                              }
-                              disabled={true}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              name="ranap_pasien_keluar"
-                              className="form-control"
-                              value={value.ranap_pasien_keluar}
-                              disabled={true}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              name="ranap_lama_dirawat"
-                              className="form-control"
-                              value={value.ranap_lama_dirawat}
-                              disabled={true}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              name="jumlah_pasien_rajal"
-                              className="form-control"
-                              value={value.jumlah_pasien_rajal}
-                              disabled={true}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              name="rajal_lab"
-                              className="form-control"
-                              value={value.rajal_lab}
-                              disabled={true}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              name="rajal_radiologi"
-                              className="form-control"
-                              value={value.rajal_radiologi}
-                              disabled={true}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              name="rajal_lain_lain"
-                              className="form-control"
-                              value={value.rajal_lain_lain}
-                              disabled={true}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-
-                    <tr>
-                      <td colSpan={3} className="text-center">
-                        <strong>Total</strong>
-                      </td>
-                      <td className="text-center">
-                        {total.ranap_pasien_keluar}
-                      </td>
-                      <td className="text-center">
-                        {total.ranap_lama_dirawat}
-                      </td>
-                      <td className="text-center">
-                        {total.jumlah_pasien_rajal}
-                      </td>
-                      <td className="text-center">{total.rajal_lab}</td>
-                      <td className="text-center">{total.rajal_radiologi}</td>
-                      <td className="text-center">{total.rajal_lain_lain}</td>
-                    </tr>
-                  </>
-                ) : (
-                  <></>
-                )}
-              </tbody>
-            </table>
           </div>
         </div>
       </div>

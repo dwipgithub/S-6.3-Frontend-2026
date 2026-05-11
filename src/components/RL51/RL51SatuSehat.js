@@ -90,7 +90,7 @@ const RL51SATUSEHAT = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getBulan = async () => {
@@ -209,7 +209,7 @@ const RL51SATUSEHAT = () => {
     };
     const results = await axiosJWT.get(
       "/apisirs6v2/rllimatitiksatusatusehat",
-      customConfig
+      customConfig,
     );
     // proses results jika perlu
 
@@ -231,7 +231,7 @@ const RL51SATUSEHAT = () => {
 
     const responseShow = await axiosJWT.get(
       "/apisirs6v2/rllimatitiksatusatusehatpage",
-      config2
+      config2,
     );
 
     const rawData = responseShow.data.data;
@@ -323,7 +323,7 @@ const RL51SATUSEHAT = () => {
 
       const res = await axiosJWT.get(
         "/apisirs6v2/getMasterumursatusehat",
-        config2
+        config2,
       );
 
       setMasterUmur(res.data.data); // asumsi master umur di res.data.data
@@ -564,7 +564,7 @@ const RL51SATUSEHAT = () => {
                       <td>{item.diagnosis}</td>
                       {masterUmur.map((umur) => {
                         const umurData = item.umur.find(
-                          (u) => u.age_group === umur.name
+                          (u) => u.age_group === umur.name,
                         );
                         return (
                           <React.Fragment key={`${item.icd_10}-${umur.name}`}>
@@ -855,7 +855,7 @@ const RL51SATUSEHAT = () => {
       <div className="row">
         <div className="col-md-12">
           <span style={{ color: "gray" }}>
-            <h4>RL 5.1 - Mobiditas Pasien Rawat Jalan</h4>
+            <h4>RL 5.1 - Mobiditas Pasien Rawat Jalans</h4>
           </span>
           <span style={{ color: "gray" }}>
             <h5>DATA SATUSEHAT</h5>

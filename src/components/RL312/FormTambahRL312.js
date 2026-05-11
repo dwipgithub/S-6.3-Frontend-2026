@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
-import style from "./FormTambahRL312.module.css";
+import style from "./RL312.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Table from "react-bootstrap/Table";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import { IoArrowBack } from "react-icons/io5";
 
 const FormTambahRL312 = () => {
   const [namaRS, setNamaRS] = useState("");
@@ -16,7 +17,8 @@ const FormTambahRL312 = () => {
   const [namaKabKota, setNamaKabKota] = useState("");
   // const [tahun, setTahun] = useState("");
   const [bulan, setBulan] = useState(1);
-  const [tahun, setTahun] = useState("2025");
+  // const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [dataRL, setDataRL] = useState([]);
   const [token, setToken] = useState("");
@@ -307,12 +309,32 @@ const FormTambahRL312 = () => {
     setBulan(e.target.value);
   };
 
+  // TOTAL
+  const totalKhusus = dataRL.reduce(
+    (sum, item) => sum + (parseInt(item.Khusus) || 0),
+    0,
+  );
+
+  const totalBesar = dataRL.reduce(
+    (sum, item) => sum + (parseInt(item.Besar) || 0),
+    0,
+  );
+
+  const totalSedang = dataRL.reduce(
+    (sum, item) => sum + (parseInt(item.Sedang) || 0),
+    0,
+  );
+
+  const totalKecil = dataRL.reduce(
+    (sum, item) => sum + (parseInt(item.Kecil) || 0),
+    0,
+  );
+
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h1>RL 3.12</h1>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -456,214 +478,108 @@ const FormTambahRL312 = () => {
         </div>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl312/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>Kembali RL 3.12 Pembedahan</span>
+            <div className={style.headerAction}>
+              <Link to="/rl312">
+                <button type="button" className={style.btnPrimary}>
+                  <IoArrowBack />
+                </button>
+              </Link>
+              <h4 className={style.pageHeader}>RL 3.12 Pembedahan</h4>
+            </div>
 
-            <Table className={style.rlTable}>
-              <thead>
-                <tr>
-                  <th style={{ width: "4%" }}>No.</th>
-                  <th style={{ width: "3%" }}></th>
-                  <th style={{ width: "20%" }}>Jenis Spesialisasi</th>
-                  <th>Khusus</th>
-                  <th>Besar</th>
-                  <th>Sedang</th>
-                  <th>Kecil</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dataRL.map((value, index) => {
-                  if (value.id === 88) {
+            <div className={style["table-container"]}>
+              <table
+                className={style["table"]}
+                style={{ width: "100%", tableLayout: "fixed" }}
+              >
+                <thead className={style["thead"]}>
+                  <tr className="main-header-row">
+                    <th style={{ width: "5%" }}>No</th>
+                    <th style={{ width: "5%" }}>Pilih</th>
+                    <th style={{ width: "25%" }}>Jenis Spesialisasi</th>
+                    <th>Khusus</th>
+                    <th>Besar</th>
+                    <th>Sedang</th>
+                    <th>Kecil</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {dataRL.map((value, index) => {
+                    const isDisabled = value.id === 88 || value.disabledInput;
+
                     return (
                       <tr key={value.id}>
-                        <td>{value.id}</td>
-                        <td>
+                        <td className="text-center">{index + 1}</td>
+
+                        <td className="text-center">
                           <input
                             type="checkbox"
                             name="check"
-                            className="checkbox"
                             onChange={(e) => changeHandler(e, index)}
                             checked={value.checked}
                           />
                         </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="jenisSpesialisasi"
-                            className="form-control"
-                            value={value.jenisSpesialisasi}
-                            disabled={true}
-                          />
+
+                        <td style={{ textAlign: "left" }}>
+                          {value.jenisSpesialisasi}
                         </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="Khusus"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            className="form-control"
-                            value={value.Khusus}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={true}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="Besar"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            className="form-control"
-                            value={value.Besar}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={true}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="Sedang"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            className="form-control"
-                            value={value.Sedang}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={true}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="Kecil"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            className="form-control"
-                            value={value.Kecil}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={true}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
+
+                        {["Khusus", "Besar", "Sedang", "Kecil"].map((field) => (
+                          <td key={field} style={{ padding: 0 }}>
+                            <input
+                              type="number"
+                              name={field}
+                              min={0}
+                              maxLength={7}
+                              onInput={(e) => maxLengthCheck(e)}
+                              onPaste={preventPasteNegative}
+                              onKeyPress={preventMinus}
+                              value={value[field]}
+                              onChange={(e) => changeHandler(e, index)}
+                              disabled={isDisabled}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                textAlign: "center",
+                                backgroundColor: isDisabled
+                                  ? "#e0e0e0"
+                                  : "#ffffff",
+                                border: "none",
+                                outline: "none",
+                                boxShadow: "none",
+                                margin: 0,
+                                padding: "8px 4px",
+                                display: "block",
+                              }}
+                            />
+                          </td>
+                        ))}
                       </tr>
                     );
-                  } else {
-                    return (
-                      <tr key={value.id}>
-                        <td>{value.id}</td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            name="check"
-                            className="checkbox"
-                            onChange={(e) => changeHandler(e, index)}
-                            checked={value.checked}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="jenisSpesialisasi"
-                            className="form-control"
-                            value={value.jenisSpesialisasi}
-                            disabled={true}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="Khusus"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            className="form-control"
-                            value={value.Khusus}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                            onFocus={handleFocus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="Besar"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            className="form-control"
-                            value={value.Besar}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="Sedang"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            className="form-control"
-                            value={value.Sedang}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="Kecil"
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            className="form-control"
-                            value={value.Kecil}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  }
-                })}
-              </tbody>
-            </Table>
+                  })}
+
+                  {/* ✅ TOTAL ROW */}
+                  {dataRL.length > 0 && (
+                    <tr
+                      className="fw-bold"
+                      style={{ backgroundColor: "#f1f1f1" }}
+                    >
+                      <td colSpan={3} className="text-center">
+                        TOTAL
+                      </td>
+                      <td className="text-center">{totalKhusus}</td>
+                      <td className="text-center">{totalBesar}</td>
+                      <td className="text-center">{totalSedang}</td>
+                      <td className="text-center">{totalKecil}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button
-                disabled={buttonStatus}
-                type="submit"
-                className="btn btn-outline-success"
-              >
+              <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs /> Simpan
               </button>
             </div>

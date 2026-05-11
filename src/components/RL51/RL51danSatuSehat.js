@@ -161,7 +161,7 @@ export default function TabMenu() {
 
 function TabOne() {
   const [bulan, setBulan] = useState("01");
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear());
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [filterLabel, setFilterLabel] = useState([]);
   const [rumahSakit, setRumahSakit] = useState("");
@@ -184,11 +184,13 @@ function TabOne() {
   const [idValidasiSubmited, setidValidasiSubmited] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(1);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
+  const [KeteranganValidasiDb, setKeteranganValidasiDb] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
   const [spinner, setSpinner] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -372,9 +374,12 @@ function TabOne() {
   const handleSelectRumahSakit = (e) => {
     const id = e.target.value;
     const selected = daftarRumahSakit.find((item) => item.id == id);
+
     if (selected) {
+      setSelectedRsID(selected.id);
       setRumahSakit(selected);
     } else {
+      setSelectedRsID(null);
       setRumahSakit(null);
     }
   };
@@ -402,14 +407,22 @@ function TabOne() {
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
+        if (user.jenisUserId === 3) {
+          setStatusValidasi(1);
+        } else if (user.jenisUserId === 4) {
+          setStatusValidasi(2);
+        } else {
+          setStatusValidasi("");
+        }
         setKeteranganValidasi(results.data.data[0].catatan || "");
+        setKeteranganValidasiDb(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
       } else {
         setidValidasi("");
         setStatusValidasi(1);
         setKeteranganValidasi("");
+        setKeteranganValidasiDb("");
         setTglValidasi("");
         setIsValidated(false);
       }
@@ -453,11 +466,14 @@ function TabOne() {
   const getRL = async (e) => {
     e.preventDefault();
 
-    if (!rumahSakit) {
-      toast("rumah sakit harus dipilih", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setSpinner(false);
+        return;
+      }
     }
 
     const filter = [];
@@ -645,10 +661,11 @@ function TabOne() {
           customConfig,
         );
       }
+      setIsValidated(statusValidasi == 3);
+      await getValidasi();
       toast("Data Berhasil Disimpan", {
         position: toast.POSITION.TOP_RIGHT,
       });
-      setIsValidated(statusValidasi == 3);
     } catch (error) {
       toast(`Data tidak bisa disimpan karena ,${error.response.data.message}`, {
         position: toast.POSITION.TOP_RIGHT,
@@ -825,7 +842,7 @@ function TabOne() {
   const stickyOffsets =
     user.jenisUserId === 4
       ? { no: "0px", aksi: "40px", icd: "202px", diag: "307px" }
-      : { no: "0px", icd: "52px", diag: "134px" };
+      : { no: "0px", icd: "52px", diag: "180px" };
 
   return (
     <div className="container-fluid">
@@ -914,7 +931,8 @@ function TabOne() {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -969,7 +987,8 @@ function TabOne() {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -999,7 +1018,8 @@ function TabOne() {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -2274,32 +2294,38 @@ function TabOne() {
                   </tbody>
                 </table>
               </div>
-              <div
-                style={{
-                  bottom: 0,
-                  background: "#fff",
-                  padding: "12px 0",
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: 12,
-                  borderTop: "1px solid #ddd",
-                }}
-              >
-                <button disabled={page === 1} onClick={() => fetchRL(page - 1)}>
-                  ◀ Prev
-                </button>
 
-                <span>
-                  Halaman {page} / {totalPages}
-                </span>
-
-                <button
-                  disabled={page === totalPages}
-                  onClick={() => fetchRL(page + 1)}
+              {totalPages > 1 && (
+                <div
+                  style={{
+                    bottom: 0,
+                    background: "#fff",
+                    padding: "12px 0",
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: 12,
+                    borderTop: "1px solid #ddd",
+                  }}
                 >
-                  Next ▶
-                </button>
-              </div>
+                  <button
+                    disabled={page === 1}
+                    onClick={() => fetchRL(page - 1)}
+                  >
+                    ◀ Prev
+                  </button>
+
+                  <span>
+                    Halaman {page} / {totalPages}
+                  </span>
+
+                  <button
+                    disabled={page === totalPages}
+                    onClick={() => fetchRL(page + 1)}
+                  >
+                    Next ▶
+                  </button>
+                </div>
+              )}
             </div>
             <div
               className={`tab-pane fade ${
@@ -2309,6 +2335,7 @@ function TabOne() {
               <div className={style.validasiCard}>
                 <h3 className={style.validasiCardTitle}>Validasi RL 5.1</h3>
                 {!isFilterApplied ? (
+                  // 🔸 BELUM FILTER
                   <div
                     style={{
                       backgroundColor: "#fff3cd",
@@ -2323,6 +2350,20 @@ function TabOne() {
                       Silakan pilih filter terlebih dahulu untuk menampilkan
                       data.
                     </strong>
+                  </div>
+                ) : dataRL.length === 0 ? (
+                  // 🔸 DATA KOSONG
+                  <div
+                    style={{
+                      backgroundColor: "#fff3cd",
+                      border: "1px solid #ffc107",
+                      color: "#856404",
+                      padding: "15px",
+                      borderRadius: "4px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <strong>Tidak ada data untuk proses validasi</strong>
                   </div>
                 ) : idValidasi ? (
                   <div
@@ -2352,7 +2393,7 @@ function TabOne() {
                       >
                         Catatan
                       </strong>
-                      : {keteranganValidasi || "-"}
+                      : {KeteranganValidasiDb || "-"}
                     </p>
                     <p style={{ margin: "0" }}>
                       <strong
@@ -2371,6 +2412,7 @@ function TabOne() {
                     </p>
                   </div>
                 ) : (
+                  dataRL.length > 0 &&
                   user.jenisUserId !== 3 && (
                     <div
                       style={{
@@ -2386,6 +2428,8 @@ function TabOne() {
                     </div>
                   )
                 )}
+
+                {/* 🔽 FORM VALIDASI */}
                 {dataRL.length > 0 && rumahSakit?.id ? (
                   isValidated ? (
                     <div
@@ -2398,9 +2442,7 @@ function TabOne() {
                         textAlign: "center",
                       }}
                     >
-                      <div className="text-center">
-                        <strong>Data telah di validasi</strong>
-                      </div>
+                      <strong>Data telah di validasi</strong>
                     </div>
                   ) : (
                     (user.jenisUserId === 3 ||
@@ -2431,26 +2473,21 @@ function TabOne() {
                           </select>
                         </div>
 
-                        {user.jenisUserId === 3 ? (
-                          <>
-                            <div className={style.validasiFormGroup}>
-                              <label htmlFor="keteranganValidasi">
-                                Catatan
-                              </label>
-                              <textarea
-                                id="keteranganValidasi"
-                                name="keteranganValidasi"
-                                value={keteranganValidasi}
-                                onChange={(e) =>
-                                  keteranganValidasiChangeHadler(e)
-                                }
-                                placeholder="Tambahkan catatan (opsional)"
-                                rows={4}
-                                disabled={user.jenisUserId === 4}
-                              />
-                            </div>
-                          </>
-                        ) : null}
+                        {user.jenisUserId === 3 && (
+                          <div className={style.validasiFormGroup}>
+                            <label htmlFor="keteranganValidasi">Catatan</label>
+                            <textarea
+                              id="keteranganValidasi"
+                              name="keteranganValidasi"
+                              value={keteranganValidasi}
+                              onChange={(e) =>
+                                keteranganValidasiChangeHadler(e)
+                              }
+                              placeholder="Tambahkan catatan (opsional)"
+                              rows={4}
+                            />
+                          </div>
+                        )}
 
                         <button type="submit" className={style.btnPrimary}>
                           <HiSaveAs size={20} /> Simpan
@@ -3375,17 +3412,11 @@ function TabTwo() {
 
             {sudahFilter && (
               <button
-                className="btn"
-                style={{
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                  marginLeft: "10px",
-                }}
+                className={style.btnPrimary}
+                style={{ marginLeft: "10px" }}
                 onClick={tarikDataSatusehat}
                 disabled={loading}
               >
-                <FaSync />
                 {loading ? "Memproses..." : "Tarik Data"}
               </button>
             )}
