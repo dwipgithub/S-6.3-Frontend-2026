@@ -109,7 +109,7 @@ import FormTambahRL319 from "./components/RL319/FormTambahRL319";
 import FormUbahRL319 from "./components/RL319/FormUbahRL319";
 
 // RL 4.1
-import RL41 from "./components/RL41/RL41";
+import RL41 from "./components/RL41/RL41danSatuSehat";
 import FormTambahRL41 from "./components/RL41/FormTambahRL41";
 import { FormUbahRL41 } from "./components/RL41/FormUbahRL41";
 
