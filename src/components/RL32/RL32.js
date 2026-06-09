@@ -12,6 +12,7 @@ import Modal from "react-bootstrap/Modal";
 // import Table from 'react-bootstrap/Table'
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 const RL32 = () => {
   const [bulan, setBulan] = useState(0);
@@ -86,6 +87,22 @@ const RL32 = () => {
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
+      }
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers = config.headers || {};
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
       }
       return config;
     },
