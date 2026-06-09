@@ -10,6 +10,7 @@ import Table from "react-bootstrap/esm/Table";
 import Spinner from "react-bootstrap/esm/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import { IoArrowBack } from "react-icons/io5";
+import CryptoJS from "crypto-js";
 
 const FormTambahRL318 = () => {
   // const [tahun, setTahun] = useState("2025");
@@ -56,16 +57,39 @@ const FormTambahRL318 = () => {
     async (config) => {
       const currentDate = new Date();
       if (expire * 1000 < currentDate.getTime()) {
-        const customConfig = { headers: { "XSRF-TOKEN": CSRFToken } };
+        const customConfig = {
+          headers: {
+            "XSRF-TOKEN": CSRFToken,
+          },
+        };
         const response = await axios.get("/apisirs6v2/token", customConfig);
         config.headers.Authorization = `Bearer ${response.data.accessToken}`;
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+      }
+
       return config;
     },
-    (error) => Promise.reject(error),
+    (error) => {
+      return Promise.reject(error);
+    },
   );
 
   const getRumahSakit = async (id) => {
