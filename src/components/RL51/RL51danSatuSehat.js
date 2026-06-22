@@ -2725,7 +2725,7 @@ function TabTwo() {
   };
 
   const getPageData = async (requestedPage = 1, requestedLimit = limit) => {
-    setDataRL([]); // 🔥 reset dulu
+    setDataRL([]);
 
     const config2 = {
       headers: {
@@ -2767,9 +2767,9 @@ function TabTwo() {
 
       const current = mapICD.get(icd);
 
-      current.total_kunjungan.male += item.male_visits;
-      current.total_kunjungan.female += item.female_visits;
-      current.total_kunjungan.total += item.total_visits;
+      current.total_kunjungan.male = item.male_visits;
+      current.total_kunjungan.female = item.female_visits;
+      current.total_kunjungan.total = item.total_visits;
 
       current.umur.push({
         age_group: item.age_groups_satusehat?.name || "-",

@@ -5,6 +5,7 @@ import { CSRFTokenProvider } from "./components/Context/CSRFTokenContext.js";
 
 import SSO_Login from "./components/Login/Sso_Login";
 import SSO_Verif from "./components/Login/SSO_Verif";
+
 import Layout from "./components/Layout/Layout";
 import Footer from "./components/Footer/Footer";
 
@@ -109,7 +110,7 @@ import FormTambahRL319 from "./components/RL319/FormTambahRL319";
 import FormUbahRL319 from "./components/RL319/FormUbahRL319";
 
 // RL 4.1
-import RL41 from "./components/RL41/RL41";
+import RL41 from "./components/RL41/RL41danSatuSehat";
 import FormTambahRL41 from "./components/RL41/FormTambahRL41";
 import { FormUbahRL41 } from "./components/RL41/FormUbahRL41";
 
@@ -140,11 +141,13 @@ import Absensi from "./components/Absensi/absensi.js";
 import MaintenancePage from "./components/MaintenancePage/MaintenancePage.js";
 
 function App() {
+  const isManualLogin = window.location.pathname === "/login";
   return (
     <CSRFTokenProvider>
-      <MemoryRouter initialEntries={["/beranda"]}>
+      <MemoryRouter initialEntries={[isManualLogin ? "/login" : "/beranda"]}>
         <Routes>
           <Route path="/" element={<SSO_Login />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/verif" element={<SSO_Verif />} />
           <Route element={<Layout />}>
             <Route path="/beranda" element={null} />

@@ -235,6 +235,15 @@
   color: #000000;
 }
 
+.table .sticky-header-view-satusehat {
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  top: 0; /* Sticky header */
+  z-index: 2; /* Above table content */
+  background-color: #fbfefe;
+  color: #000000;
+}
+
 .table .sticky-column-view {
   position: -webkit-sticky; /* For Safari */
   position: sticky;
