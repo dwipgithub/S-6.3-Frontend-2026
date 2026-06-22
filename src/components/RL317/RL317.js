@@ -30,7 +30,7 @@ export const RL317 = () => {
   const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [filterLabel, setFilterLabel] = useState([]);
   // const [daftarBulan, setDaftarBulan] = useState([])
-  const [rumahSakit, setRumahSakit] = useState("");
+  const [rumahSakit, setRumahSakit] = useState(null);
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
@@ -43,13 +43,15 @@ export const RL317 = () => {
   const navigate = useNavigate();
   const [idValidasi, setidValidasi] = useState("");
   const [idValidasiSubmited, setidValidasiSubmited] = useState("");
-  const [statusValidasi, setStatusValidasi] = useState(1);
+  // const [statusValidasi, setStatusValidasi] = useState(1);
+  const [statusValidasi, setStatusValidasi] = useState("");
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -125,11 +127,22 @@ export const RL317 = () => {
   };
 
   const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
   };
 
   const getRumahSakit = async (kabKotaId) => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
+
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
         headers: {
@@ -139,8 +152,11 @@ export const RL317 = () => {
           kabKotaId: kabKotaId,
         },
       });
+
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -157,6 +173,16 @@ export const RL317 = () => {
 
   const getRL = async (e) => {
     e.preventDefault();
+
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
+    }
+
     if (rumahSakit == null) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
@@ -165,7 +191,8 @@ export const RL317 = () => {
     }
     const filter = [];
     filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun)));
+    // filter.push("periode: ".concat(String(tahun)));
+    filter.push("Periode ".concat(String(tahun)));
     setFilterLabel(filter);
 
     setSpinner(true);
@@ -294,28 +321,44 @@ export const RL317 = () => {
       "JUMLAH ITEM OBAT",
       "JUMLAH ITEM OBAT YANG TERSEDIA DI RUMAH SAKIT",
     ];
-    console.log(dataRL);
 
-    const body = dataRL.map((value, index) => {
-      console.log();
-      const data = [
+    let totalItem = 0;
+    let totalItemRS = 0;
+
+    const body = dataRL.map((value) => {
+      const jumlahItem = Number(value.jumlah_item_obat) || 0;
+      const jumlahItemRS = Number(value.jumlah_item_obat_rs) || 0;
+
+      // akumulasi
+      totalItem += jumlahItem;
+      totalItemRS += jumlahItemRS;
+
+      return [
         value.no_golongan_obat,
         value.nama_golongan_obat,
-        value.jumlah_item_obat,
-        value.jumlah_item_obat_rs,
+        jumlahItem,
+        jumlahItemRS,
       ];
-      return data;
     });
+
+    // 🔥 TAMBAHKAN BARIS TOTAL
+    body.push([
+      "", // No kosong
+      "TOTAL",
+      totalItem,
+      totalItemRS,
+    ]);
 
     downloadExcel({
       fileName: "RL317-Farmasi Pengadaan Obat",
       sheet: "Farmasi Pengadaan Obat",
       tablePayload: {
         header,
-        body: body,
+        body,
       },
     });
   }
+
   const getProvinsi = async () => {
     try {
       const customConfig = {
@@ -359,6 +402,19 @@ export const RL317 = () => {
     }
   };
 
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
+  };
+
   const getValidasi = async () => {
     setSpinner(true);
     try {
@@ -380,13 +436,15 @@ export const RL317 = () => {
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
+
+        setStatusValidasi("");
+
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
       } else {
         setidValidasi("");
-        setStatusValidasi(1);
+        setStatusValidasi(""); // 🔥 ini juga penting
         setKeteranganValidasi("");
         setTglValidasi("");
         setIsValidated(false);
@@ -398,7 +456,7 @@ export const RL317 = () => {
   };
 
   const statusValidasiChangeHadler = (e) => {
-    setStatusValidasi(e.target.value);
+    setStatusValidasi(Number(e.target.value));
   };
 
   const keteranganValidasiChangeHadler = (e) => {
@@ -437,7 +495,10 @@ export const RL317 = () => {
         await axiosJWT.patch(
           "/apisirs6v2/rltigatitiktujuhbelasvalidasi/" + idValidasi,
           {
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -448,7 +509,10 @@ export const RL317 = () => {
           {
             rsId: rumahSakit.id,
             periode: `${tahun}-12-01`,
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -520,7 +584,7 @@ export const RL317 = () => {
                     onChange={(e) => provinsiChangeHandler(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarProvinsi.map((nilai) => {
                       return (
@@ -545,7 +609,7 @@ export const RL317 = () => {
                     onChange={(e) => kabKotaChangeHandler(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarKabKota.map((nilai) => {
                       return (
@@ -567,10 +631,12 @@ export const RL317 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    // onChange={(e) => rumahSakitChangeHandler(e)}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -600,7 +666,7 @@ export const RL317 = () => {
                     onChange={(e) => kabKotaChangeHandler(e)}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarKabKota.map((nilai) => {
                       return (
@@ -622,10 +688,12 @@ export const RL317 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    // onChange={(e) => rumahSakitChangeHandler(e)}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -652,10 +720,12 @@ export const RL317 = () => {
                     id="rumahSakit"
                     typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    // onChange={(e) => rumahSakitChangeHandler(e)}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -795,11 +865,11 @@ export const RL317 = () => {
                         )}
 
                         <th style={{ textAlign: "center" }}>Golongan Obat</th>
-                        <th style={{ width: "15%", textAlign: "center" }}>
+                        <th style={{ width: "27%", textAlign: "center" }}>
                           Jumlah Item Obat
                         </th>
-                        <th style={{ width: "20%", textAlign: "center" }}>
-                          Jumlah Item Obat Yang Tersedia di Rumah Sakit
+                        <th style={{ width: "27%", textAlign: "center" }}>
+                          Jumlah Item Obat yang Tersedia di Rumah Sakit
                         </th>
                       </tr>
                     </thead>
@@ -820,12 +890,22 @@ export const RL317 = () => {
                               {index + 1}
                             </td>
                             {user.jenisUserId === 4 && (
-                              <td className={style["sticky-column"]}>
+                              <td
+                                className={style["sticky-column"]}
+                                style={{ textAlign: "center" }}
+                              >
                                 {value.no_golongan_obat !== 4 &&
                                 value.no_golongan_obat !== 2 ? (
-                                  <div style={{ display: "flex" }}>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "center",
+                                      alignItems: "center",
+                                    }}
+                                  >
                                     {user.jenisUserId === 4 ? (
                                       <>
+                                        {/* Tombol Hapus (selalu ada) */}
                                         <button
                                           className="btn btn-danger"
                                           style={{
@@ -840,18 +920,23 @@ export const RL317 = () => {
                                         >
                                           Hapus
                                         </button>
-                                        <Link
-                                          to={`/rl317/ubah/${value.id}`}
-                                          className="btn btn-warning"
-                                          style={{
-                                            margin: "0 5px 0 0",
-                                            backgroundColor: "#CFD35E",
-                                            border: "1px solid #CFD35E",
-                                            color: "#FFFFFF",
-                                          }}
-                                        >
-                                          Ubah
-                                        </Link>
+
+                                        {/* Tombol Ubah hanya jika bukan 0 */}
+                                        {Number(value.no_golongan_obat) !==
+                                          0 && (
+                                          <Link
+                                            to={`/rl317/ubah/${value.id}`}
+                                            className="btn btn-warning"
+                                            style={{
+                                              margin: "0 5px 0 0",
+                                              backgroundColor: "#CFD35E",
+                                              border: "1px solid #CFD35E",
+                                              color: "#FFFFFF",
+                                            }}
+                                          >
+                                            Ubah
+                                          </Link>
+                                        )}
                                       </>
                                     ) : (
                                       <></>
@@ -1010,17 +1095,22 @@ export const RL317 = () => {
                             <select
                               id="statusValidasi"
                               name="statusValidasi"
-                              value={statusValidasi}
+                              value={statusValidasi || ""}
                               required
                               onChange={(e) => statusValidasiChangeHadler(e)}
                             >
                               {user.jenisUserId === 4 ? (
                                 <>
-                                  <option value="">Pilih Status</option>
+                                  <option value="" disabled>
+                                    Pilih Status
+                                  </option>
                                   <option value="2">Selesai Diperbaiki</option>
                                 </>
                               ) : (
                                 <>
+                                  <option value="" disabled>
+                                    Pilih Status
+                                  </option>
                                   <option value="1">Perlu Perbaikan</option>
                                   <option value="3">Disetujui</option>
                                 </>

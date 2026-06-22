@@ -93,7 +93,6 @@
     border-collapse: collapse;
     table-layout: fixed;
     font-size: 15px;
-    font-family: 'Times New Roman', Times, serif; /* Set font family */
     /* Ensures column widths are consistent */
 }
 
@@ -122,7 +121,7 @@
     position: -webkit-sticky;
     /* For Safari */
     position: sticky;
-    top: 10px;
+    top: 45px;
     /* Adjust this to the height of the main header row */
     z-index: 1;
     /* Ensures the subheader is below the main header */
@@ -133,7 +132,7 @@
     position: -webkit-sticky;
     /* For Safari */
     position: sticky;
-    top: 10px;
+    top: 39px;
     /* Adjust this to the height of the main header row */
     z-index: 1;
     /* Ensures the subheader is below the main header */
@@ -152,72 +151,61 @@
     position: -webkit-sticky; /* For Safari */
     position: sticky;
     top: 0; /* Sticky header */
-    z-index: 2; /* Above table content */
+    z-index: 2;
+    background-color: #fff; /* Above table content */
 }
 
 .table .sticky-column {
-    position: -webkit-sticky; /* For Safari */
+    position: -webkit-sticky; /* Safari */
     position: sticky;
     left: 0;
-    z-index: 1; /* Ensures sticky column is above other content */
+    z-index: 2;              /* Lebih tinggi dari kolom lain */
+    background-color: #fff;  /* 🔴 Supaya tidak transparan */
+    border-right: 1px solid #dee2e6; /* Opsional: garis pemisah */
 }
 
 
 /* view */
-.table thead th.sticky-header-view:nth-child(1)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 4; /* Above both header and body content */
+.table thead th.sticky-header-view:nth-child(1) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 0;
+  z-index: 4;
 }
-.table thead th.sticky-header-view:nth-child(2)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 10px;
-    z-index: 4; /* Above both header and body content */
+
+.table thead th.sticky-header-view:nth-child(2) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 52px;
+  z-index: 4;
 }
+
 .table thead th.sticky-header-view:nth-child(3) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 10px;
-    z-index: 4; /* Above both header and body content */
+  position: -webkit-sticky;
+  position: sticky;
+  left: 205px;
+  z-index: 4;
 }
 
-.table thead th.sticky-header-view:nth-child(4) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 287px;
-    z-index: 4; /* Above both header and body content */
+.table tbody tr td.sticky-column-view:nth-child(1) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 0;
+  z-index: 3;
 }
 
-.table tbody tr td.sticky-column-view:nth-child(1)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 3; /* Above both header and body content */
+.table tbody tr td.sticky-column-view:nth-child(2) {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 52px;
+  z-index: 3;
 }
-.table tbody tr td.sticky-column-view:nth-child(2)
-{
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 52px;
-    z-index: 3; /* Above both header and body content */
-}
+
 .table tbody tr td.sticky-column-view:nth-child(3) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 205px;
-    z-index: 3; /* Above both header and body content */
-}
-
-.table tbody tr td.sticky-column-view:nth-child(4) {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 287px;
-    z-index: 3; /* Above both header and body content */
+  position: -webkit-sticky;
+  position: sticky;
+  left: 205px;
+  z-index: 3;
 }
 
 .table .sticky-header-view {
@@ -349,24 +337,4 @@
 .table th:nth-child(3),
 .table td:nth-child(3) {
   text-align: left; /* Golongan Obat rata kiri */
-}
-.btnPrimary {
-  font-size: 0.95rem;
-  font-weight: 500;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  background: #00b9ad;
-  color: #fff;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.btnPrimary:hover {
-  background: #00b9ad;
-  color: #fff;
-  transform: translateY(-1px);
-}
-
-.btnPrimary:active {
-  transform: translateY(0);
 }

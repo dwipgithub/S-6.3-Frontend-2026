@@ -43,7 +43,7 @@ export const RL318 = () => {
   const navigate = useNavigate();
   const [idValidasi, setidValidasi] = useState("");
   const [idValidasiSubmited, setidValidasiSubmited] = useState("");
-  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [statusValidasi, setStatusValidasi] = useState("");
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
@@ -401,21 +401,14 @@ export const RL318 = () => {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
 
-        // 🔥 INI KUNCI UTAMA
-        if (user.jenisUserId === 3) {
-          setStatusValidasi(1);
-        } else if (user.jenisUserId === 4) {
-          setStatusValidasi(2);
-        } else {
-          setStatusValidasi("");
-        }
+        setStatusValidasi("");
 
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
       } else {
         setidValidasi("");
-        setStatusValidasi(1);
+        setStatusValidasi("");
         setKeteranganValidasi("");
         setTglValidasi("");
         setIsValidated(false);
@@ -427,7 +420,7 @@ export const RL318 = () => {
   };
 
   const statusValidasiChangeHadler = (e) => {
-    setStatusValidasi(e.target.value);
+    setStatusValidasi(Number(e.target.value));
   };
 
   const keteranganValidasiChangeHadler = (e) => {
@@ -849,50 +842,44 @@ export const RL318 = () => {
                             </td>
                             {user.jenisUserId === 4 && (
                               <td className={style["sticky-column"]}>
-                                {value.no_golongan_obat != 4 &&
-                                value.no_golongan_obat != 2 ? (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: "center",
-                                    }}
-                                  >
-                                    {user.jenisUserId === 4 ? (
-                                      <>
-                                        <button
-                                          className="btn btn-danger"
-                                          style={{
-                                            margin: "0 5px 0 0",
-                                            backgroundColor: "#FF6663",
-                                            border: "1px solid #FF6663",
-                                          }}
-                                          type="button"
-                                          onClick={(e) =>
-                                            deleteConfirmation(value.id)
-                                          }
-                                        >
-                                          Hapus
-                                        </button>
-                                        <Link
-                                          to={`/rl318/ubah/${value.id}`}
-                                          className="btn btn-warning"
-                                          style={{
-                                            margin: "0 5px 0 0",
-                                            backgroundColor: "#CFD35E",
-                                            border: "1px solid #CFD35E",
-                                            color: "#FFFFFF",
-                                          }}
-                                        >
-                                          Ubah
-                                        </Link>
-                                      </>
-                                    ) : (
-                                      <></>
-                                    )}
-                                  </div>
-                                ) : (
-                                  ""
-                                )}
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  {user.jenisUserId === 4 ? (
+                                    <>
+                                      <button
+                                        className="btn btn-danger"
+                                        style={{
+                                          margin: "0 5px 0 0",
+                                          backgroundColor: "#FF6663",
+                                          border: "1px solid #FF6663",
+                                        }}
+                                        type="button"
+                                        onClick={(e) =>
+                                          deleteConfirmation(value.id)
+                                        }
+                                      >
+                                        Hapus
+                                      </button>
+
+                                      <Link
+                                        to={`/rl318/ubah/${value.id}`}
+                                        className="btn btn-warning"
+                                        style={{
+                                          margin: "0 5px 0 0",
+                                          backgroundColor: "#CFD35E",
+                                          border: "1px solid #CFD35E",
+                                          color: "#FFFFFF",
+                                        }}
+                                      >
+                                        Ubah
+                                      </Link>
+                                    </>
+                                  ) : null}
+                                </div>
                               </td>
                             )}
                             <td style={{ textAlign: "left" }}>
@@ -1047,17 +1034,22 @@ export const RL318 = () => {
                             <select
                               id="statusValidasi"
                               name="statusValidasi"
-                              value={statusValidasi}
+                              value={statusValidasi || ""}
                               required
                               onChange={(e) => statusValidasiChangeHadler(e)}
                             >
                               {user.jenisUserId === 4 ? (
                                 <>
-                                  <option value="">Pilih Status</option>
+                                  <option value="" disabled>
+                                    Pilih Status
+                                  </option>
                                   <option value="2">Selesai Diperbaiki</option>
                                 </>
                               ) : (
                                 <>
+                                  <option value="" disabled>
+                                    Pilih Status
+                                  </option>
                                   <option value="1">Perlu Perbaikan</option>
                                   <option value="3">Disetujui</option>
                                 </>

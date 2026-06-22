@@ -405,8 +405,10 @@ const FormTambahRL314 = () => {
                   <tr className="main-header-row">
                     <th style={{ width: "4%" }}>No</th>
                     <th style={{ width: "5%" }}>Pilih</th>
-                    <th style={{ width: "30%" }}>Jenis Kegiatan</th>
-                    <th>Jumlah</th>
+                    <th style={{ width: "30%", textAlign: "center" }}>
+                      Jenis Kegiatan
+                    </th>
+                    <th style={{ width: "20%" }}>Jumlah</th>
                   </tr>
                 </thead>
                 <tbody>

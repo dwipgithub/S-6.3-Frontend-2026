@@ -14,9 +14,7 @@ import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL312 = () => {
-  // const [tahun, setTahun] = useState("");
-  const [bulan, setBulan] = useState(1);
-  // const [tahun, setTahun] = useState("2025");
+  const [bulan, setBulan] = useState("1");
   const [tahun, setTahun] = useState(new Date().getFullYear().toString());
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [filterLabel, setFilterLabel] = useState([]);
@@ -42,13 +40,14 @@ const RL312 = () => {
   // untuk validasi
   const [idValidasi, setidValidasi] = useState("");
   const [idValidasiSubmited, setidValidasiSubmited] = useState("");
-  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [statusValidasi, setStatusValidasi] = useState("");
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
   const [loadingRS, setLoadingRS] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -182,12 +181,28 @@ const RL312 = () => {
     getRumahSakit(kabKotaId);
   };
 
-  const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
+  // const rumahSakitChangeHandler = (e) => {
+  //   const rsId = e.target.value;
+  //   showRumahSakit(rsId);
+  // };
+
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
   };
 
   const getRumahSakit = async (kabKotaId) => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
+
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
         headers: {
@@ -199,6 +214,8 @@ const RL312 = () => {
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -215,6 +232,16 @@ const RL312 = () => {
 
   const getRL = async (e) => {
     e.preventDefault();
+
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
+    }
+
     if (!rumahSakit || !rumahSakit.id) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
@@ -222,9 +249,10 @@ const RL312 = () => {
       return;
     }
     const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    // filter.push("periode: ".concat(String(tahun)));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
+    filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
+    filter.push(
+      "Periode ".concat(`${tahun}-${bulan.toString().padStart(2, "0")}`),
+    );
     setFilterLabel(filter);
     try {
       const customConfig = {
@@ -234,8 +262,7 @@ const RL312 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          // periode: String(tahun),
-          periode: String(tahun).concat("-").concat(bulan),
+          periode: `${tahun}-${bulan.toString().padStart(2, "0")}`,
         },
       };
       const results = await axiosJWT.get(
@@ -281,6 +308,7 @@ const RL312 = () => {
           "_".concat(String(tahun).concat("-").concat(bulan).concat("-01")),
       );
       // setRumahSakit(null);
+      await getValidasi();
       handleClose();
     } catch (error) {
       console.log(error);
@@ -338,22 +366,22 @@ const RL312 = () => {
     switch (jenisUserId) {
       case 1:
         getProvinsi();
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 2:
         getKabKota(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 3:
         getRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 4:
         showRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       default:
@@ -430,7 +458,6 @@ const RL312 = () => {
   function handleDownloadExcel() {
     const header = [
       "No",
-      "Kode",
       "Jenis Pelayanan",
       "Khusus",
       "Besar",
@@ -439,33 +466,54 @@ const RL312 = () => {
       "Total",
     ];
 
-    const body = dataRL.map((value, index) => {
-      const total =
-        (value.khusus || 0) +
-        (value.besar || 0) +
-        (value.sedang || 0) +
-        (value.kecil || 0);
+    let totalKhusus = 0;
+    let totalBesar = 0;
+    let totalSedang = 0;
+    let totalKecil = 0;
 
-      ```
-return [
-  index + 1,
-  value.jenis_pelayanan_rl_tiga_titik_dua_belas?.no,
-  value.jenis_pelayanan_rl_tiga_titik_dua_belas?.nama,
-  value.khusus,
-  value.besar,
-  value.sedang,
-  value.kecil,
-  total,
-];
-```;
+    const body = dataRL.map((value, index) => {
+      const khusus = value.khusus || 0;
+      const besar = value.besar || 0;
+      const sedang = value.sedang || 0;
+      const kecil = value.kecil || 0;
+
+      const total = khusus + besar + sedang + kecil;
+
+      // akumulasi total
+      totalKhusus += khusus;
+      totalBesar += besar;
+      totalSedang += sedang;
+      totalKecil += kecil;
+
+      return [
+        index + 1,
+        value.nama_spesialisasi,
+        khusus,
+        besar,
+        sedang,
+        kecil,
+        total,
+      ];
     });
 
+    const grandTotal = totalKhusus + totalBesar + totalSedang + totalKecil;
+
+    body.push([
+      "",
+      "TOTAL",
+      totalKhusus,
+      totalBesar,
+      totalSedang,
+      totalKecil,
+      grandTotal,
+    ]);
+
     downloadExcel({
-      fileName: "RL_3_12",
+      fileName: namafile || "RL_3_12",
       sheet: "RL312",
       tablePayload: {
         header,
-        body: body,
+        body,
       },
     });
   }
@@ -480,7 +528,7 @@ return [
         },
         params: {
           rsId: rumahSakit.id,
-          periode: tahun,
+          periode: `${tahun}-${bulan.toString().padStart(2, "0")}`,
         },
       };
       const results = await axiosJWT.get(
@@ -491,13 +539,15 @@ return [
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
+
+        setStatusValidasi("");
+
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
       } else {
         setidValidasi("");
-        setStatusValidasi(1);
+        setStatusValidasi("");
         setKeteranganValidasi("");
         setTglValidasi("");
         setIsValidated(false);
@@ -509,7 +559,7 @@ return [
   };
 
   const statusValidasiChangeHadler = (e) => {
-    setStatusValidasi(e.target.value);
+    setStatusValidasi(Number(e.target.value));
   };
 
   const keteranganValidasiChangeHadler = (e) => {
@@ -548,7 +598,10 @@ return [
         await axiosJWT.patch(
           "/apisirs6v2/rltigatitikduabelasvalidasi/" + idValidasi,
           {
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -558,8 +611,11 @@ return [
           "/apisirs6v2/rltigatitikduabelasvalidasi",
           {
             rsId: rumahSakit.id,
-            periode: `${tahun}-12-01`,
-            statusValidasiId: statusValidasi,
+            periode: `${tahun}-${bulan.toString().padStart(2, "0")}-01`,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -675,10 +731,9 @@ return [
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -730,13 +785,12 @@ return [
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -760,13 +814,12 @@ return [
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -929,7 +982,10 @@ return [
                           No
                         </th>
                         {user.jenisUserId === 4 && (
-                          <th style={{ width: "13%", textAlign: "center" }}>
+                          <th
+                            className={style["sticky-header-view"]}
+                            style={{ verticalAlign: "middle" }}
+                          >
                             Aksi
                           </th>
                         )}
@@ -973,6 +1029,7 @@ return [
                     </thead>
                     <tbody>
                       {dataRL.map((value, index) => {
+                        console.log(value);
                         return (
                           <tr key={value.id}>
                             <td className={style["sticky-column-view"]}>
@@ -980,46 +1037,44 @@ return [
                             </td>
 
                             {user.jenisUserId === 4 && (
-                              <td className={style["sticky-column"]}>
-                                {value.no_golongan_obat != 4 &&
-                                value.no_golongan_obat != 2 ? (
-                                  <div
+                              <td className={style["sticky-column-view"]}>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  {/* Tombol Hapus tetap ada */}
+                                  <button
+                                    className="btn btn-danger"
                                     style={{
-                                      display: "flex",
-                                      justifyContent: "center",
+                                      margin: "0 5px 0 0",
+                                      backgroundColor: "#FF6663",
+                                      border: "1px solid #FF6663",
                                     }}
+                                    type="button"
+                                    onClick={() => deleteConfirmation(value.id)}
                                   >
-                                    <button
-                                      className="btn btn-danger"
-                                      style={{
-                                        margin: "0 5px 0 0",
-                                        backgroundColor: "#FF6663",
-                                        border: "1px solid #FF6663",
-                                      }}
-                                      type="button"
-                                      onClick={() =>
-                                        deleteConfirmation(value.id)
-                                      }
-                                    >
-                                      Hapus
-                                    </button>
+                                    Hapus
+                                  </button>
 
-                                    <Link
-                                      to={`/rl312/ubah/${value.id}`}
-                                      className="btn btn-warning"
-                                      style={{
-                                        margin: "0 5px 0 0",
-                                        backgroundColor: "#CFD35E",
-                                        border: "1px solid #CFD35E",
-                                        color: "#FFFFFF",
-                                      }}
-                                    >
-                                      Ubah
-                                    </Link>
-                                  </div>
-                                ) : (
-                                  ""
-                                )}
+                                  {value.id !== 88 &&
+                                    value.nama_spesialisasi !==
+                                      "Tidak Ada Data" && (
+                                      <Link
+                                        to={`/rl312/edit/${value.id}`}
+                                        className="btn btn-warning"
+                                        style={{
+                                          margin: "0 5px 0 0",
+                                          backgroundColor: "#CFD35E",
+                                          border: "1px solid #CFD35E",
+                                          color: "#FFFFFF",
+                                        }}
+                                      >
+                                        Ubah
+                                      </Link>
+                                    )}
+                                </div>
                               </td>
                             )}
 
@@ -1185,17 +1240,22 @@ return [
                           <select
                             id="statusValidasi"
                             name="statusValidasi"
-                            value={statusValidasi}
+                            value={statusValidasi || ""}
                             required
                             onChange={(e) => statusValidasiChangeHadler(e)}
                           >
                             {user.jenisUserId === 4 ? (
                               <>
-                                <option value="">Pilih Status</option>
+                                <option value="" disabled>
+                                  Pilih Status
+                                </option>
                                 <option value="2">Selesai Diperbaiki</option>
                               </>
                             ) : (
                               <>
+                                <option value="" disabled>
+                                  Pilih Status
+                                </option>
                                 <option value="1">Perlu Perbaikan</option>
                                 <option value="3">Disetujui</option>
                               </>

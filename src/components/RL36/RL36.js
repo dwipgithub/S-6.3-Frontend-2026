@@ -35,16 +35,19 @@ const RL36 = () => {
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
   const [activeTab, setActiveTab] = useState("tab1");
+  const [submittedBulan, setSubmittedBulan] = useState(null);
+  const [submittedTahun, setSubmittedTahun] = useState(null);
+  const [submittedRumahSakit, setSubmittedRumahSakit] = useState(null);
   const { CSRFToken } = useCSRFTokenContext();
   const tableRef = useRef(null);
 
-  // Load validasi data when user opens Validasi tab or when filters change
+  // Load validasi data when user opens Validasi tab or when submitted filters change
   useEffect(() => {
-    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
+    if (activeTab === "tab2" && submittedRumahSakit && submittedRumahSakit.id && submittedBulan !== 0 && submittedTahun) {
       getValidasi();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bulan, tahun, rumahSakit, activeTab]);
+  }, [submittedBulan, submittedTahun, submittedRumahSakit, activeTab]);
 
   useEffect(() => {
     refreshToken();
@@ -75,8 +78,11 @@ const RL36 = () => {
       } else if (decoded.jenisUserId === 3) {
         getRumahSakit(decoded.satKerId);
       } else if (decoded.jenisUserId === 4) {
-        showRumahSakit(decoded.satKerId, accessToken);
-      }
+  // 🔴 hanya load jika belum ada RS
+          if (!rumahSakit || !rumahSakit.id) {
+            showRumahSakit(decoded.satKerId, accessToken);
+          }
+        }
 
       setExpire(decoded.exp);
     } catch (error) {
@@ -182,9 +188,15 @@ const RL36 = () => {
   };
 
   const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
-  };
+  const rsId = e.target.value;
+
+  // 🔴 cegah reset kalau sama
+  if (rumahSakit && String(rumahSakit.id) === String(rsId)) {
+    return;
+  }
+
+  showRumahSakit(rsId);
+};
 
   const getRumahSakit = async (kabKotaId) => {
     try {
@@ -201,16 +213,24 @@ const RL36 = () => {
   };
 
   const showRumahSakit = async (id, tokenOverride) => {
-    try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
+  try {
+    // 🔴 cegah overwrite jika RS sama
+    if (rumahSakit && String(rumahSakit.id) === String(id)) {
+      return;
+    }
+
+    const response = await axiosJWT.get(
+      "/apisirs6v2/rumahsakit/" + id,
+      {
         headers: {
           Authorization: `Bearer ${tokenOverride || token}`,
         },
-      });
+      }
+    );
 
-      setRumahSakit(response.data.data);
-    } catch (error) {}
-  };
+    setRumahSakit(response.data.data);
+  } catch (error) {}
+};
 
   const getDataRLTigaTitikEnam = async (event) => {
     setSpinner(true);
@@ -567,6 +587,11 @@ const RL36 = () => {
       setDataRL(data);
       handleClose();
 
+      // Simpan filter yang di-submit
+      setSubmittedBulan(bulan);
+      setSubmittedTahun(tahun);
+      setSubmittedRumahSakit(rumahSakit);
+      
       // Load validasi data setelah filter diterapkan
       try {
         const validasiConfig = {
@@ -827,10 +852,12 @@ const RL36 = () => {
         setShow(true);
         break;
       case 4:
+      if (!rumahSakit || !rumahSakit.id) {
         showRumahSakit(satKerId);
-        setBulan(1);
-        setShow(true);
-        break;
+      }
+
+      setShow(true);
+      break;
       default:
     }
   };
@@ -917,6 +944,7 @@ const RL36 = () => {
         value.nrHidup,
         value.nrMati,
         value.nrTotal,
+        value.dirujuk,
       ];
       return data;
     });
@@ -939,8 +967,8 @@ const RL36 = () => {
           Authorization: `Bearer ${token}`,
         },
         params: {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          rsId: submittedRumahSakit.id,
+          periode: String(submittedTahun).concat("-").concat(String(submittedBulan).padStart(2, "0")),
         },
       };
       const response = await axiosJWT.get(
@@ -980,8 +1008,8 @@ const RL36 = () => {
   const simpanValidasi = async (e) => {
     e.preventDefault();
 
-    if (!rumahSakit || !rumahSakit.id) {
-      toast("Rumah sakit harus dipilih terlebih dahulu", {
+    if (!submittedRumahSakit || !submittedRumahSakit.id) {
+      toast("Rumah sakit harus dipilih dan filter diterapkan terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
@@ -1024,8 +1052,8 @@ const RL36 = () => {
         const response = await axiosJWT.post(
           "/apisirs6v2/rltigatitikenamvalidasi",
           {
-            rsId: rumahSakit.id,
-            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+            rsId: submittedRumahSakit.id,
+            periode: String(submittedTahun).concat("-").concat(String(submittedBulan).padStart(2, "0")),
             ...payload,
           },
           customConfig
@@ -1124,12 +1152,12 @@ const RL36 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1179,12 +1207,12 @@ const RL36 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1209,12 +1237,12 @@ const RL36 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1414,16 +1442,16 @@ const RL36 = () => {
                               // color:"#354259"
                             }}
                           >
-                            <td className={style["sticky-column"]}>
+                            <td className={style["sticky-column-view"]}>
                               {value.groupNo}
                             </td>
                             {user.jenisUserId === 4
                    ?
-                            <td className={style["sticky-column"]}></td>
+                            <td className={style["sticky-column-view"]}></td>
                             : <>
                      </>
                       }
-                            <td className={style["sticky-column"]}>
+                            <td className={style["sticky-column-view"]}>
                               {/* {value.groupNama} */}
                               {value.groupNama}
                             </td>
@@ -1474,7 +1502,7 @@ const RL36 = () => {
                           {value.details.map((value2, index2) => {
                             return (
                               <tr key={index2}>
-                                <td className={style["sticky-column"]}>
+                                <td className={style["sticky-column-view"]}>
                                   {
                                       value2.jenis_kegiatan_rl_tiga_titik_enam
                                         .no
@@ -1483,7 +1511,7 @@ const RL36 = () => {
                                 {user.jenisUserId === 4
                    ?
                                 <td
-                                  className={style["sticky-column"]}
+                                  className={style["sticky-column-view"]}
                                   style={{
                                     textAlign: "center",
                                     verticalAlign: "middle",
@@ -1524,7 +1552,7 @@ const RL36 = () => {
                                 : <>
                      </>
                       }
-                                <td className={style["sticky-column"]}>
+                                <td className={style["sticky-column-view"]}>
                                   {/* {
                                     value2.jenis_kegiatan_rl_tiga_titik_enam
                                       .nama
@@ -1689,14 +1717,25 @@ const RL36 = () => {
 
                                 {/* DIBUAT */}
                                 <div style={{ display: "flex" }}>
-                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
-                                    Dibuat
-                                  </div>
-                                  <div style={{ width: "10px" }}>:</div>
-                                  <div>
-                                    {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
-                                  </div>
-                                </div>
+                                        <div
+                                          style={{
+                                            width: "90px",
+                                            textAlign: "left",
+                                            paddingRight: "8px",
+                                            fontWeight: "600",
+                                          }}
+                                        >
+                                          Dibuat
+                                        </div>
+                                        <div style={{ width: "10px" }}>:</div>
+                                        <div>
+                                          {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID", {
+                                            day: "2-digit",
+                                            month: "long",
+                                            year: "numeric",
+                                          })}
+                                        </div>
+                                      </div>
 
                               </div>
                             )}

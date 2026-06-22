@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, useParams } from "react-router-dom";
-import style from "./FormTambahRL318.module.css";
+import style from "./RL318.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { Link } from "react-router-dom";
 import { IoArrowBack } from "react-icons/io5";
@@ -75,7 +75,7 @@ export const FormUbahRL318 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getRumahSakit = async (id) => {
@@ -146,7 +146,7 @@ export const FormUbahRL318 = () => {
       await axiosJWT.patch(
         "/apisirs6v2/rltigatitikdelapanbelas/" + id,
         data,
-        customConfig
+        customConfig,
       );
 
       setSpinner(false);
@@ -174,7 +174,7 @@ export const FormUbahRL318 = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     setNama(response.data.data.nama_golongan_obat);
@@ -205,7 +205,7 @@ export const FormUbahRL318 = () => {
     if (object.target.value.length > object.target.maxLength) {
       object.target.value = object.target.value.slice(
         0,
-        object.target.maxLength
+        object.target.maxLength,
       );
     }
   };
@@ -213,8 +213,17 @@ export const FormUbahRL318 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
+      <div className={style.headerAction}>
+        <Link to="/rl318">
+          <button type="button" className={style.btnPrimary}>
+            ←
+          </button>
+        </Link>
+
+        <h4 className={style.pageHeader}>RL 3.18 - Farmasi Resep</h4>
+      </div>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -279,55 +288,21 @@ export const FormUbahRL318 = () => {
         </div>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl318/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/><span style={{color: "gray"}}></span> */}
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>RL 3.18 Farmasi Resep</span>
-
-            <div className="container" style={{ textAlign: "center" }}>
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-            </div>
-            <table className={style.rlTable}>
-              <thead>
-                <tr>
-                  <th>No Golongan Obat</th>
-                  <th>Golongan Obat</th>
-                  <th>Rawat Jalan</th>
-                  <th>IGD</th>
-                  <th>Rawat Inap</th>
+            <table responsive className={style.table}>
+              <thead className={style.thead}>
+                <tr className="main-header-row">
+                  <th>No.</th>
+                  <th style={{ textAlign: "center" }}>Golongan Obat</th>
+                  <th style={{ textAlign: "center" }}>Rawat Jalan</th>
+                  <th style={{ textAlign: "center" }}>IGD</th>
+                  <th style={{ textAlign: "center" }}>Rawat Inap</th>
                 </tr>
               </thead>
               <tbody>
                 <td>
                   <center>{no}</center>
                 </td>
-                <td>{nama}</td>
+                <td style={{ textAlign: "left" }}>{nama}</td>
                 <td>
                   {nama === "Tidak Ada Data" && (
                     <div className="control">
@@ -337,6 +312,7 @@ export const FormUbahRL318 = () => {
                         maxLength={7}
                         onInput={(e) => maxLengthCheck(e)}
                         className="form-control"
+                        style={{ textAlign: "center" }}
                         name="rawat_jalan"
                         value={rawat_jalan}
                         onFocus={handleFocus}
@@ -355,6 +331,7 @@ export const FormUbahRL318 = () => {
                         maxLength={7}
                         onInput={(e) => maxLengthCheck(e)}
                         className="form-control"
+                        style={{ textAlign: "center" }}
                         name="rawat_jalan"
                         value={rawat_jalan}
                         onFocus={handleFocus}
@@ -375,6 +352,7 @@ export const FormUbahRL318 = () => {
                         maxLength={7}
                         onInput={(e) => maxLengthCheck(e)}
                         className="form-control"
+                        style={{ textAlign: "center" }}
                         name="igd"
                         value={igd}
                         onFocus={handleFocus}
@@ -393,6 +371,7 @@ export const FormUbahRL318 = () => {
                         maxLength={7}
                         onInput={(e) => maxLengthCheck(e)}
                         className="form-control"
+                        style={{ textAlign: "center" }}
                         name="igd"
                         value={igd}
                         onFocus={handleFocus}
@@ -413,6 +392,7 @@ export const FormUbahRL318 = () => {
                         maxLength={7}
                         onInput={(e) => maxLengthCheck(e)}
                         className="form-control"
+                        style={{ textAlign: "center" }}
                         name="rawat_inap"
                         value={rawat_inap}
                         onFocus={handleFocus}
@@ -431,6 +411,7 @@ export const FormUbahRL318 = () => {
                         maxLength={7}
                         onInput={(e) => maxLengthCheck(e)}
                         className="form-control"
+                        style={{ textAlign: "center" }}
                         name="rawat_inap"
                         value={rawat_inap}
                         onFocus={handleFocus}
@@ -448,12 +429,8 @@ export const FormUbahRL318 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button
-            type="submit"
-            className="btn btn-outline-success"
-            disabled={buttonStatus}
-          >
-            <HiSaveAs /> Update
+          <button type="submit" className={style.btnPrimary}>
+            <HiSaveAs size={20} /> Simpan
           </button>
         </div>
       </form>

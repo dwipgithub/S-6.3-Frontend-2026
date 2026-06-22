@@ -87,11 +87,14 @@ const Login = () => {
                                             sitekey={googleReCaptchaSiteKey}
                                             ref={reCaptchaReference}
                                         /> */}
-                    <div className="mt-3">
-                      <ToastContainer />
-                      <button className="btn btn-outline-success">
-                        <BoxArrowDownRight /> Login
-                      </button>
+                                        <div className="mt-3">
+                                            <ToastContainer />
+                                            <button className={style.btnPrimary}><BoxArrowDownRight/> Login</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                   </form>
                 </div>
@@ -104,4 +107,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Login

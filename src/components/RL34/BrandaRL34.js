@@ -97,7 +97,7 @@ const BrandaRL34 = () => {
       value: "1",
     });
     results.push({
-      key: "Febuari",
+      key: "Februari",
       value: "2",
     });
     results.push({

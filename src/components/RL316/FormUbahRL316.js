@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import style from "./FormTambahRL316.module.css";
+import style from "./RL316.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -260,8 +260,17 @@ export const FormEditRL316 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
+      <div className={style.headerAction}>
+        <Link to="/rl316">
+          <button type="button" className={style.btnPrimary}>
+            ←
+          </button>
+        </Link>
+
+        <h4 className={style.pageHeader}>RL 3.16 - Keluarga Berencana</h4>
+      </div>
       <form onSubmit={UpdateRLTigaTitikDuaBelas}>
         <div className="row">
           <div className="col-md-6">
@@ -326,44 +335,9 @@ export const FormEditRL316 = () => {
         </div>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl316/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>
-              {" "}
-              Kembali RL 3.16 Keluarga Berencana
-            </span>
-            {/* <div className="container" style={{ textAlign: "center" }}>
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-            </div> */}
-            <Table className={style.table}>
-              <thead>
-                <tr>
+            <table responsive className={style.table}>
+              <thead className={style.thead}>
+                <tr className="main-header-row">
                   <th
                     className={style["sticky-header-ubah"]}
                     rowSpan="2"
@@ -374,30 +348,32 @@ export const FormEditRL316 = () => {
                   <th
                     className={style["sticky-header-ubah"]}
                     rowSpan="2"
-                    style={{ width: "8%" }}
+                    style={{ width: "13%" }}
                   >
                     Jenis Pelayanan Keluarga Berencana
                   </th>
-                  <th colSpan="3" style={{ width: "5%" }}>
+                  <th colSpan="3" style={{ width: "4%", textAlign: "center" }}>
                     Pelayanan KB
                   </th>
-                  <th rowSpan="2" style={{ width: "5%" }}>
+                  <th rowSpan="2" style={{ width: "4%" }}>
                     Komplikasi KB
                   </th>
-                  <th rowSpan="2" style={{ width: "5%" }}>
+                  <th rowSpan="2" style={{ width: "4%" }}>
                     Kegagalan KB
                   </th>
-                  <th rowSpan="2" style={{ width: "5%" }}>
+                  <th rowSpan="2" style={{ width: "4%" }}>
                     Efek Samping
                   </th>
-                  <th rowSpan="2" style={{ width: "5%" }}>
+                  <th rowSpan="2" style={{ width: "4%" }}>
                     Drop Out
                   </th>
                 </tr>
                 <tr>
                   <th style={{ width: "5%" }}>{"Paska Persalinan"}</th>
                   <th style={{ width: "5%" }}>{"Paska Keguguran"}</th>
-                  <th style={{ width: "5%" }}>{"Interval"}</th>
+                  <th style={{ width: "5%", textAlign: "center" }}>
+                    {"Interval"}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -545,15 +521,11 @@ export const FormEditRL316 = () => {
                   </td>
                 </tr>
               </tbody>
-            </Table>
+            </table>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button
-                type="submit"
-                disabled={buttonStatus}
-                className="btn btn-outline-success"
-              >
-                <HiSaveAs /> Simpan
+              <button type="submit" className={style.btnPrimary}>
+                <HiSaveAs /> Update
               </button>
             </div>
           </div>

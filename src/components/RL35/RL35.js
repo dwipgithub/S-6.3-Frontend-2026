@@ -22,6 +22,7 @@ const RL35 = () => {
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
   const [dataRL, setDataRL] = useState([]);
+  const [dataRLSatusehat, setDataRLSatusehat] = useState([]);
   const [token, setToken] = useState("");
   const [expire, setExpire] = useState("");
   const [show, setShow] = useState(false);
@@ -32,12 +33,16 @@ const RL35 = () => {
   const [total_kunjungan, setTotalKunjungan] = useState(0);
   const [rata_kunjungan, setRataKunjungan] = useState(0);
   const tableRef = useRef(null);
+  const tableSatusehatRef = useRef(null);
   const [namafile, setNamaFile] = useState("");
+  const [namafileSatusehat, setNamaFileSatusehat] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(0);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
   const [activeTab, setActiveTab] = useState("tab1");
+  const [activeWadahTab, setActiveWadahTab] = useState("sirs");
+  const [filterLabelSatusehat, setFilterLabelSatusehat] = useState([]);
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
@@ -319,6 +324,94 @@ const RL35 = () => {
     }
   };
 
+const getRLSatusehat = async (e) => {
+  if (e) e.preventDefault();
+
+  setSpinner(true);
+
+  const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+
+    const apiKey = process.env.REACT_APP_SATUSEHAT_API_KEY;
+
+    if (apiKey) {
+      headers["X-API-Key"] = apiKey;
+    }
+    const results = await axios.get(
+      "/apisirs6v2/rltigatitiklimasatusehat",
+      {
+        headers,
+        params: {
+          periode,
+          rsId: rumahSakit.id,
+        },
+      }
+    );
+
+    console.log("Response RL 3.5:", results.data);
+    const serverMessage = results?.data?.message || "";
+
+    const responseStatus = results?.data?.data?.status;
+
+    const rawData = results?.data?.data?.data;
+    let items = [];
+
+    if (rawData && Array.isArray(rawData.visits)) {
+      items = rawData.visits;
+    } else if (
+      rawData &&
+      typeof rawData === "object" &&
+      rawData.jenis_kegiatan
+    ) {
+      items = [rawData];
+    }
+    if (responseStatus === 404 || items.length === 0) {
+      setDataRLSatusehat([]);
+
+      toast.info(
+        serverMessage || "Data belum tersedia untuk periode ini.",
+        {
+          position: toast.POSITION.TOP_RIGHT,
+          autoClose: 5000,
+        }
+      );
+    } else {
+      setDataRLSatusehat(items);
+
+      setNamaFileSatusehat(
+        `rl35_satusehat_${periode}-01`
+      );
+    }
+  } catch (error) {
+    console.error("Error RL 3.5 Satusehat:", error);
+
+    setDataRLSatusehat([]);
+
+    const errMsg =
+      error?.response?.data?.message ||
+      "Terjadi kesalahan sistem";
+
+    toast.error(errMsg, {
+      position: toast.POSITION.TOP_RIGHT,
+      autoClose: 5000,
+    });
+  } finally {
+    setSpinner(false);
+
+    // Delay supaya toast tetap terlihat
+    setTimeout(() => {
+      if (typeof handleClose === "function") {
+        handleClose();
+      }
+    }, 3000);
+  }
+};
+
   const getValidasi = async () => {
     try {
       const customConfig = {
@@ -450,6 +543,10 @@ const RL35 = () => {
 
   const handleTabClick = (tab) => {
     setActiveTab(tab);
+  };
+
+  const handleWadahTabClick = (tab) => {
+    setActiveWadahTab(tab);
   };
 
   const totalPengunjung = () => {
@@ -628,7 +725,7 @@ const RL35 = () => {
           <Modal.Title>Filter</Modal.Title>
         </Modal.Header>
 
-        <form onSubmit={getRL}>
+        <form onSubmit={activeWadahTab === "satusehat" ? getRLSatusehat : getRL}>
           <Modal.Body>
             {user.jenisUserId === 1 ? (
               <>
@@ -848,350 +945,327 @@ const RL35 = () => {
 
       <div className="row">
         <div className="col-md-12">
-            <h4 className={style.pageHeader}> RL 3.5 - Kunjungan</h4>
-          <div className={style.toolbar}>
-            {user.jenisUserId === 4 ? (
-              <Link
-                to={`/rl35/tambah/`}
-                type="button"
-                className={style.btnPrimary}
-                style={{ textDecoration: "none" }}
-              >
-                Tambah
-              </Link>
-            ) : (
-              <></>
-            )}
-            <button
-              type="button"
-              className={style.btnPrimary}
-              onClick={handleShow}
-            >
-              Filter
-            </button>
-            <DownloadTableExcel
-              filename={namafile}
-              sheet="data RL 35"
-              currentTableRef={tableRef.current}
-            >
-              {/* <button> Export excel </button> */}
+          <h4 className={style.pageHeader}> RL 3.5 - Kunjungan</h4>
+
+          <ul className={`nav nav-tabs ${style.navTabs}`}>
+            <li className={`nav-item ${style.navItem}`}>
               <button
                 type="button"
-                className={style.btnPrimary}
+                className={`${style.navLink} ${activeWadahTab === "sirs" ? style.active : ""}`}
+                onClick={() => handleWadahTabClick("sirs")}
               >
-                {" "}
-                Download
+                SIRS
               </button>
-            </DownloadTableExcel>
-          </div>
-          <div>
-            <h5 style={{ fontSize: "14px" }}>
-              {filterLabel
-                .map((value) => {
-                  return "filtered by" + value;
-                })
-                .join(", ")}
-            </h5>
-          </div>
-
-          <div>
-            <ul className={`nav nav-tabs ${style.navTabs}`}>
-              <li className={`nav-item ${style.navItem}`}>
-                <button
-                  type="button"
-                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
-                  onClick={() => handleTabClick("tab1")}
-                >
-                  Data
-                </button>
-              </li>
-              <li className={`nav-item ${style.navItem}`}>
-                <button
-                  type="button"
-                  className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
-                  onClick={() => handleTabClick("tab2")}
-                >
-                  Validasi
-                </button>
-              </li>
-            </ul>
-
-            <div className={`tab-content ${style.tabContent}`}>
-              <div
-                className={`tab-pane fade ${
-                  activeTab === "tab1" ? "show active" : ""
-                }`}
+            </li>
+            <li className={`nav-item ${style.navItem}`}>
+              <button
+                type="button"
+                className={`${style.navLink} ${activeWadahTab === "satusehat" ? style.active : ""}`}
+                onClick={() => handleWadahTabClick("satusehat")}
               >
-          <div className={style["table-container"]}>
-            <div className="table-responsive">
-            <table className={style.table} ref={tableRef}>
-              <thead>
-                <tr className={style.thead}>
-                  <th
-                    rowSpan={2}
-                    style={{ width: "4%", verticalAlign: "middle" }}
+                Satusehat
+              </button>
+            </li>
+          </ul>
+
+          <div className={`tab-content ${style.tabContent}`}>
+            <div
+              className={`tab-pane fade ${
+                activeWadahTab === "sirs" ? "show active" : ""
+              }`}
+            >
+              <div className={style.toolbar}>
+                  {user.jenisUserId === 4 ? (
+                    <Link
+                      to={`/rl35/tambah/`}
+                      type="button"
+                      className={style.btnPrimary}
+                      style={{ textDecoration: "none" }}
+                    >
+                      Tambah
+                    </Link>
+                  ) : (
+                    <></>
+                  )}
+                  <button
+                    type="button"
+                    className={style.btnPrimary}
+                    onClick={handleShow}
                   >
-                    No.
-                  </th>
-                  {user.jenisUserId === 4
-                        ?
-                  <th
-                    rowSpan={2}
-                    style={{ width: "8%", verticalAlign: "middle" }}
+                    Filter
+                  </button>
+                  <DownloadTableExcel
+                    filename={namafile}
+                    sheet="data RL 35"
+                    currentTableRef={tableRef.current}
                   >
-                    Aksi
-                  </th>
-                  : <>
-                                      
-                                    </>
-                                }
-                  <th
-                    rowSpan={2}
-                    style={{ width: "12%", verticalAlign: "middle" }}
-                  >
-                    Jenis Kegiatan
-                  </th>
-                  <th colSpan={2} style={{ textAlign: "center" }}>
-                    Kunjungan Pasien Dalam Kota
-                  </th>
-                  <th colSpan={2} style={{ textAlign: "center" }}>
-                    Kunjungan Pasien Luar Kota
-                  </th>
-                  <th rowSpan={2} style={{ verticalAlign: "middle" }}>
-                    Total Kunjungan{" "}
-                  </th>
-                </tr>
-                <tr className={style["subheader-row"]}>
-                  <th style={{ verticalAlign: "middle" }}>Laki-Laki</th>
-                  <th style={{ verticalAlign: "middle" }}>Perempuan</th>
-                  <th style={{ verticalAlign: "middle" }}>Laki-Laki</th>
-                  <th style={{ verticalAlign: "middle" }}>Perempuan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dataRL.map((value, index) => {
-                  return (
-                    <tr key={value.id}>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
+                    <button
+                      type="button"
+                      className={style.btnPrimary}
+                    >
+                      {" "}
+                      Download
+                    </button>
+                  </DownloadTableExcel>
+                </div>
+                <div>
+                  <h5 style={{ fontSize: "14px" }}>
+                    {filterLabel
+                      .map((value) => {
+                        return "filtered by" + value;
+                      })
+                      .join(", ")}
+                  </h5>
+                </div>
+
+                <div>
+                  <ul className={`nav nav-tabs ${style.navTabs}`}>
+                    <li className={`nav-item ${style.navItem}`}>
+                      <button
+                        type="button"
+                        className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                        onClick={() => handleTabClick("tab1")}
                       >
-                        {index + 1}
-                      </td>
-                      {user.jenisUserId === 4
-                        ?
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
+                        Data
+                      </button>
+                    </li>
+                    <li className={`nav-item ${style.navItem}`}>
+                      <button
+                        type="button"
+                        className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                        onClick={() => handleTabClick("tab2")}
                       >
-                        <ToastContainer />
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            width: "100%",
-                          }}
-                        >
-                          {/* <RiDeleteBin5Fill  size={20} onClick={(e) => hapus(value.id)} style={{color: "gray", cursor: "pointer", marginRight: "5px"}} /> */}
-                          <button
-                            className="btn btn-danger"
-                            style={{
-                              margin: "0 5px 0 0",
-                              backgroundColor: "#FF6663",
-                              border: "1px solid #FF6663",
-                              flex: "1",
-                            }}
-                            type="button"
-                            onClick={(e) => hapus(value.id)}
-                          >
-                            Hapus
-                          </button>
-                          <Link
-                            to={`/rl35/ubah/${value.id}`}
-                            className="btn btn-warning"
-                            style={{
-                              margin: "0 5px 0 0",
-                              backgroundColor: "#CFD35E",
-                              border: "1px solid #CFD35E",
-                              color: "#FFFFFF",
-                              flex: "1",
-                            }}
-                          >
-                            Ubah
-                          </Link>
+                        Validasi
+                      </button>
+                    </li>
+                  </ul>
+
+                  <div className={`tab-content ${style.tabContent}`}>
+                    <div
+                      className={`tab-pane fade ${
+                        activeTab === "tab1" ? "show active" : ""
+                      }`}
+                    >
+                      <div className={style["table-container"]}>
+                        <div className="table-responsive">
+                          <table className={style.table} ref={tableRef}>
+                            <thead>
+                              <tr className={style.thead}>
+                                <th
+                                  rowSpan={2}
+                                  style={{ width: "4%", verticalAlign: "middle" }}
+                                >
+                                  No.
+                                </th>
+
+                                {user?.jenisUserId === 4 && (
+                                  <th
+                                    rowSpan={2}
+                                    style={{ width: "8%", verticalAlign: "middle" }}
+                                  >
+                                    Aksi
+                                  </th>
+                                )}
+
+                                <th
+                                  rowSpan={2}
+                                  style={{ width: "12%", verticalAlign: "middle" }}
+                                >
+                                  Jenis Kegiatan
+                                </th>
+
+                                <th colSpan={2} style={{ textAlign: "center" }}>
+                                  Kunjungan Pasien Dalam Kota
+                                </th>
+
+                                <th colSpan={2} style={{ textAlign: "center" }}>
+                                  Kunjungan Pasien Luar Kota
+                                </th>
+
+                                <th rowSpan={2} style={{ verticalAlign: "middle" }}>
+                                  Total Kunjungan
+                                </th>
+                              </tr>
+
+                              <tr className={style["subheader-row"]}>
+                                <th>Laki-Laki</th>
+                                <th>Perempuan</th>
+                                <th>Laki-Laki</th>
+                                <th>Perempuan</th>
+                              </tr>
+                            </thead>
+
+                            <tbody>
+                              {dataRL.map((value, index) => (
+                                <tr key={value.id}>
+                                  <td style={{ textAlign: "center" }}>
+                                    {index + 1}
+                                  </td>
+
+                                  {user?.jenisUserId === 4 && (
+                                    <td style={{ textAlign: "center" }}>
+                                      <ToastContainer />
+
+                                      <div style={{ display: "flex" }}>
+                                        <button
+                                          className="btn btn-danger"
+                                          style={{
+                                            marginRight: "5px",
+                                            backgroundColor: "#FF6663",
+                                            border: "1px solid #FF6663",
+                                          }}
+                                          type="button"
+                                          onClick={() => hapus(value.id)}
+                                        >
+                                          Hapus
+                                        </button>
+
+                                        <Link
+                                          to={`/rl35/ubah/${value.id}`}
+                                          className="btn btn-warning"
+                                          style={{
+                                            backgroundColor: "#CFD35E",
+                                            border: "1px solid #CFD35E",
+                                            color: "#FFFFFF",
+                                          }}
+                                        >
+                                          Ubah
+                                        </Link>
+                                      </div>
+                                    </td>
+                                  )}
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {value.jenis_kegiatan_rl_tiga_titik_lima.nama}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {value.kunjungan_pasien_dalam_kabkota_laki}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {value.kunjungan_pasien_dalam_kabkota_perempuan}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {value.kunjungan_pasien_luar_kabkota_laki}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {value.kunjungan_pasien_luar_kabkota_perempuan}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {value.total_kunjungan}
+                                  </td>
+                                </tr>
+                              ))}
+
+                              {total_kunjungan !== 0 && (
+                                <tr>
+                                  <td style={{ textAlign: "center" }}>99</td>
+
+                                  {user?.jenisUserId === 4 && <td></td>}
+
+                                  <td style={{ textAlign: "center" }}>
+                                    Total
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[0].kunjungan_pasien_dalam_kabkota_laki}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[0].kunjungan_pasien_dalam_kabkota_perempuan}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[0].kunjungan_pasien_luar_kabkota_laki}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[0].kunjungan_pasien_luar_kabkota_perempuan}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[0].total_kunjungan}
+                                  </td>
+                                </tr>
+                              )}
+
+                              {rata_kunjungan !== 0 && (
+                                <tr>
+                                  <td style={{ textAlign: "center" }}>77</td>
+
+                                  {user?.jenisUserId === 4 && <td></td>}
+
+                                  <td style={{ textAlign: "center" }}>
+                                    Rata-rata kunjungan per hari
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[1].kunjungan_pasien_dalam_kabkota_laki}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[1].kunjungan_pasien_dalam_kabkota_perempuan}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[1].kunjungan_pasien_luar_kabkota_laki}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[1].kunjungan_pasien_luar_kabkota_perempuan}
+                                  </td>
+
+                                  <td style={{ textAlign: "center" }}>
+                                    {dataCount[1].total_kunjungan}
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
                         </div>
-                      </td>
-                       : <>
-                                      
-                                    </>
-                                }
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.jenis_kegiatan_rl_tiga_titik_lima.nama}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.kunjungan_pasien_dalam_kabkota_laki}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.kunjungan_pasien_dalam_kabkota_perempuan}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.kunjungan_pasien_luar_kabkota_laki}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.kunjungan_pasien_luar_kabkota_perempuan}
-                      </td>
-                      <td
-                        style={{ textAlign: "center", verticalAlign: "middle" }}
-                      >
-                        {value.total_kunjungan}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {total_kunjungan != 0 ? (
-                  <tr>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {99}
-                    </td>
-                    <td></td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      Total
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[0].kunjungan_pasien_dalam_kabkota_laki}
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[0].kunjungan_pasien_dalam_kabkota_perempuan}
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[0].kunjungan_pasien_luar_kabkota_laki}
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[0].kunjungan_pasien_luar_kabkota_perempuan}
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[0].total_kunjungan}
-                    </td>
-                  </tr>
-                ) : (
-                  <></>
-                )}
-                {rata_kunjungan != 0 ? (
-                  <tr>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {77}
-                    </td>
-                    <td></td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      Rata-rata kunjungan per hari
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[1].kunjungan_pasien_dalam_kabkota_laki}
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[1].kunjungan_pasien_dalam_kabkota_perempuan}
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[1].kunjungan_pasien_luar_kabkota_laki}
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[1].kunjungan_pasien_luar_kabkota_perempuan}
-                    </td>
-                    <td
-                      style={{ textAlign: "center", verticalAlign: "middle" }}
-                    >
-                      {dataCount[1].total_kunjungan}
-                    </td>
-                  </tr>
-                ) : (
-                  <></>
-                )}
-              </tbody>
-            </table>
-            </div>
-          </div>
-              </div>
-
-              <div
-                className={`tab-pane fade ${
-                  activeTab === "tab2" ? "show active" : ""
-                }`}
-              >
-                <div className={style.validasiCard}>
-                    <h3 className={style.validasiCardTitle}>Validasi RL 3.5</h3>
-
-                    {/* =========================
-                        1️⃣ DATA RL KOSONG
-                    ========================== */}
-                    {dataRL.length === 0 ? (
-                      <div style={{
-                        backgroundColor: "#fff3cd",
-                        border: "1px solid #ffc107",
-                        color: "#856404",
-                        padding: "15px",
-                        borderRadius: "4px",
-                        textAlign: "center"
-                      }}>
-                        <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
                       </div>
+                    </div>
 
-                    /* =========================
-                        2️⃣ RS BELUM PERNAH DIVALIDASI
-                    ========================== */
-                    ) : (!dataValidasi && user.jenisUserId === 4) ? (
-                      <div style={{
-                        backgroundColor: "#fff3cd",
-                        border: "1px solid #ffc107",
-                        color: "#856404",
-                        padding: "15px",
-                        borderRadius: "4px",
-                        textAlign: "center"
-                      }}>
-                        <strong>Data Belum di Validasi</strong>
-                      </div>
+                    <div
+                      className={`tab-pane fade ${
+                        activeTab === "tab2" ? "show active" : ""
+                      }`}
+                    >
+                      <div className={style.validasiCard}>
+                        <h3 className={style.validasiCardTitle}>Validasi RL 3.5</h3>
 
-                    ) : (
+                        {dataRL.length === 0 ? (
+                          <div style={{
+                            backgroundColor: "#fff3cd",
+                            border: "1px solid #ffc107",
+                            color: "#856404",
+                            padding: "15px",
+                            borderRadius: "4px",
+                            textAlign: "center"
+                          }}>
+                            <strong>Silahkan pilih Filter terlebih dahulu untuk melihat data.</strong>
+                          </div>
 
-                      <>
-                        {/* =========================
-                            3️⃣ INFO VALIDASI
-                        ========================== */}
-                        {dataValidasi && (
+                        ) : (!dataValidasi && user.jenisUserId === 4) ? (
+                          <div style={{
+                            backgroundColor: "#fff3cd",
+                            border: "1px solid #ffc107",
+                            color: "#856404",
+                            padding: "15px",
+                            borderRadius: "4px",
+                            textAlign: "center"
+                          }}>
+                            <strong>Data Belum di Validasi</strong>
+                          </div>
+
+                        ) : (
+
+                          <>
+                            {dataValidasi && (
                               <div style={{
                                 backgroundColor: "#f0f0f0",
                                 padding: "12px",
@@ -1199,7 +1273,6 @@ const RL35 = () => {
                                 marginBottom: "15px"
                               }}>
 
-                                {/* STATUS */}
                                 <div style={{ display: "flex", marginBottom: "4px" }}>
                                   <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
                                     Status
@@ -1209,14 +1282,13 @@ const RL35 = () => {
                                     {dataValidasi.statusValidasiId === 1
                                       ? "Perlu Perbaikan"
                                       : dataValidasi.statusValidasiId === 2
-                                      ? "Selesai Diperbaiki"
-                                      : dataValidasi.statusValidasiId === 3
-                                      ? "Disetujui"
-                                      : "-"}
+                                        ? "Selesai Diperbaiki"
+                                        : dataValidasi.statusValidasiId === 3
+                                          ? "Disetujui"
+                                          : "-"}
                                   </div>
                                 </div>
 
-                                {/* CATATAN */}
                                 {(dataValidasi.keteranganValidasi ||
                                   dataValidasi.catatan ||
                                   dataValidasi.keterangan) && (
@@ -1233,7 +1305,6 @@ const RL35 = () => {
                                   </div>
                                 )}
 
-                                {/* DIBUAT */}
                                 <div style={{ display: "flex" }}>
                                   <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
                                     Dibuat
@@ -1247,68 +1318,197 @@ const RL35 = () => {
                               </div>
                             )}
 
-                        {/* =========================
-                            4️⃣ STATUS FINAL LOCK
-                        ========================== */}
-                        {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
-                        <div style={{
-                        backgroundColor: "#fff3cd",
-                        border: "1px solid #ffc107",
-                        color: "#856404",
-                        padding: "15px",
-                        borderRadius: "4px",
-                        textAlign: "center"
-                      }}>
-                        <strong>Data telah divalidasi.</strong>
-                      </div>
-
-                        ) : (
-
-                          /* =========================
-                              5️⃣ FORM VALIDASI
-                          ========================== */
-                          <form onSubmit={simpanValidasi}>
-                            <ToastContainer />
-
-                            <div className={style.validasiFormGroup}>
-                              <label>Status</label>
-                              <select
-                                value={statusValidasi}
-                                onChange={statusValidasiChangeHadler}
-                              >
-                                <option value={0}>Pilih</option>
-
-                                {user.jenisUserId === 4
-                                  ? <option value="2">Selesai Diperbaiki</option>
-                                  : <>
-                                      <option value="1">Perlu Perbaikan</option>
-                                      <option value="3">Disetujui</option>
-                                    </>
-                                }
-                              </select>
-                            </div>
-
-                            {/* ✅ TEXTAREA HANYA UNTUK VALIDATOR */}
-                            {user.jenisUserId !== 4 && (
-                              <div className={style.validasiFormGroup}>
-                                <label>Catatan</label>
-                                <textarea
-                                  onChange={keteranganValidasiChangeHadler}
-                                  rows={4}
-                                />
+                            {dataValidasi && dataValidasi.statusValidasiId === 3 ? (
+                              <div style={{
+                                backgroundColor: "#fff3cd",
+                                border: "1px solid #ffc107",
+                                color: "#856404",
+                                padding: "15px",
+                                borderRadius: "4px",
+                                textAlign: "center"
+                              }}>
+                                <strong>Data telah divalidasi.</strong>
                               </div>
+
+                            ) : (
+                              <form onSubmit={simpanValidasi}>
+                                <ToastContainer />
+
+                                <div className={style.validasiFormGroup}>
+                                  <label>Status</label>
+                                  <select
+                                    value={statusValidasi}
+                                    onChange={statusValidasiChangeHadler}
+                                  >
+                                    <option value={0}>Pilih</option>
+
+                                    {user.jenisUserId === 4
+                                      ? <option value="2">Selesai Diperbaiki</option>
+                                      : <>
+                                        <option value="1">Perlu Perbaikan</option>
+                                        <option value="3">Disetujui</option>
+                                      </>
+                                    }
+                                  </select>
+                                </div>
+
+                                {user.jenisUserId !== 4 && (
+                                  <div className={style.validasiFormGroup}>
+                                    <label>Catatan</label>
+                                    <textarea
+                                      onChange={keteranganValidasiChangeHadler}
+                                      rows={4}
+                                    />
+                                  </div>
+                                )}
+
+                                <button type="submit" className={style.btnPrimary}>
+                                  <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
+                                </button>
+
+                              </form>
                             )}
-
-                            <button type="submit" className={style.btnPrimary}>
-                              <HiSaveAs size={20} /> {validasiId ? "Perbarui" : "Simpan"}
-                            </button>
-
-                          </form>
-
+                          </>
                         )}
-                      </>
-                    )}
+                      </div>
+                    </div>
                   </div>
+                </div>
+              </div>
+          </div>
+
+          <div
+            className={`tab-pane fade ${
+              activeWadahTab === "satusehat" ? "show active" : ""
+            }`}
+          >
+            <div className={style.toolbar}>
+              <button
+                type="button"
+                className={style.btnPrimary}
+                onClick={handleShow}
+              >
+                Filter
+              </button>
+              <DownloadTableExcel
+                filename={namafileSatusehat}
+                sheet="data RL 35 Satusehat"
+                currentTableRef={tableSatusehatRef.current}
+              >
+                <button
+                  type="button"
+                  className={style.btnPrimary}
+                >
+                  {" "}
+                  Download
+                </button>
+              </DownloadTableExcel>
+            </div>
+
+            <div>
+              <h5 style={{ fontSize: "14px" }}>
+                {filterLabelSatusehat
+                  .map((value) => {
+                    return "filtered by" + value;
+                  })
+                  .join(", ")}
+              </h5>
+            </div>
+
+            <div className={style["table-container"]}>
+              <div className="table-responsive">
+                  <table
+                    className={style.table}
+                    ref={tableSatusehatRef}
+                    style={{
+                      borderCollapse: "collapse",
+                      borderSpacing: 0,
+                      width: "100%",
+                    }}
+                  >
+                    <thead>
+                      <tr className={style.thead}>
+                        <th
+                          rowSpan={2}
+                          style={{
+                            width: "4%",
+                            verticalAlign: "middle",
+                          }}
+                        >
+                          No.
+                        </th>
+
+                        <th
+                          rowSpan={2}
+                          style={{
+                            width: "18%",
+                            verticalAlign: "middle",
+                          }}
+                        >
+                          Jenis Kegiatan
+                        </th>
+
+                        <th colSpan={2} style={{ textAlign: "center" }}>
+                          Kunjungan Pasien Dalam Kota
+                        </th>
+
+                        <th colSpan={2} style={{ textAlign: "center" }}>
+                          Kunjungan Pasien Luar Kota
+                        </th>
+
+                        <th
+                          rowSpan={2}
+                          style={{
+                            verticalAlign: "middle",
+                          }}
+                        >
+                          Total Kunjungan
+                        </th>
+
+                        <th
+                          rowSpan={2}
+                          style={{
+                            verticalAlign: "middle",
+                          }}
+                        >
+                          Rata-rata / hari
+                        </th>
+                      </tr>
+
+                      <tr className={style["subheader-row"]}>
+                        <th>Laki-Laki</th>
+                        <th>Perempuan</th>
+                        <th>Laki-Laki</th>
+                        <th>Perempuan</th>
+                      </tr>
+                    </thead>
+                  <tbody>
+                    {dataRLSatusehat.map((value, index) => (
+                      <tr key={`${value?.jenis_kegiatan || "row"}-${index}`}>
+                        <td style={{ textAlign: "center" }}>{index + 1}</td>
+                        <td style={{ textAlign: "left" }}>{value?.jenis_kegiatan}</td>
+                        <td style={{ textAlign: "center" }}>
+                          {value?.kunjungan_dalam_kab_kota?.laki_laki ?? value?.kunjungan_dalam_kab_kota_laki_laki ?? 0}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          {value?.kunjungan_dalam_kab_kota?.perempuan ?? value?.kunjungan_dalam_kab_kota_perempuan ?? 0}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          {value?.kunjungan_luar_kab_kota?.laki_laki ?? value?.kunjungan_luar_kab_kota_laki_laki ?? 0}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          {value?.kunjungan_luar_kab_kota?.perempuan ?? value?.kunjungan_luar_kab_kota_perempuan ?? 0}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          {value?.total_kunjungan ?? 0}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          {value?.rata_rata_kunjungan_perhari ?? 0}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

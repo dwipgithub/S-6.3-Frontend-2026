@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, useParams } from "react-router-dom";
-import style from "./FormTambahRL317.module.css";
+import style from "./RL317.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { Link } from "react-router-dom";
 // import { IoArrowBack } from "react-icons/io5"
@@ -216,8 +216,17 @@ export const FormUbahRL317 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
+      <div className={style.headerAction}>
+        <Link to="/rl317">
+          <button type="button" className={style.btnPrimary}>
+            ←
+          </button>
+        </Link>
+
+        <h4 className={style.pageHeader}>RL 3.17 - Farmasi Pengadaan Obat</h4>
+      </div>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -282,49 +291,15 @@ export const FormUbahRL317 = () => {
         </div>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl317/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/><span style={{color: "gray"}}></span> */}
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>
-              RL 3.17 Farmasi Pengadaan Obat
-            </span>
-
-            <div className="container" style={{ textAlign: "center" }}>
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-            </div>
-            <table className={style.rlTable}>
-              <thead>
-                <tr>
-                  <th>No Golongan Obat</th>
+            <table responsive className={style.table}>
+              <thead className={style.thead}>
+                <tr className="main-header-row">
+                  <th>No.</th>
                   <th>Golongan Obat</th>
-                  <th>JUMLAH ITEM OBAT</th>
-                  <th>JUMLAH ITEM OBAT YANG TERSEDIA DI RUMAH SAKIT</th>
+                  <th style={{ textAlign: "center" }}>Jumlah Item Obat</th>
+                  <th style={{ textAlign: "center" }}>
+                    Jumlah Item Obat yang Tersedia di Rumah Sakit
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -332,7 +307,7 @@ export const FormUbahRL317 = () => {
                   <td>
                     <center>{no}</center>
                   </td>
-                  <td>{nama}</td>
+                  <td style={{ textAlign: "left" }}>{nama}</td>
 
                   <td>
                     {" "}
@@ -344,6 +319,7 @@ export const FormUbahRL317 = () => {
                           maxLength={7}
                           onInput={(e) => maxLengthCheck(e)}
                           className="form-control"
+                          style={{ textAlign: "center" }}
                           name="jumlah_item_obat"
                           value={jumlah_item_obat}
                           onFocus={handleFocus}
@@ -362,6 +338,7 @@ export const FormUbahRL317 = () => {
                           maxLength={7}
                           onInput={(e) => maxLengthCheck(e)}
                           className="form-control"
+                          style={{ textAlign: "center" }}
                           name="jumlah_item_obat"
                           value={jumlah_item_obat}
                           onFocus={handleFocus}
@@ -382,6 +359,7 @@ export const FormUbahRL317 = () => {
                           maxLength={7}
                           onInput={(e) => maxLengthCheck(e)}
                           className="form-control"
+                          style={{ textAlign: "center" }}
                           name="jumlah_item_obat_rs"
                           value={jumlah_item_obat_rs}
                           onFocus={handleFocus}
@@ -400,6 +378,7 @@ export const FormUbahRL317 = () => {
                           maxLength={7}
                           onInput={(e) => maxLengthCheck(e)}
                           className="form-control"
+                          style={{ textAlign: "center" }}
                           name="jumlah_item_obat_rs"
                           value={jumlah_item_obat_rs}
                           onFocus={handleFocus}
@@ -418,12 +397,8 @@ export const FormUbahRL317 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button
-            type="submit"
-            className="btn btn-outline-success"
-            disabled={buttonStatus}
-          >
-            <HiSaveAs /> Update
+          <button type="submit" className={style.btnPrimary}>
+            <HiSaveAs size={20} /> Simpan
           </button>
         </div>
       </form>

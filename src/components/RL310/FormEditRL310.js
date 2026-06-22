@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import style from "./FormUbahRL10.module.css";
+import style from "./FormTambahRL310.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import Table from "react-bootstrap/Table";
 import { ToastContainer, toast } from "react-toastify";
@@ -83,7 +83,7 @@ export const FormEditRL310 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getDataRS = async (id) => {
@@ -133,7 +133,7 @@ export const FormEditRL310 = () => {
             parseInt(keluarPasienDatangSendiri) + parseInt(keluarPasienRujukan),
           keluar_diterima_kembali: parseInt(keluarDiterimaKembali),
         },
-        customConfig
+        customConfig,
       );
 
       if (result.status === 200) {
@@ -165,7 +165,7 @@ export const FormEditRL310 = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
     setTahun(response.data.data.tahun);
     setBulan(response.data.data.bulan);
@@ -181,7 +181,7 @@ export const FormEditRL310 = () => {
     setRmDikembalikanTotal(response.data.data.rm_dikembalikan_total_rm);
     setKeluarPasienRujukan(response.data.data.keluar_pasien_rujukan);
     setKeluarPasienDatangSendiri(
-      response.data.data.keluar_pasien_datang_sendiri
+      response.data.data.keluar_pasien_datang_sendiri,
     );
     setKeluarPasienTotal(response.data.data.keluar_total_keluar);
     setKeluarDiterimaKembali(response.data.data.keluar_diterima_kembali);
@@ -209,9 +209,17 @@ export const FormEditRL310 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
-      <h2>RL. 3.10</h2>
+      <div className={style.headerAction}>
+        <Link to="/rl310">
+          <button type="button" className={style.btnPrimary}>
+            ←
+          </button>
+        </Link>
+
+        <h4 className={style.pageHeader}>RL 3.10 - Rujukan</h4>
+      </div>
       <form onSubmit={updateDataRLTigaTitikTiga}>
         <div className="row">
           <div className="col-md-6">
@@ -273,22 +281,41 @@ export const FormEditRL310 = () => {
               </div>
             </div>
           </div>
-        </div>
+          {/* <div className="col-md-6">
+            <div className="col-md-12">
+              <div className="card">
+                <div className="card-body">
+                  <h5 className="card-title h5">Periode Laporan</h5>
 
-        <div className="col-md-12">
-          <Link
-            to={`/rl310/`}
-            className="btn btn-info"
-            style={{
-              fontSize: "18px",
-              backgroundColor: "#779D9E",
-              color: "#FFFFFF",
-            }}
-          >
-            {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/><span style={{color: "gray"}}></span> */}
-            &lt;
-          </Link>
-          <span style={{ color: "gray" }}>RL 3.10 Pelayanan Khusus</span>
+                  <div
+                    className="form-floating"
+                    style={{ width: "50%", display: "inline-block" }}
+                  >
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={bulan}
+                      disabled
+                    />
+                    <label>Bulan</label>
+                  </div>
+
+                  <div
+                    className="form-floating"
+                    style={{ width: "50%", display: "inline-block" }}
+                  >
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={tahun}
+                      disabled
+                    />
+                    <label>Tahun</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div> */}
         </div>
 
         <div className="row mt-3">
@@ -300,18 +327,24 @@ export const FormEditRL310 = () => {
                     <th
                       style={{ width: "4%" }}
                       rowSpan={3}
-                      className={style["sticky-header"]}
+                      className={style["sticky-header-view"]}
                     >
-                      No Spesialisasi
+                      No.
                     </th>
                     <th
-                      style={{ width: "20%" }}
+                      className={style["sticky-header-view"]}
+                      style={{
+                        width: "20%",
+                        verticalAlign: "middle",
+                        textAlign: "center",
+                      }}
                       rowSpan={3}
-                      className={style["sticky-header"]}
                     >
                       Jenis Spesialisasi
                     </th>
-                    <th colSpan={8}>Rujukan Masuk</th>
+                    <th colSpan={8} style={{ textAlign: "center" }}>
+                      Rujukan Masuk
+                    </th>
                     <th
                       colSpan={4}
                       rowSpan={2}
@@ -341,7 +374,7 @@ export const FormEditRL310 = () => {
                 </thead>
                 <tbody>
                   <tr key={id}>
-                    <td className={style["sticky-column"]}>
+                    <td className={style["sticky-column-view"]}>
                       <input
                         type="text"
                         name="no"
@@ -350,7 +383,7 @@ export const FormEditRL310 = () => {
                         disabled={true}
                       />
                     </td>
-                    <td className={style["sticky-column"]}>
+                    <td className={style["sticky-column-view"]}>
                       <input
                         type="text"
                         name="jenisKegiatan"
@@ -548,7 +581,7 @@ export const FormEditRL310 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button type="submit" className="btn btn-outline-success">
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Update
           </button>
         </div>

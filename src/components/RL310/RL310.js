@@ -16,10 +16,10 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL310 = () => {
   const [tahun, setTahun] = useState(1);
-  const [bulan, setBulan] = useState("");
+  const [bulan, setBulan] = useState("1");
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [filterLabel, setFilterLabel] = useState([]);
-  const [rumahSakit, setRumahSakit] = useState("");
+  const [rumahSakit, setRumahSakit] = useState(null);
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
@@ -36,7 +36,8 @@ const RL310 = () => {
   // untuk validasi
   const [idValidasi, setidValidasi] = useState("");
   const [idValidasiSubmited, setidValidasiSubmited] = useState("");
-  const [statusValidasi, setStatusValidasi] = useState(1);
+  // const [statusValidasi, setStatusValidasi] = useState(1);
+  const [statusValidasi, setStatusValidasi] = useState("");
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
@@ -44,6 +45,7 @@ const RL310 = () => {
   const [spinner, setSpinner] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -170,12 +172,28 @@ const RL310 = () => {
     getRumahSakit(kabKotaId);
   };
 
-  const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
+  // const rumahSakitChangeHandler = (e) => {
+  //   const rsId = e.target.value;
+  //   showRumahSakit(rsId);
+  // };
+
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
   };
 
   const getRumahSakit = async (kabKotaId) => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
+
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
         headers: {
@@ -187,6 +205,8 @@ const RL310 = () => {
       });
       setDaftarRumahSakit(response.data.data);
     } catch (error) {}
+
+    setLoadingRS(false);
   };
 
   const showRumahSakit = async (id) => {
@@ -203,6 +223,16 @@ const RL310 = () => {
 
   const getDataRLTigaTitikSepuluh = async (e) => {
     e.preventDefault();
+
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
+    }
+
     if (rumahSakit == null) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
@@ -211,7 +241,7 @@ const RL310 = () => {
     }
 
     const filter = [];
-    filter.push("Nama: ".concat(rumahSakit.nama));
+    filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
     filter.push(
       "Periode ".concat(
         String(months[bulan - 1].label)
@@ -309,22 +339,22 @@ const RL310 = () => {
     switch (jenisUserId) {
       case 1:
         getProvinsi();
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 2:
         getKabKota(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 3:
         getRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       case 4:
         showRumahSakit(satKerId);
-        setBulan(1);
+        setBulan("1");
         setShow(true);
         break;
       default:
@@ -491,7 +521,7 @@ const RL310 = () => {
         },
         params: {
           rsId: rumahSakit.id,
-          periode: tahun,
+          periode: `${tahun}-${bulan.toString().padStart(2, "0")}`,
         },
       };
       const results = await axiosJWT.get(
@@ -502,13 +532,25 @@ const RL310 = () => {
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
+
+        // 🔥 FIX UTAMA
+        // if (user.jenisUserId === 3) {
+        //   setStatusValidasi(1);
+        // } else if (user.jenisUserId === 4) {
+        //   setStatusValidasi(2);
+        // } else {
+        //   setStatusValidasi("");
+        // }
+
+        setStatusValidasi("");
+
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
       } else {
         setidValidasi("");
-        setStatusValidasi(1);
+        // setStatusValidasi(1);
+        setStatusValidasi("");
         setKeteranganValidasi("");
         setTglValidasi("");
         setIsValidated(false);
@@ -520,7 +562,8 @@ const RL310 = () => {
   };
 
   const statusValidasiChangeHadler = (e) => {
-    setStatusValidasi(e.target.value);
+    // setStatusValidasi(e.target.value);
+    setStatusValidasi(Number(e.target.value));
   };
 
   const keteranganValidasiChangeHadler = (e) => {
@@ -559,7 +602,10 @@ const RL310 = () => {
         await axiosJWT.patch(
           "/apisirs6v2/rltigatitiksepuluhvalidasi/" + idValidasi,
           {
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -569,8 +615,11 @@ const RL310 = () => {
           "/apisirs6v2/rltigatitiksepuluhvalidasi",
           {
             rsId: rumahSakit.id,
-            periode: `${tahun}-12-01`,
-            statusValidasiId: statusValidasi,
+            periode: `${tahun}-${bulan.toString().padStart(2, "0")}-01`,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -686,10 +735,9 @@ const RL310 = () => {
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -741,10 +789,9 @@ const RL310 = () => {
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -771,10 +818,9 @@ const RL310 = () => {
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
                       {loadingRS ? "Loading..." : "Pilih"}
@@ -955,7 +1001,9 @@ const RL310 = () => {
                         >
                           Jenis Spesialisasi
                         </th>
-                        <th colSpan={8}>Rujukan Masuk</th>
+                        <th colSpan={8} style={{ textAlign: "center" }}>
+                          Rujukan Masuk
+                        </th>
                         <th
                           colSpan={4}
                           rowSpan={2}
@@ -1277,17 +1325,22 @@ const RL310 = () => {
                           <select
                             id="statusValidasi"
                             name="statusValidasi"
-                            value={statusValidasi}
+                            value={statusValidasi || ""}
                             required
                             onChange={(e) => statusValidasiChangeHadler(e)}
                           >
                             {user.jenisUserId === 4 ? (
                               <>
-                                <option value="">Pilih Status</option>
+                                <option value="" disabled>
+                                  Pilih Status
+                                </option>
                                 <option value="2">Selesai Diperbaiki</option>
                               </>
                             ) : (
                               <>
+                                <option value="" disabled>
+                                  Pilih Status
+                                </option>
                                 <option value="1">Perlu Perbaikan</option>
                                 <option value="3">Disetujui</option>
                               </>

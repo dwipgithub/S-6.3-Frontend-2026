@@ -34,7 +34,7 @@ const RL316 = () => {
 
   const [idValidasi, setidValidasi] = useState("");
   const [idValidasiSubmited, setidValidasiSubmited] = useState("");
-  const [statusValidasi, setStatusValidasi] = useState(1);
+  const [statusValidasi, setStatusValidasi] = useState("");
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
@@ -42,6 +42,7 @@ const RL316 = () => {
   const [spinner, setSpinner] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
+  const [selectedRsID, setSelectedRsID] = useState(null);
 
   const [pelayananKbPaskaPersalinan, setpelayanankbpaskapersalinan] =
     useState(0);
@@ -142,17 +143,20 @@ const RL316 = () => {
     } catch (error) {}
   };
 
-  const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
-  };
+  // const rumahSakitChangeHandler = (e) => {
+  //   const rsId = e.target.value;
+  //   showRumahSakit(rsId);
+  // };
 
   const handleSelectRumahSakit = (e) => {
     const id = e.target.value;
     const selected = daftarRumahSakit.find((item) => item.id == id);
+
     if (selected) {
+      setSelectedRsID(selected.id); // 🔥 penting
       setRumahSakit(selected);
     } else {
+      setSelectedRsID(null);
       setRumahSakit(null);
     }
   };
@@ -178,13 +182,15 @@ const RL316 = () => {
       if (results.data.data != null && results.data.data.length > 0) {
         setidValidasi(results.data.data[0].id);
         setidValidasiSubmited(results.data.data[0].statusValidasiId);
-        setStatusValidasi(results.data.data[0].statusValidasiId);
+
+        setStatusValidasi("");
+
         setKeteranganValidasi(results.data.data[0].catatan || "");
         setTglValidasi(results.data.data[0].modifiedAt);
         setIsValidated(results.data.data[0].statusValidasiId === 3);
       } else {
         setidValidasi("");
-        setStatusValidasi(1);
+        setStatusValidasi("");
         setKeteranganValidasi("");
         setTglValidasi("");
         setIsValidated(false);
@@ -197,6 +203,16 @@ const RL316 = () => {
 
   const getRL = async (e) => {
     e.preventDefault();
+
+    if (user.jenisUserId == 3) {
+      if (!selectedRsID) {
+        toast(`rumah sakit harus dipilih`, {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
+    }
+
     if (rumahSakit == null) {
       toast(`Rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
@@ -204,8 +220,8 @@ const RL316 = () => {
       return;
     }
     const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun)));
+    filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
+    filter.push("Periode ".concat(String(tahun)));
     setFilterLabel(filter);
     try {
       const customConfig = {
@@ -351,6 +367,7 @@ const RL316 = () => {
       "Drop Out",
     ];
 
+    // body data
     const body = dataRL.map((value, index) => [
       index + 1,
       value.nama,
@@ -364,12 +381,38 @@ const RL316 = () => {
       value.drop_out,
     ]);
 
+    // hitung total
+    const totalRow = [
+      "",
+      "TOTAL",
+      dataRL.reduce(
+        (sum, val) => sum + Number(val.pelayanan_kb_paska_persalinan || 0),
+        0,
+      ),
+      dataRL.reduce(
+        (sum, val) => sum + Number(val.pelayanan_kb_paska_keguguran || 0),
+        0,
+      ),
+      dataRL.reduce(
+        (sum, val) => sum + Number(val.pelayanan_kb_interval || 0),
+        0,
+      ),
+      dataRL.reduce((sum, val) => sum + Number(val.pelayanan_kb_total || 0), 0),
+      dataRL.reduce((sum, val) => sum + Number(val.komplikasi_kb || 0), 0),
+      dataRL.reduce((sum, val) => sum + Number(val.kegagalan_kb || 0), 0),
+      dataRL.reduce((sum, val) => sum + Number(val.efek_samping || 0), 0),
+      dataRL.reduce((sum, val) => sum + Number(val.drop_out || 0), 0),
+    ];
+
+    // gabungkan body + total
+    const finalBody = [...body, totalRow];
+
     downloadExcel({
       fileName: namafile,
       sheet: "RL316",
       tablePayload: {
         header,
-        body,
+        body: finalBody,
       },
     });
   }
@@ -472,7 +515,7 @@ const RL316 = () => {
   );
 
   const statusValidasiChangeHadler = (e) => {
-    setStatusValidasi(e.target.value);
+    setStatusValidasi(Number(e.target.value));
   };
 
   const keteranganValidasiChangeHadler = (e) => {
@@ -511,7 +554,10 @@ const RL316 = () => {
         await axiosJWT.patch(
           "/apisirs6v2/rltigatitikenambelasvalidasi/" + idValidasi,
           {
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -522,7 +568,10 @@ const RL316 = () => {
           {
             rsId: rumahSakit.id,
             periode: `${tahun}-12-01`,
-            statusValidasiId: statusValidasi,
+            statusValidasiId:
+              statusValidasi === "" || statusValidasi === null
+                ? idValidasiSubmited
+                : Number(statusValidasi),
             catatan: keteranganValidasi,
           },
           customConfig,
@@ -637,13 +686,12 @@ const RL316 = () => {
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -692,13 +740,12 @@ const RL316 = () => {
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -722,13 +769,12 @@ const RL316 = () => {
                 >
                   <select
                     name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
                     className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
+                    value={selectedRsID || ""}
+                    onChange={handleSelectRumahSakit}
                   >
                     <option key={0} value={0}>
-                      Pilih
+                      {loadingRS ? "Loading..." : "Pilih"}
                     </option>
                     {daftarRumahSakit.map((nilai) => {
                       return (
@@ -1133,17 +1179,22 @@ const RL316 = () => {
                             <select
                               id="statusValidasi"
                               name="statusValidasi"
-                              value={statusValidasi}
+                              value={statusValidasi || ""}
                               required
                               onChange={(e) => statusValidasiChangeHadler(e)}
                             >
                               {user.jenisUserId === 4 ? (
                                 <>
-                                  <option value="">Pilih Status</option>
+                                  <option value="" disabled>
+                                    Pilih Status
+                                  </option>
                                   <option value="2">Selesai Diperbaiki</option>
                                 </>
                               ) : (
                                 <>
+                                  <option value="" disabled>
+                                    Pilih Status
+                                  </option>
                                   <option value="1">Perlu Perbaikan</option>
                                   <option value="3">Disetujui</option>
                                 </>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, useParams } from "react-router-dom";
-import style from "./FormTambahRL314.module.css";
+import style from "./RL314.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { IoArrowBack } from "react-icons/io5";
 import { ToastContainer, toast } from "react-toastify";
@@ -69,7 +69,7 @@ export const FormUbahRL314 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getRumahSakit = async (id) => {
@@ -94,10 +94,10 @@ export const FormUbahRL314 = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       setJenisKegiatan(
-        response.data.data.rl_tiga_titik_empat_belas_jenis_kegiatan.nama
+        response.data.data.rl_tiga_titik_empat_belas_jenis_kegiatan.nama,
       );
       setNo(response.data.data.rl_tiga_titik_empat_belas_jenis_kegiatan.no);
       setJumlah(response.data.data.jumlah);
@@ -140,7 +140,7 @@ export const FormUbahRL314 = () => {
       const result = await axiosJWT.patch(
         "/apisirs6v2/rltigatitikempatbelas/" + id,
         data,
-        customConfig
+        customConfig,
       );
 
       toast("Data Berhasil Diubah", {
@@ -176,7 +176,7 @@ export const FormUbahRL314 = () => {
     if (object.target.value.length > object.target.maxLength) {
       object.target.value = object.target.value.slice(
         0,
-        object.target.maxLength
+        object.target.maxLength,
       );
     }
   };
@@ -185,7 +185,19 @@ export const FormUbahRL314 = () => {
   };
 
   return (
-    <div className="container" style={{ marginTop: "70px" }}>
+    <div
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
+    >
+      <div className={style.headerAction}>
+        <Link to="/rl314">
+          <button type="button" className={style.btnPrimary}>
+            ←
+          </button>
+        </Link>
+
+        <h4 className={style.pageHeader}>RL 3.14 - Pemeriksaan Khusus</h4>
+      </div>
       <form onSubmit={Simpan}>
         <div className="row">
           <div className="col-md-6">
@@ -250,26 +262,19 @@ export const FormUbahRL314 = () => {
         </div>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl314/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>
-              Kembali RL 3.14 Pemeriksaan Khusus
-            </span>
-            <table className={style.rlTable}>
-              <thead>
-                <tr>
-                  <th style={{ width: "4%" }}>No Kegiatan</th>
+            {/* <div className={`${style["table-container"]} mt-2 mb-1 pb-2 `}> */}
+            <table responsive className={style.table}>
+              <thead className={style.thead}>
+                <tr className="main-header-row">
+                  <th
+                    style={{ width: "4%" }}
+                    rowSpan={3}
+                    className={style["sticky-header-view"]}
+                  >
+                    No Kegiatan
+                  </th>
                   <th style={{ width: "50%" }}>Jenis Kegiatan</th>
-                  <th>Jumlah</th>
+                  <th style={{ textAlign: "center" }}>Jumlah</th>
                 </tr>
               </thead>
               <tbody>
@@ -292,11 +297,12 @@ export const FormUbahRL314 = () => {
                 </td>
               </tbody>
             </table>
+            {/* </div> */}
           </div>
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button type="submit" className="btn btn-outline-success">
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Update
           </button>
         </div>

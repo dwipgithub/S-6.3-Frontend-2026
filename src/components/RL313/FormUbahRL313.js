@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import style from "./FormTambahRL313.module.css";
+import style from "./RL313.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -69,7 +69,7 @@ export const FormUbahRL313 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getRumahSakit = async (id) => {
@@ -93,7 +93,7 @@ export const FormUbahRL313 = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
     setNama(response.data.data.nama_jenis_tindakan);
     setNo(response.data.data.no_jenis_tindakan);
@@ -147,7 +147,7 @@ export const FormUbahRL313 = () => {
         {
           jumlah,
         },
-        customConfig
+        customConfig,
       );
       toast("Data Berhasil Diupdate", {
         position: toast.POSITION.TOP_RIGHT,
@@ -182,13 +182,25 @@ export const FormUbahRL313 = () => {
     if (object.target.value.length > object.target.maxLength) {
       object.target.value = object.target.value.slice(
         0,
-        object.target.maxLength
+        object.target.maxLength,
       );
     }
   };
 
   return (
-    <div className="container" style={{ marginTop: "70px" }}>
+    <div
+      className="container"
+      style={{ marginTop: "20px", marginBottom: "70px" }}
+    >
+      <div className={style.headerAction}>
+        <Link to="/rl313">
+          <button type="button" className={style.btnPrimary}>
+            ←
+          </button>
+        </Link>
+
+        <h4 className={style.pageHeader}>RL 3.13 - Rehabilitasi Medik</h4>
+      </div>
       <form onSubmit={updateDataRLTigaTitikTigaBelas}>
         <div className="row">
           <div className="col-md-6">
@@ -254,27 +266,19 @@ export const FormUbahRL313 = () => {
         <br></br>
         <div className="row mt-3">
           <div className="col-md-12">
-            <Link
-              to={`/rl313/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              &lt;
-            </Link>
-            <span style={{ color: "gray" }}>
-              Kembali RL 3.13 Rehabilitasi Medik
-            </span>
-            <br></br>
-            <Table className={style.rlTable}>
-              <thead>
-                <tr>
-                  <th style={{ width: "5%" }}>No Tindakan</th>
+            {/* <div className={`${style["table-container"]} mt-2 mb-1 pb-2 `}> */}
+            <table responsive className={style.table}>
+              <thead className={style.thead}>
+                <tr className="main-header-row">
+                  <th
+                    style={{ width: "4%" }}
+                    rowSpan={3}
+                    className={style["sticky-header-view"]}
+                  >
+                    No.
+                  </th>
                   <th>Jenis Tindakan</th>
-                  <th style={{ width: "40%" }}>Jumlah</th>
+                  <th style={{ width: "40%", textAlign: "center" }}>Jumlah</th>
                 </tr>
               </thead>
               <tbody>
@@ -322,12 +326,13 @@ export const FormUbahRL313 = () => {
                   </td>
                 </tr>
               </tbody>
-            </Table>
+            </table>
+            {/* </div> */}
           </div>
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button type="submit" className="btn btn-outline-success">
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Update
           </button>
         </div>

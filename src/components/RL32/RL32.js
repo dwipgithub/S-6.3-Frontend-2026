@@ -64,7 +64,9 @@ const RL32 = () => {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
+      if (decoded.jenisUserId === 4) {
       showRumahSakit(decoded.satKerId);
+      };
       setExpire(decoded.exp);
       setUser(decoded);
     } catch (error) {
@@ -273,7 +275,7 @@ const RL32 = () => {
 
   const getRL = async (e) => {
     e.preventDefault();
-    if (rumahSakit == null) {
+    if (!rumahSakit) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -842,12 +844,12 @@ const RL32 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                        name="rumahSakit"
+                        id="rumahSakit"
+                        className="form-select"
+                        value={rumahSakit?.id || 0}
+                        onChange={(e) => rumahSakitChangeHandler(e)}
+                      >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -897,12 +899,12 @@ const RL32 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                        name="rumahSakit"
+                        id="rumahSakit"
+                        className="form-select"
+                        value={rumahSakit?.id || 0}
+                        onChange={(e) => rumahSakitChangeHandler(e)}
+                      >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -927,12 +929,12 @@ const RL32 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                        name="rumahSakit"
+                        id="rumahSakit"
+                        className="form-select"
+                        value={rumahSakit?.id || 0}
+                        onChange={(e) => rumahSakitChangeHandler(e)}
+                      >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1077,8 +1079,8 @@ const RL32 = () => {
                         <tr>
                           <th rowSpan="2">No.</th>
 
-                          {/* ✅ kolom SELALU ADA */}
-                          <th rowSpan="2">Aksi</th>
+                          {/* ✅ kolom kondisional */}
+                          {isAksi && <th rowSpan="2">Aksi</th>}
 
                           <th rowSpan="2">Jenis Pelayanan</th>
                           <th rowSpan="2">Pasien Awal Bulan</th>
@@ -1118,9 +1120,9 @@ const RL32 = () => {
                           <tr key={value.id}>
                             <td>{index + 1}</td>
 
-                            {/* ✅ kolom tetap ada */}
-                            <td>
-                              {isAksi && (
+                            {/* ✅ kolom kondisional */}
+                            {isAksi && (
+                              <td>
                                 <div style={{ display: "flex" }}>
                                   <button
                                     className="btn btn-danger"
@@ -1136,8 +1138,8 @@ const RL32 = () => {
                                     Ubah
                                   </Link>
                                 </div>
-                              )}
-                            </td>
+                              </td>
+                            )}
 
                             <td>{value.nama_jenis_pelayanan}</td>
                             <td>{value.pasien_awal_bulan}</td>
@@ -1167,39 +1169,39 @@ const RL32 = () => {
                         ))}
 
                         {dataRL.length > 0 && (
-                          <tr>
-                            <td></td>
+                            <tr>
+                              <td></td>
 
-                            {/* ✅ tetap ada */}
-                            <td></td>
+                              {/* kolom aksi tetap dihitung */}
+                              {isAksi && <td></td>}
 
-                            <td>Total</td>
+                              <td>Total</td>
 
-                            <td>{totalPasienAwalBulan}</td>
-                            <td>{totalPasienMasuk}</td>
-                            <td>{totalPasienPindahan}</td>
-                            <td>{totalPasienDipindahkan}</td>
-                            <td>{totalPasienKeluarHidup}</td>
+                              <td>{totalPasienAwalBulan}</td>
+                              <td>{totalPasienMasuk}</td>
+                              <td>{totalPasienPindahan}</td>
+                              <td>{totalPasienDipindahkan}</td>
+                              <td>{totalPasienKeluarHidup}</td>
 
-                            <td>{totalPasienKeluarMatiKurangDari48Jam}</td>
-                            <td>{totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
-                            <td>{totalPasienWanitaKeluarMatiKurangDari48Jam}</td>
-                            <td>{totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
+                              <td>{totalPasienKeluarMatiKurangDari48Jam}</td>
+                              <td>{totalPasienKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
+                              <td>{totalPasienWanitaKeluarMatiKurangDari48Jam}</td>
+                              <td>{totalPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam}</td>
 
-                            <td>{totalJumlahDirawat}</td>
-                            <td>{totalPasienAkhirBulan}</td>
-                            <td>{totalHariPerawatan}</td>
+                              <td>{totalJumlahDirawat}</td>
+                              <td>{totalPasienAkhirBulan}</td>
+                              <td>{totalHariPerawatan}</td>
 
-                            <td>{totalKelasVVIP}</td>
-                            <td>{totalKelasVIP}</td>
-                            <td>{totalKelas1}</td>
-                            <td>{totalKelas2}</td>
-                            <td>{totalKelas3}</td>
-                            <td>{totalKelasKhusus}</td>
+                              <td>{totalKelasVVIP}</td>
+                              <td>{totalKelasVIP}</td>
+                              <td>{totalKelas1}</td>
+                              <td>{totalKelas2}</td>
+                              <td>{totalKelas3}</td>
+                              <td>{totalKelasKhusus}</td>
 
-                            <td>{totalTotalJumlahAlokasiTempatTidurAwalBulan}</td>
-                          </tr>
-                        )}
+                              <td>{totalTotalJumlahAlokasiTempatTidurAwalBulan}</td>
+                            </tr>
+                          )}
                       </tbody>
                     </table>
                 </div>
