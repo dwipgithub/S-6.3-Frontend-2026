@@ -5,6 +5,7 @@ import { CSRFTokenProvider } from "./components/Context/CSRFTokenContext.js";
 
 import SSO_Login from "./components/Login/Sso_Login";
 import SSO_Verif from "./components/Login/SSO_Verif";
+
 import Layout from "./components/Layout/Layout";
 import Footer from "./components/Footer/Footer";
 
@@ -140,11 +141,13 @@ import Absensi from "./components/Absensi/absensi.js";
 import MaintenancePage from "./components/MaintenancePage/MaintenancePage.js";
 
 function App() {
+  const isManualLogin = window.location.pathname === "/login";
   return (
     <CSRFTokenProvider>
-      <MemoryRouter initialEntries={["/beranda"]}>
+      <MemoryRouter initialEntries={[isManualLogin ? "/login" : "/beranda"]}>
         <Routes>
           <Route path="/" element={<SSO_Login />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/verif" element={<SSO_Verif />} />
           <Route element={<Layout />}>
             <Route path="/beranda" element={null} />

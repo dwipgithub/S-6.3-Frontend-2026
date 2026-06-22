@@ -18,6 +18,13 @@ import { getDataSatusehat } from "../../api/rlLimasatuSatusehat.js";
 import { FaSlidersH, FaDownload, FaSync } from "react-icons/fa";
 import Spinner from "react-bootstrap/Spinner";
 import CryptoJS from "crypto-js";
+import {
+  FaSyncAlt,
+  FaFileExcel,
+  FaInfoCircle,
+  FaDatabase,
+  FaCalendarAlt,
+} from "react-icons/fa";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -1855,7 +1862,7 @@ function TabTwo() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
-
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
   const limit = 50;
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
@@ -1886,17 +1893,42 @@ function TabTwo() {
     async (config) => {
       const currentDate = new Date();
       if (expire * 1000 < currentDate.getTime()) {
-        const response = await axios.get("/apisirs6v2/token", {
-          headers: { "XSRF-TOKEN": CSRFToken },
-        });
+        const customConfig = {
+          headers: {
+            "XSRF-TOKEN": CSRFToken,
+          },
+        };
+        const response = await axios.get("/apisirs6v2/token", customConfig);
         config.headers.Authorization = `Bearer ${response.data.accessToken}`;
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+
+      // Di interceptor axiosJWT TabTwo yang sudah ada
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        // HMAC yang sudah ada
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+        config.headers["XSRF-TOKEN"] = CSRFToken; // ← tambahkan di sini
+      }
+
       return config;
     },
-    (error) => Promise.reject(error),
+    (error) => {
+      return Promise.reject(error);
+    },
   );
 
   const getBulan = () => {
@@ -2046,8 +2078,73 @@ function TabTwo() {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleString("id-ID");
+    return (
+      new Date(dateStr).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) +
+      " WIB"
+    );
   };
+
+  const MANUAL_SYNC_COOLDOWN = 5; // menit
+
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    setNow(Date.now()); // ← tambah ini
+
+    if (!sync.lastSync || sync.isUpdating) return;
+
+    const elapsed = (Date.now() - new Date(sync.lastSync).getTime()) / 60000;
+    if (elapsed >= MANUAL_SYNC_COOLDOWN) return;
+
+    const remainingMs = (MANUAL_SYNC_COOLDOWN - elapsed) * 60 * 1000;
+    const timeout = setTimeout(() => setNow(Date.now()), remainingMs);
+
+    return () => clearTimeout(timeout);
+  }, [sync.lastSync, sync.isUpdating]);
+
+  // Ganti Date.now() → now
+  const minutesSinceSync = sync.lastSync
+    ? (now - new Date(sync.lastSync).getTime()) / 60000
+    : null;
+
+  const canSync =
+    !sync.isUpdating &&
+    !isManualSyncing && // ← tambah ini
+    (minutesSinceSync === null || minutesSinceSync >= MANUAL_SYNC_COOLDOWN);
+
+  // Sisa menit cooldown (untuk info ke user)
+  const cooldownLeft =
+    minutesSinceSync !== null
+      ? Math.max(0, MANUAL_SYNC_COOLDOWN - minutesSinceSync).toFixed(1)
+      : null;
+
+  const handleManualSync = async () => {
+    if (!canSync) return;
+
+    setIsManualSyncing(true); // ← langsung disable tombol saat klik
+    setLoadingTable(true);
+
+    try {
+      await axiosJWT.post(
+        "/apisirs6v2/rlempattitiksatusatusehat/sync",
+        { rsId: user.satKerId, periode: `${tahun}-${bulan}` },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "XSRF-TOKEN": CSRFToken,
+          },
+        },
+      );
+      startPolling(token, user, tahun, bulan);
+    } catch (err) {
+      console.error(err);
+      setLoadingTable(false);
+    }
+  };
+
+  useEffect(() => {
+    setIsManualSyncing(false);
+  }, [sync]);
 
   // Komponen loading di dalam tabel
   const TableLoading = () => (
@@ -2076,7 +2173,7 @@ function TabTwo() {
       <ToastContainer />
 
       {/* Modal Filter */}
-      <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
+      {/* <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>
         </Modal.Header>
@@ -2117,15 +2214,548 @@ function TabTwo() {
             </button>
           </Modal.Footer>
         </form>
-      </Modal>
+      </Modal> */}
 
       <div className="row">
         <div className="col-md-12">
-          {/* Toolbar */}
-          <div className={style.toolbar}>
-            <button className={style.btnPrimary} onClick={handleShow}>
-              <FaSlidersH size={14} style={{ marginRight: 4 }} /> Filter
-            </button>
+          <div
+            style={{
+              background: "var(--color-background-primary, #fff)",
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+              padding: "16px 20px",
+              marginBottom: 14,
+            }}
+          >
+            {/* Heading */}
+            <p
+              style={{
+                fontWeight: 700,
+                fontSize: 13,
+                color: "#1e293b",
+                margin: "0 0 14px 0",
+                letterSpacing: 0.2,
+              }}
+            >
+              Periode Data
+            </p>
+
+            {/* Row: input + tombol */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              {/* Bulan */}
+              <div>
+                <label
+                  style={{
+                    fontSize: 12,
+                    color: "#64748b",
+                    display: "block",
+                    marginBottom: 5,
+                    fontWeight: 500,
+                  }}
+                >
+                  Bulan
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 7,
+                    padding: "7px 10px",
+                    background: "#f8fafc",
+                    minWidth: 155,
+                  }}
+                >
+                  <FaCalendarAlt
+                    size={13}
+                    color="#94a3b8"
+                    style={{ marginRight: 7, flexShrink: 0 }}
+                  />
+                  <select
+                    value={bulan}
+                    onChange={(e) => setBulan(e.target.value)}
+                    style={{
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
+                      flex: 1,
+                      fontSize: 13,
+                      color: "#334155",
+                    }}
+                  >
+                    {daftarBulan.map((b) => (
+                      <option key={b.value} value={b.value}>
+                        {b.key}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Tahun */}
+              <div>
+                <label
+                  style={{
+                    fontSize: 12,
+                    color: "#64748b",
+                    display: "block",
+                    marginBottom: 5,
+                    fontWeight: 500,
+                  }}
+                >
+                  Tahun
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 7,
+                    padding: "7px 10px",
+                    background: "#f8fafc",
+                    width: 125,
+                  }}
+                >
+                  <FaCalendarAlt
+                    size={13}
+                    color="#94a3b8"
+                    style={{ marginRight: 7, flexShrink: 0 }}
+                  />
+                  <input
+                    type="number"
+                    value={tahun}
+                    onChange={(e) => setTahun(e.target.value)}
+                    style={{
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
+                      width: "100%",
+                      fontSize: 13,
+                      color: "#334155",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* ── Tombol-tombol ── */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                {/* FILTER */}
+                <div style={{ textAlign: "center" }}>
+                  <button
+                    onClick={getRL}
+                    style={{
+                      background: "#1d4ed8",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 7,
+                      padding: "9px 18px",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <FaSlidersH size={14} /> FILTER
+                  </button>
+                  {/* <div
+                    style={{
+                      fontSize: 10,
+                      color: "#94a3b8",
+                      marginTop: 5,
+                      maxWidth: 120,
+                      lineHeight: 1.4,
+                      textAlign: "center",
+                    }}
+                  >
+                    Menampilkan data dari
+                    <br />
+                    database SIRS Online
+                  </div> */}
+                </div>
+
+                {/* SYNC SATUSEHAT */}
+                <div style={{ textAlign: "center" }}>
+                  <button
+                    onClick={handleManualSync}
+                    disabled={!canSync || isManualSyncing || !isFilterApplied}
+                    title={
+                      !isFilterApplied
+                        ? "Terapkan filter terlebih dahulu"
+                        : isManualSyncing || sync.isUpdating
+                          ? "Sedang sinkronisasi..."
+                          : !canSync
+                            ? `Tunggu ${cooldownLeft} menit lagi`
+                            : "Klik untuk sync manual"
+                    }
+                    style={{
+                      background: "#059669",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 7,
+                      padding: "9px 18px",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      cursor:
+                        canSync && !isManualSyncing && isFilterApplied
+                          ? "pointer"
+                          : "not-allowed",
+                      opacity:
+                        canSync && !isManualSyncing && isFilterApplied
+                          ? 1
+                          : 0.55,
+                    }}
+                  >
+                    {isManualSyncing || sync.isUpdating ? (
+                      <>
+                        <Spinner animation="border" size="sm" /> Syncing...
+                      </>
+                    ) : (
+                      <>
+                        <FaSyncAlt size={14} /> SYNC SATUSEHAT
+                      </>
+                    )}
+                  </button>
+                  {/* <div
+                    style={{
+                      fontSize: 10,
+                      color: "#94a3b8",
+                      marginTop: 5,
+                      maxWidth: 140,
+                      lineHeight: 1.4,
+                      textAlign: "center",
+                    }}
+                  >
+                    Mengambil data terbaru
+                    <br />
+                    dari SATUSEHAT
+                  </div> */}
+                </div>
+
+                {/* DOWNLOAD EXCEL */}
+                <div style={{ textAlign: "center" }}>
+                  <button
+                    style={{
+                      background: "#059669",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 7,
+                      padding: "9px 18px",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <HiSaveAs size={15} /> DOWNLOAD EXCEL
+                  </button>
+                  {/* <div
+                    style={{
+                      fontSize: 10,
+                      color: "#94a3b8",
+                      marginTop: 5,
+                      maxWidth: 140,
+                      lineHeight: 1.4,
+                      textAlign: "center",
+                    }}
+                  >
+                    Mengunduh data hasil filter
+                  </div> */}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: 14,
+              marginBottom: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Card 1: Keterangan Tombol */}
+            <div
+              style={{
+                flex: "1 1 240px",
+                border: "1.5px solid #3b82f6",
+                borderRadius: 10,
+                padding: "14px 16px",
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  marginBottom: 13,
+                }}
+              >
+                <div
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    background: "#dbeafe",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <FaInfoCircle size={12} color="#2563eb" />
+                </div>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: "#2563eb",
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  KETERANGAN TOMBOL
+                </span>
+              </div>
+
+              {[
+                {
+                  icon: <FaSlidersH size={11} />,
+                  bg: "#1d4ed8",
+                  label: "FILTER",
+                  desc: "Menampilkan data dari database SIRS Online",
+                },
+                {
+                  icon: <FaSyncAlt size={11} />,
+                  bg: "#059669",
+                  label: "SYNC SATUSEHAT",
+                  desc: "Mengambil data terbaru dari SATUSEHAT",
+                },
+                {
+                  icon: <HiSaveAs size={12} />,
+                  bg: "#059669",
+                  label: "DOWNLOAD EXCEL",
+                  desc: "Mengunduh data hasil filter",
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 9,
+                    marginBottom: 9,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: item.bg,
+                      borderRadius: 5,
+                      width: 26,
+                      height: 26,
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+                  <div
+                    style={{ fontSize: 12, color: "#475569", lineHeight: 1.45 }}
+                  >
+                    <strong style={{ fontWeight: 700 }}>{item.label}</strong>
+                    {" : "}
+                    {item.desc}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Card 2: Status Sinkronisasi */}
+            <div
+              style={{
+                flex: "1 1 210px",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: 10,
+                padding: "14px 16px",
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  marginBottom: 14,
+                }}
+              >
+                <FaSyncAlt size={15} color="#059669" />
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: "#059669",
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  STATUS SINKRONISASI
+                </span>
+              </div>
+
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 11 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "#f1f5f9",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <FaCalendarAlt size={13} color="#64748b" />
+                  </div>
+                  <span style={{ fontSize: 12, color: "#475569" }}>
+                    Terakhir Sync&nbsp;:&nbsp;
+                    <strong>
+                      {sync.lastSync ? formatDate(sync.lastSync) : "-"}
+                    </strong>
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "#f1f5f9",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: 15, lineHeight: 1, color: "#64748b" }}
+                    >
+                      ⏱
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, color: "#475569" }}>
+                    Interval Sync&nbsp;:&nbsp;
+                    <strong>{MANUAL_SYNC_COOLDOWN} Menit</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Sumber Data */}
+            <div
+              style={{
+                flex: "1 1 180px",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: 10,
+                padding: "14px 16px",
+                background: "#fff",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  marginBottom: 12,
+                }}
+              >
+                <FaDatabase size={14} color="#3b82f6" />
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: "#3b82f6",
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  SUMBER DATA
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  flex: 1,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "#475569",
+                    margin: 0,
+                    flex: 1,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Data yang ditampilkan bersumber dari database{" "}
+                  <strong>SIRS Online</strong>. Informasi disajikan berdasarkan
+                  data yang tersedia pada sistem.
+                </p>
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <FaDatabase size={38} color="#bfdbfe" />
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: -3,
+                      right: -6,
+                      background: "#059669",
+                      color: "#fff",
+                      borderRadius: "50%",
+                      width: 18,
+                      height: 18,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      lineHeight: 1,
+                    }}
+                  >
+                    ✓
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Filter label + status sync */}
