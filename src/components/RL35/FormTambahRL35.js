@@ -9,6 +9,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Spinner from "react-bootstrap/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 const FormTambahRL35 = () => {
   const [tahun, setTahun] = useState("2026");
@@ -69,7 +70,24 @@ const FormTambahRL35 = () => {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
-      return config;
+        if (
+          ["post", "put", "patch", "delete"].includes(
+            config.method?.toLowerCase(),
+          )
+        ) {
+          const timestamp = Date.now().toString();
+          const bodyString = JSON.stringify(config.data || {});
+          const signature = CryptoJS.HmacSHA256(
+            timestamp + bodyString,
+            process.env.REACT_APP_HMAC_SECRET,
+          ).toString();
+
+          config.headers = config.headers || {};
+          config.headers["X-Timestamp"] = timestamp;
+          config.headers["X-Signature"] = signature;
+        }
+
+        return config;
     },
     (error) => {
       return Promise.reject(error);
