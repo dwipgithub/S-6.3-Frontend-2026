@@ -91,11 +91,7 @@ const Login = () => {
                                             <ToastContainer />
                                             <button className={style.btnPrimary}><BoxArrowDownRight/> Login</button>
                                         </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                          
                   </form>
                 </div>
               </div>
