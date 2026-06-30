@@ -13,6 +13,7 @@ import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 const RL34 = () => {
   const [bulan, setBulan] = useState(1);
@@ -50,7 +51,7 @@ const RL34 = () => {
 
     totalPengunjung();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataRL]);
+  }, []);
 
   // Load validasi data secara realtime saat bulan/tahun/rumahSakit berubah
   useEffect(() => {
@@ -60,24 +61,33 @@ const RL34 = () => {
   }, [bulan, tahun, rumahSakit, activeTab]);
 
   const refreshToken = async () => {
-    try {
-      const customConfig = {
-        headers: {
-          "XSRF-TOKEN": CSRFToken,
-        },
-      };
-      const response = await axios.get("/apisirs6v2/token", customConfig);
-      setToken(response.data.accessToken);
-      const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
-      setExpire(decoded.exp);
-      setUser(decoded);
-    } catch (error) {
-      if (error.response) {
-        navigate("/");
-      }
+  try {
+    const customConfig = {
+      headers: {
+        "XSRF-TOKEN": CSRFToken,
+      },
+    };
+
+    const response = await axios.get("/apisirs6v2/token", customConfig);
+
+    setToken(response.data.accessToken);
+
+    const decoded = jwt_decode(response.data.accessToken);
+
+    // ✅ hanya set default RS kalau belum ada pilihan
+    if (!rumahSakit || !rumahSakit.id) {
+          showRumahSakit(decoded.satKerId);
+        }
+
+    setExpire(decoded.exp);
+    setUser(decoded);
+
+  } catch (error) {
+    if (error.response) {
+      navigate("/");
     }
-  };
+  }
+};
 
   const axiosJWT = axios.create();
   axiosJWT.interceptors.request.use(
@@ -94,6 +104,22 @@ const RL34 = () => {
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
+      }
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers = config.headers || {};
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
       }
       return config;
     },
@@ -175,9 +201,14 @@ const RL34 = () => {
   };
 
   const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
-  };
+  const rsId = e.target.value;
+
+  const rsTerpilih = daftarRumahSakit.find(
+    (rs) => String(rs.id) === String(rsId)
+  );
+
+  setRumahSakit(rsTerpilih);
+};
 
   const getRumahSakit = async (kabKotaId) => {
     try {
@@ -394,13 +425,14 @@ const RL34 = () => {
         },
       };
 
-      const payload = {
-        statusValidasiId: parseInt(statusValidasi),
-        catatan: keteranganValidasi,
-      };
+      let payload = {
+      statusValidasiId: parseInt(statusValidasi),
+        };
 
-      console.log("Payload yang dikirim:", payload);
-      console.log("ValidasiId:", validasiId);
+        // ✅ HANYA VALIDATOR kirim catatan
+        if (user.jenisUserId !== 4) {
+          payload.catatan = keteranganValidasi;
+        }
 
       if (validasiId) {
         // Update existing validation
@@ -577,27 +609,38 @@ const RL34 = () => {
   };
 
   function handleDownloadExcel() {
-    const header = ["No", "Jenis Kunjungan", "Jumlah"];
+  const header = ["No", "Jenis Kunjungan", "Jumlah"];
 
-    const body = dataRL.map((value, index) => {
-      const data = [
-        value.id,
-        value.jenis_pengunjung_rl_tiga_titik_tempat.nama,
-        value.jumlah,
-      ];
+  // hitung total jumlah
+  const totalJumlah = dataRL.reduce((acc, item) => {
+    return acc + Number(item.jumlah || 0);
+  }, 0);
 
-      return data;
-    });
+  // isi body data
+  const body = dataRL.map((value, index) => {
+    return [
+      index + 1,
+      value.jenis_pengunjung_rl_tiga_titik_tempat.nama,
+      value.jumlah,
+    ];
+  });
 
-    downloadExcel({
-      fileName: "RL_3_4",
-      sheet: "react-export-table-to-excel",
-      tablePayload: {
-        header,
-        body: body,
-      },
-    });
-  }
+  // tambahkan baris TOTAL di bawah
+  body.push([
+    "",          // kolom No kosong
+    "TOTAL",     // tulisan TOTAL
+    totalJumlah  // total jumlah
+  ]);
+
+  downloadExcel({
+    fileName: "RL_Pengunjung",
+    sheet: "RL",
+    tablePayload: {
+      header,
+      body: body,
+    },
+  });
+}
 
   return (
     <div className="container" style={{ marginTop: "20px", marginBottom: "20px" }}>
@@ -665,13 +708,13 @@ const RL34 = () => {
                   className="form-floating"
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
-                  <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                 <select
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => rumahSakitChangeHandler(e)}
+                    > 
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -720,13 +763,13 @@ const RL34 = () => {
                   className="form-floating"
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
-                  <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                 <select
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => rumahSakitChangeHandler(e)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -751,12 +794,12 @@ const RL34 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                          name="rumahSakit"
+                          id="rumahSakit"
+                          className="form-select"
+                          value={rumahSakit?.id || 0}
+                          onChange={(e) => rumahSakitChangeHandler(e)}
+                        >
                     <option key={0} value={0}>
                       Pilih
                     </option>

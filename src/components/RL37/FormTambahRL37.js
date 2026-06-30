@@ -10,6 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Table from "react-bootstrap/Table";
 import Spinner from "react-bootstrap/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 const FormTambahRL37 = () => {
   const [tahun, setTahun] = useState("2026");
@@ -70,6 +71,23 @@ const FormTambahRL37 = () => {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers = config.headers || {};
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+      }
+
       return config;
     },
     (error) => {
@@ -403,7 +421,7 @@ const FormTambahRL37 = () => {
 
   const currentYear = new Date().getFullYear();
   const daftarTahun = [];
-  for (let i = 2026; i <= currentYear; i++) {
+  for (let i = 2025; i <= currentYear; i++) {
     daftarTahun.push(i);
   }
 
@@ -532,17 +550,15 @@ const FormTambahRL37 = () => {
           <div className="col-md-12">
             <Link
               to={`/rl37/`}
-              className="btn btn-info"
-              style={{
-                fontSize: "18px",
-                backgroundColor: "#779D9E",
-                color: "#FFFFFF",
-              }}
-            >
-              {/* <IoArrowBack size={30} style={{color:"gray",cursor: "pointer"}}/><span style={{color: "gray"}}></span>
-                            <span style={{color:"gray"}}>Tambah data RL 3.5 -  Kunjungan Rawat Jalan</span> */}
-              &lt;
-            </Link>
+              className={style.btnPrimary}
+                                          style={{
+                                            textDecoration: "none",
+                                            display: "inline-block",
+                                            color: "#FFF",
+                                          }}
+                          >
+                            &lt;
+                          </Link>
             <span style={{ color: "gray" }}>
               Kembali RL 3.7 - Neonatal, Bayi, dan Balita
             </span>
@@ -950,11 +966,7 @@ const FormTambahRL37 = () => {
         </div>
         <div className="mt-3 mb-3">
           <ToastContainer />
-          <button
-            type="submit"
-            disabled={buttonStatus}
-            className="btn btn-outline-success"
-          >
+          <button type="submit" className={style.btnPrimary}>
             <HiSaveAs /> Simpan
           </button>
         </div>

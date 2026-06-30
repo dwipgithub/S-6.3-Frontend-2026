@@ -12,6 +12,7 @@ import silangIcon from "../Images/silang.png";
 import { DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import Spinner from "react-bootstrap/Spinner";
+import { ToastContainer, toast } from "react-toastify";
 
 const Absensi = () => {
   const [namaRs, setNamaRs] = useState("");
@@ -158,6 +159,12 @@ const Absensi = () => {
 
     if (provinsiId != null) {
       parameterAbsensi.provinsiId = provinsiId;
+    } else {
+      toast("Pilih Provinsi", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
     }
 
     if (kabKotaId !== null && kabKotaId !== "0") {
@@ -170,6 +177,12 @@ const Absensi = () => {
 
     if (tahun !== "") {
       parameterAbsensi.tahun = tahun;
+    } else {
+      toast("Pilih Tahun", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setSpinner(false);
+      return;
     }
 
     try {
@@ -203,7 +216,10 @@ const Absensi = () => {
       // );
       setApa(false);
     } catch (error) {
-      console.log(error);
+      console.error(error);
+      toast("Gagal Mendapatkan Data", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
     }
     setSpinner(false);
   };
@@ -340,6 +356,7 @@ const Absensi = () => {
       className="container"
       style={{ marginTop: "20px", marginBottom: "70px" }}
     >
+      <ToastContainer />
       <form onSubmit={Cari}>
         <div className="row">
           <div className="col-md-6">

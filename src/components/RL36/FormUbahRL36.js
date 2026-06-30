@@ -10,6 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Table from "react-bootstrap/Table";
 import Spinner from "react-bootstrap/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 export const FormUbahRL36 = () => {
   const [tahun, setTahun] = useState("");
@@ -93,6 +94,22 @@ export const FormUbahRL36 = () => {
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
+      }
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers = config.headers || {};
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
       }
       return config;
     },
@@ -369,7 +386,7 @@ export const FormUbahRL36 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <h2>RL. 3.6</h2>
       <form onSubmit={updateDataRLTigaTitikEnam}>
@@ -433,7 +450,7 @@ export const FormUbahRL36 = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-6">
+          {/* <div className="col-md-6">
             <div className="card">
               <div className="card-body">
                 <h5 className="card-title h5">Periode Laporan</h5>
@@ -471,20 +488,23 @@ export const FormUbahRL36 = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
         <div className="row mt-3 mb-3">
           <div className="col-md-12">
             {/* <h3>Ubah data RL 5.1 -  Pengunjung</h3> */}
-            <Link to={`/rl36/`} style={{ textDecoration: "none" }}>
-              <IoArrowBack
-                size={30}
-                style={{ color: "gray", cursor: "pointer" }}
-              />
+            <Link to={`/rl36/`} className={style.btnPrimary}
+                                        style={{
+                                                                      textDecoration: "none",
+                                                                      display: "inline-block",
+                                                                      color: "#FFF",
+                                                                    }}>
+                                                                      &lt;
+                                                                                  </Link>
+              
               <span style={{ color: "gray" }}>
                 Kembali ke RL 3.6 - Kebidanan
               </span>
-            </Link>
             <div className="container" style={{ textAlign: "center" }}>
               {spinner && (
                 <Spinner animation="grow" variant="success"></Spinner>
@@ -838,14 +858,10 @@ export const FormUbahRL36 = () => {
           </div>
         </div>
         <div className="mt-3 mb-3">
-          <ToastContainer />
-          <button
-            type="submit"
-            disabled={buttonStatus}
-            className="btn btn-outline-success"
-          >
-            <HiSaveAs /> Update
-          </button>
+           <ToastContainer />
+                                        <button type="submit" className={style.btnPrimary}>
+                                          <HiSaveAs /> Simpan
+                                        </button>
         </div>
       </form>
     </div>

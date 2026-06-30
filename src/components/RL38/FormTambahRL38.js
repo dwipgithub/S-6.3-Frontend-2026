@@ -7,6 +7,7 @@ import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 const FormTambahRL38 = () => {
   const [tahun, setTahun] = useState("2026");
@@ -64,6 +65,22 @@ const FormTambahRL38 = () => {
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
+      }
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers = config.headers || {};
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
       }
       return config;
     },
@@ -136,13 +153,12 @@ const FormTambahRL38 = () => {
   const changeHandler = (event, index) => {
     let newDataRL = [...dataRL];
     const name = event.target.name;
+    const isNoData =
+      newDataRL[index].no === 0 ||
+      newDataRL[index].rLTigaTitikDelapanPemeriksaan === "Tidak Ada Data";
     if (name === "check") {
-      if (event.target.checked === true) {
-        newDataRL[index].disabledInput = false;
-      } else if (event.target.checked === false) {
-        newDataRL[index].disabledInput = true;
-      }
       newDataRL[index].checked = event.target.checked;
+      newDataRL[index].disabledInput = !(event.target.checked && !isNoData);
     } else if (name === "jumlahLaki") {
       if (event.target.value === "") {
         event.target.value = 0;
@@ -277,7 +293,7 @@ const FormTambahRL38 = () => {
 
   const currentYear = new Date().getFullYear();
   const daftarTahun = [];
-  for (let i = 2026; i <= currentYear; i++) {
+  for (let i = 2025; i <= currentYear; i++) {
     daftarTahun.push(i);
   }
 
@@ -457,13 +473,10 @@ const FormTambahRL38 = () => {
                 </thead>
                 <tbody>
                   {dataRL.map((value, index) => {
-                    let disabled = true;
-                    let visibled = true;
-                    if (value.no === 0) {
-                      value.disabledInput = true;
-                      disabled = false;
-                      visibled = "block";
-                    }
+                    const isNoData =
+                      value.no === 0 ||
+                      value.rLTigaTitikDelapanPemeriksaan === "Tidak Ada Data";
+                    const editable = value.checked && !isNoData;
                     return (
                       <tr key={value.id}>
                         <td>{value.no}</td>
@@ -494,7 +507,7 @@ const FormTambahRL38 = () => {
                             value={value.jumlahLaki}
                             onFocus={handleFocus}
                             onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
+                            disabled={!editable}
                             min={0}
                             maxLength={7}
                             onInput={(e) => maxLengthCheck(e)}
@@ -510,7 +523,7 @@ const FormTambahRL38 = () => {
                             value={value.jumlahPerempuan}
                             onFocus={handleFocus}
                             onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
+                            disabled={!editable}
                             min={0}
                             maxLength={7}
                             onInput={(e) => maxLengthCheck(e)}
@@ -519,28 +532,14 @@ const FormTambahRL38 = () => {
                           />
                         </td>
                         <td>
-                          {/* <input
-                            type="number"
-                            name="rataLaki"
-                            className="form-control"
-                            value={value.rataLaki}
-                            onFocus={handleFocus}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          /> */}
-                                                    <input
+                          <input
                             type="text"
                             name="rataLaki"
                             className="form-control"
                             value={value.rataLaki}
                             onFocus={handleFocus}
                             onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
+                            disabled={!editable}
                             maxLength={13}
                             onInput={(e) => validateDecimal(e)}
                             onPaste={preventPasteNegative}
@@ -548,20 +547,6 @@ const FormTambahRL38 = () => {
                           />
                         </td>
                         <td>
-                          {/* <input
-                            type="number"
-                            name="rataPerempuan"
-                            className="form-control"
-                            value={value.rataPerempuan}
-                            onFocus={handleFocus}
-                            onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
-                            min={0}
-                            maxLength={7}
-                            onInput={(e) => maxLengthCheck(e)}
-                            onPaste={preventPasteNegative}
-                            onKeyPress={preventMinus}
-                          /> */}
                           <input
                             type="text"
                             name="rataPerempuan"
@@ -569,7 +554,7 @@ const FormTambahRL38 = () => {
                             value={value.rataPerempuan}
                             onFocus={handleFocus}
                             onChange={(e) => changeHandler(e, index)}
-                            disabled={value.disabledInput}
+                            disabled={!editable}
                             maxLength={13}
                             onInput={(e) => validateDecimal(e)}
                             onPaste={preventPasteNegative}

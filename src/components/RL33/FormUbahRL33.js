@@ -8,6 +8,7 @@ import Table from "react-bootstrap/Table";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 export const FormUbahRL33 = () => {
   const navigate = useNavigate();
@@ -75,6 +76,22 @@ export const FormUbahRL33 = () => {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+        if (
+          ["post", "put", "patch", "delete"].includes(
+            config.method?.toLowerCase(),
+          )
+        ) {
+          const timestamp = Date.now().toString();
+          const bodyString = JSON.stringify(config.data || {});
+          const signature = CryptoJS.HmacSHA256(
+            timestamp + bodyString,
+            process.env.REACT_APP_HMAC_SECRET,
+          ).toString();
+
+          config.headers = config.headers || {};
+          config.headers["X-Timestamp"] = timestamp;
+          config.headers["X-Signature"] = signature;
+        }
       return config;
     },
     (error) => {
@@ -186,7 +203,7 @@ export const FormUbahRL33 = () => {
       console.log(error);
       if (error.response?.data) {
         console.error(error.response.data);
-        toast(`Data Gagal Diupdate, ${error.response.data.message}`, {
+        toast(`Gagal simpan : jumlah pasien luka melebihi total pasien"`, {
           position: toast.POSITION.TOP_RIGHT,
         });
       } else {
@@ -324,7 +341,7 @@ export const FormUbahRL33 = () => {
   return (
     <div
       className="container"
-      style={{ marginTop: "70px", marginBottom: "70px" }}
+      style={{ marginTop: "20px", marginBottom: "70px" }}
     >
       <h2>RL. 3.3</h2>
       <form onSubmit={updateDataRLTigaTitikTiga}>
@@ -346,6 +363,8 @@ export const FormUbahRL33 = () => {
                   />
                   <label htmlFor="floatingInput">Nama</label>
                 </div>
+
+                
                 <div
                   className="form-floating"
                   style={{ width: "100%", display: "inline-block" }}

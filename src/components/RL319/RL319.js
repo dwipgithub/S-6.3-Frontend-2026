@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
@@ -14,6 +14,7 @@ import Spinner from "react-bootstrap/Spinner";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import { useMemo } from "react";
+import CryptoJS from "crypto-js";
 
 const RL319 = () => {
   const [tahun, setTahun] = useState("");
@@ -41,11 +42,28 @@ const RL319 = () => {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
   const [selectedRsID, setSelectedRsID] = useState(null);
+  const tableRef = useRef(null);
 
   useEffect(() => {
     refreshToken();
     const currentYear = new Date().getFullYear();
     setTahun(currentYear.toString());
+
+    const headerRow = tableRef.current?.querySelector("thead tr:first-child");
+
+    if (!headerRow) return;
+
+    const updateHeight = () => {
+      const height = headerRow.getBoundingClientRect().height;
+      tableRef.current.style.setProperty("--header-height", `${height}px`);
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(headerRow);
+
+    return () => observer.disconnect();
   }, []);
   const refreshToken = async () => {
     try {
@@ -85,6 +103,23 @@ const RL319 = () => {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+      }
+
       return config;
     },
     (error) => {
@@ -517,7 +552,7 @@ const RL319 = () => {
       "Jumlah Pasien Rawat Jalan",
       "Jumlah Pasien Rawat Jalan Laboratorium",
       "Jumlah Pasien Rawat Jalan Radiologi",
-      "Jumlah Pasien Rawat Jalan Radiologi Lain-lain",
+      "Jumlah Pasien Rawat Jalan Lain-lain",
     ];
     const body = finalData.map((value, index) => {
       const data = [
@@ -1021,7 +1056,7 @@ const RL319 = () => {
                 }`}
               >
                 <div className={style["table-container"]}>
-                  <table className={style.table}>
+                  <table ref={tableRef} className={style.table}>
                     <thead className={style.thead}>
                       <tr className="">
                         <th rowSpan={2}>No.</th>

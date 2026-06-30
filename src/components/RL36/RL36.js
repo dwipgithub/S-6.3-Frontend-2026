@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef} from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
@@ -12,6 +12,7 @@ import "react-confirm-alert/src/react-confirm-alert.css";
 import Modal from "react-bootstrap/Modal";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 const RL36 = () => {
   const [bulan, setBulan] = useState(1);
@@ -35,15 +36,19 @@ const RL36 = () => {
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
   const [activeTab, setActiveTab] = useState("tab1");
+  const [submittedBulan, setSubmittedBulan] = useState(null);
+  const [submittedTahun, setSubmittedTahun] = useState(null);
+  const [submittedRumahSakit, setSubmittedRumahSakit] = useState(null);
   const { CSRFToken } = useCSRFTokenContext();
+  const tableRef = useRef(null);
 
-  // Load validasi data when user opens Validasi tab or when filters change
+  // Load validasi data when user opens Validasi tab or when submitted filters change
   useEffect(() => {
-    if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
+    if (activeTab === "tab2" && submittedRumahSakit && submittedRumahSakit.id && submittedBulan !== 0 && submittedTahun) {
       getValidasi();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bulan, tahun, rumahSakit, activeTab]);
+  }, [submittedBulan, submittedTahun, submittedRumahSakit, activeTab]);
 
   useEffect(() => {
     refreshToken();
@@ -74,8 +79,11 @@ const RL36 = () => {
       } else if (decoded.jenisUserId === 3) {
         getRumahSakit(decoded.satKerId);
       } else if (decoded.jenisUserId === 4) {
-        showRumahSakit(decoded.satKerId, accessToken);
-      }
+  // 🔴 hanya load jika belum ada RS
+          if (!rumahSakit || !rumahSakit.id) {
+            showRumahSakit(decoded.satKerId, accessToken);
+          }
+        }
 
       setExpire(decoded.exp);
     } catch (error) {
@@ -100,6 +108,22 @@ const RL36 = () => {
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
+      }
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers = config.headers || {};
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
       }
       return config;
     },
@@ -181,9 +205,15 @@ const RL36 = () => {
   };
 
   const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
-  };
+  const rsId = e.target.value;
+
+  // 🔴 cegah reset kalau sama
+  if (rumahSakit && String(rumahSakit.id) === String(rsId)) {
+    return;
+  }
+
+  showRumahSakit(rsId);
+};
 
   const getRumahSakit = async (kabKotaId) => {
     try {
@@ -200,16 +230,24 @@ const RL36 = () => {
   };
 
   const showRumahSakit = async (id, tokenOverride) => {
-    try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
+  try {
+    // 🔴 cegah overwrite jika RS sama
+    if (rumahSakit && String(rumahSakit.id) === String(id)) {
+      return;
+    }
+
+    const response = await axiosJWT.get(
+      "/apisirs6v2/rumahsakit/" + id,
+      {
         headers: {
           Authorization: `Bearer ${tokenOverride || token}`,
         },
-      });
+      }
+    );
 
-      setRumahSakit(response.data.data);
-    } catch (error) {}
-  };
+    setRumahSakit(response.data.data);
+  } catch (error) {}
+};
 
   const getDataRLTigaTitikEnam = async (event) => {
     setSpinner(true);
@@ -566,6 +604,11 @@ const RL36 = () => {
       setDataRL(data);
       handleClose();
 
+      // Simpan filter yang di-submit
+      setSubmittedBulan(bulan);
+      setSubmittedTahun(tahun);
+      setSubmittedRumahSakit(rumahSakit);
+      
       // Load validasi data setelah filter diterapkan
       try {
         const validasiConfig = {
@@ -826,10 +869,12 @@ const RL36 = () => {
         setShow(true);
         break;
       case 4:
+      if (!rumahSakit || !rumahSakit.id) {
         showRumahSakit(satKerId);
-        setBulan(1);
-        setShow(true);
-        break;
+      }
+
+      setShow(true);
+      break;
       default:
     }
   };
@@ -916,6 +961,7 @@ const RL36 = () => {
         value.nrHidup,
         value.nrMati,
         value.nrTotal,
+        value.dirujuk,
       ];
       return data;
     });
@@ -938,8 +984,8 @@ const RL36 = () => {
           Authorization: `Bearer ${token}`,
         },
         params: {
-          rsId: rumahSakit.id,
-          periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+          rsId: submittedRumahSakit.id,
+          periode: String(submittedTahun).concat("-").concat(String(submittedBulan).padStart(2, "0")),
         },
       };
       const response = await axiosJWT.get(
@@ -979,8 +1025,8 @@ const RL36 = () => {
   const simpanValidasi = async (e) => {
     e.preventDefault();
 
-    if (!rumahSakit || !rumahSakit.id) {
-      toast("Rumah sakit harus dipilih terlebih dahulu", {
+    if (!submittedRumahSakit || !submittedRumahSakit.id) {
+      toast("Rumah sakit harus dipilih dan filter diterapkan terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
@@ -1023,8 +1069,8 @@ const RL36 = () => {
         const response = await axiosJWT.post(
           "/apisirs6v2/rltigatitikenamvalidasi",
           {
-            rsId: rumahSakit.id,
-            periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
+            rsId: submittedRumahSakit.id,
+            periode: String(submittedTahun).concat("-").concat(String(submittedBulan).padStart(2, "0")),
             ...payload,
           },
           customConfig
@@ -1123,12 +1169,12 @@ const RL36 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1178,12 +1224,12 @@ const RL36 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1208,12 +1254,12 @@ const RL36 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={rumahSakit?.id || 0}
+                      onChange={(e) => showRumahSakit(e.target.value)}
+                    >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -1340,14 +1386,13 @@ const RL36 = () => {
             <div className={`tab-content ${style.tabContent}`}>
               <div className={`tab-pane fade ${activeTab === "tab1" ? "show active" : ""}`}>
                 <div className={style["table-container"]}>
-                  <div className="table-responsive">
-                    <table className={style.table} style={{ width: "200%" }}>
-                      <thead className={style.thead}>
-                <tr>
+                   <table className={style["table"]}>
+                      <thead className={style["thead"]}>
+                <tr className="main-header-row">
                   <th
                     style={{ width: "2" }}
                     rowSpan={2}
-                    className={style["sticky-header"]}
+                    className={style["sticky-header-view"]}
                   >
                     No.
                   </th>
@@ -1356,7 +1401,7 @@ const RL36 = () => {
                   <th
                     style={{ width: "6%" }}
                     rowSpan={2}
-                    className={style["sticky-header"]}
+                    className={style["sticky-header-view"]}
                   >
                     Aksi
                   </th>
@@ -1366,7 +1411,7 @@ const RL36 = () => {
                   <th
                     style={{ width: "15%" }}
                     rowSpan={2}
-                    className={style["sticky-header"]}
+                    className={style["sticky-header-view"]}
                   >
                     Jenis Kegiatan
                   </th>
@@ -1383,7 +1428,7 @@ const RL36 = () => {
                     Dirujuk
                   </th>
                 </tr>
-                <tr className={style["subheader-row"]}>
+                <tr className={style["subsubheader-row"]}>
                   <th className="align-middle">Rumah Sakit</th>
                   <th className="align-middle">Bidan</th>
                   <th className="align-middle">Puskesmas</th>
@@ -1414,16 +1459,16 @@ const RL36 = () => {
                               // color:"#354259"
                             }}
                           >
-                            <td className={style["sticky-column"]}>
+                            <td className={style["sticky-column-view"]}>
                               {value.groupNo}
                             </td>
                             {user.jenisUserId === 4
                    ?
-                            <td className={style["sticky-column"]}></td>
+                            <td className={style["sticky-column-view"]}></td>
                             : <>
                      </>
                       }
-                            <td className={style["sticky-column"]}>
+                            <td className={style["sticky-column-view"]}>
                               {/* {value.groupNama} */}
                               {value.groupNama}
                             </td>
@@ -1474,7 +1519,7 @@ const RL36 = () => {
                           {value.details.map((value2, index2) => {
                             return (
                               <tr key={index2}>
-                                <td className={style["sticky-column"]}>
+                                <td className={style["sticky-column-view"]}>
                                   {
                                       value2.jenis_kegiatan_rl_tiga_titik_enam
                                         .no
@@ -1483,7 +1528,7 @@ const RL36 = () => {
                                 {user.jenisUserId === 4
                    ?
                                 <td
-                                  className={style["sticky-column"]}
+                                  className={style["sticky-column-view"]}
                                   style={{
                                     textAlign: "center",
                                     verticalAlign: "middle",
@@ -1505,6 +1550,7 @@ const RL36 = () => {
                                     >
                                       Hapus
                                     </button>
+                                     {value2.jenis_kegiatan_rl_tiga_titik_enam.nama !== "Tidak Ada Data" && (
                                     <Link
                                       to={`/rl36/ubah/${value2.id}`}
                                       className="btn btn-warning"
@@ -1517,12 +1563,13 @@ const RL36 = () => {
                                     >
                                       Ubah
                                     </Link>
+                                    )}
                                   </div>
                                 </td>
                                 : <>
                      </>
                       }
-                                <td className={style["sticky-column"]}>
+                                <td className={style["sticky-column-view"]}>
                                   {/* {
                                     value2.jenis_kegiatan_rl_tiga_titik_enam
                                       .nama
@@ -1596,7 +1643,6 @@ const RL36 = () => {
                 }
               </tbody>
                     </table>
-                  </div>
                 </div>
               </div>
 
@@ -1688,14 +1734,25 @@ const RL36 = () => {
 
                                 {/* DIBUAT */}
                                 <div style={{ display: "flex" }}>
-                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
-                                    Dibuat
-                                  </div>
-                                  <div style={{ width: "10px" }}>:</div>
-                                  <div>
-                                    {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID")}
-                                  </div>
-                                </div>
+                                        <div
+                                          style={{
+                                            width: "90px",
+                                            textAlign: "left",
+                                            paddingRight: "8px",
+                                            fontWeight: "600",
+                                          }}
+                                        >
+                                          Dibuat
+                                        </div>
+                                        <div style={{ width: "10px" }}>:</div>
+                                        <div>
+                                          {new Date(dataValidasi.createdAt).toLocaleDateString("id-ID", {
+                                            day: "2-digit",
+                                            month: "long",
+                                            year: "numeric",
+                                          })}
+                                        </div>
+                                      </div>
 
                               </div>
                             )}

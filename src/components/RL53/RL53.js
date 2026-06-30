@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate } from "react-router-dom";
@@ -38,10 +38,27 @@ const RL53 = () => {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [spinner, setSpinner] = useState(false);
   const [selectedRsID, setSelectedRsID] = useState(null);
+  const tableRef = useRef(null);
 
   useEffect(() => {
     refreshToken();
     getBulan();
+    const headerRow = tableRef.current?.querySelector("thead tr:first-child");
+
+    if (!headerRow) return;
+
+    const updateHeight = () => {
+      const height = headerRow.getBoundingClientRect().height;
+      tableRef.current.style.setProperty("--header-height", `${height}px`);
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(headerRow);
+
+    return () => observer.disconnect();
+
     // const getLastYear = async () => {
     //     const date = new Date()
     //     setTahun(date.getFullYear())
@@ -105,7 +122,7 @@ const RL53 = () => {
       value: "01",
     });
     results.push({
-      key: "Febuari",
+      key: "Februari",
       value: "02",
     });
     results.push({
@@ -408,8 +425,8 @@ const RL53 = () => {
     });
 
     downloadExcel({
-      fileName: "react-export-table-to-excel -> downloadExcel method",
-      sheet: "react-export-table-to-excel",
+      fileName: "RL53-10 Besar Kunjungan Penyakit Rawat Jalan",
+      sheet: "rawat jalan",
       tablePayload: {
         header,
         body: body,
@@ -741,7 +758,7 @@ const RL53 = () => {
                 }`}
               >
                 <div className={style["table-container"]}>
-                  <table className={style["table"]}>
+                  <table ref={tableRef} className={style["table"]}>
                     <thead>
                       <tr>
                         <th rowSpan="2" style={{ width: "1%" }}>
@@ -760,7 +777,7 @@ const RL53 = () => {
                           Jumlah Kunjungan
                         </th>
                       </tr>
-                      <tr>
+                      <tr className={style["subheader-row"]}>
                         <th style={{ width: "2%" }}>L</th>
                         <th style={{ width: "2%" }}>P</th>
                         <th style={{ width: "2%" }}>Total</th>

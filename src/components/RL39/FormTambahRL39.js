@@ -9,6 +9,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Spinner from "react-bootstrap/Spinner";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 const FormTambahRL39 = () => {
   const [namaRS, setNamaRS] = useState("");
@@ -73,6 +74,22 @@ const FormTambahRL39 = () => {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers = config.headers || {};
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+      }
       return config;
     },
     (error) => {
@@ -104,7 +121,7 @@ const FormTambahRL39 = () => {
       value: "1",
     });
     results.push({
-      key: "Febuari",
+      key: "Februari",
       value: "2",
     });
     results.push({
@@ -307,7 +324,7 @@ const FormTambahRL39 = () => {
 
   const currentYear = new Date().getFullYear();
   const daftarTahun = [];
-  for (let i = 2026; i <= currentYear; i++) {
+  for (let i = 2025; i <= currentYear; i++) {
     daftarTahun.push(i);
   }
 

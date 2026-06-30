@@ -25,7 +25,7 @@ const Login = () => {
         },
       };
       const results = await axios.post(
-        "/apisirs6v2/login",
+        "/apisirs6v2/loginsirs",
         {
           userName: email,
           password: password,
@@ -87,12 +87,11 @@ const Login = () => {
                                             sitekey={googleReCaptchaSiteKey}
                                             ref={reCaptchaReference}
                                         /> */}
-                    <div className="mt-3">
-                      <ToastContainer />
-                      <button className={style.btnPrimary}>
-                        <BoxArrowDownRight /> Login
-                      </button>
-                    </div>
+                                        <div className="mt-3">
+                                            <ToastContainer />
+                                            <button className={style.btnPrimary}><BoxArrowDownRight/> Login</button>
+                                        </div>
+                          
                   </form>
                 </div>
               </div>
@@ -104,4 +103,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Login
