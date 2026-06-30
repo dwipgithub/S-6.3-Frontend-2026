@@ -10,7 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "react-confirm-alert/src/react-confirm-alert.css";
 // import Table from "react-bootstrap/Table";
 import Modal from "react-bootstrap/Modal";
-import { downloadExcel } from "react-export-table-to-excel";
+import { downloadExcel, DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL36 = () => {
@@ -23,6 +23,7 @@ const RL36 = () => {
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
   const [dataRL, setDataRL] = useState([]);
+  const [dataRLSatusehat, setDataRLSatusehat] = useState([]);
   const [downloadData, setDownloadData] = useState([]);
   const [token, setToken] = useState("");
   const [expire, setExpire] = useState("");
@@ -30,16 +31,20 @@ const RL36 = () => {
   const [user, setUser] = useState({});
   const navigate = useNavigate();
   const [spinner, setSpinner] = useState(false);
+  const [namafileSatusehat, setNamaFileSatusehat] = useState("");
   const [statusValidasi, setStatusValidasi] = useState(0);
   const [keteranganValidasi, setKeteranganValidasi] = useState("");
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
   const [activeTab, setActiveTab] = useState("tab1");
+  const [activeWadahTab, setActiveWadahTab] = useState("sirs");
+  const [filterLabelSatusehat, setFilterLabelSatusehat] = useState([]);
   const [submittedBulan, setSubmittedBulan] = useState(null);
   const [submittedTahun, setSubmittedTahun] = useState(null);
   const [submittedRumahSakit, setSubmittedRumahSakit] = useState(null);
   const { CSRFToken } = useCSRFTokenContext();
   const tableRef = useRef(null);
+  const tableSatusehatRef = useRef(null);
 
   // Load validasi data when user opens Validasi tab or when submitted filters change
   useEffect(() => {
@@ -959,6 +964,86 @@ const RL36 = () => {
     });
   }
 
+  const getRLSatusehat = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!rumahSakit || !rumahSakit.id) {
+      toast("rumah sakit harus dipilih", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    setSpinner(true);
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+    const bulanLaporan = `${periode}-01`;
+    const filter = [];
+    filter.push("nama: ".concat(rumahSakit.nama));
+    filter.push("periode: ".concat(periode));
+    setFilterLabelSatusehat(filter);
+
+    try {
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      try {
+        const apiKey = process.env.REACT_APP_SATUSEHAT_API_KEY;
+        if (apiKey) {
+          headers["X-API-Key"] = apiKey;
+        }
+
+        await axios.get("/apisirs6v2/rltigatitikenamsatusehat", {
+          headers,
+          params: {
+            periode,
+            rsId: rumahSakit.id,
+          },
+        });
+      } catch (apiError) {
+        console.log(apiError);
+      }
+
+      const localResults = await axios.get(
+        "/apisirs6v2/getDataRLTigaTitikEnamSatusehatLocal",
+        {
+          headers,
+          params: {
+            bulan_laporan: bulanLaporan,
+            rsId: rumahSakit.id,
+          },
+        }
+      );
+
+      const items = localResults?.data?.data || [];
+
+      if (items.length === 0) {
+        setDataRLSatusehat([]);
+        toast.info("Data belum tersedia untuk periode ini.", {
+          position: toast.POSITION.TOP_RIGHT,
+          autoClose: 5000,
+        });
+      } else {
+        setDataRLSatusehat(items);
+        setNamaFileSatusehat(`rl36_satusehat_${periode}`);
+      }
+
+      handleClose();
+    } catch (error) {
+      console.log(error);
+      setDataRLSatusehat([]);
+      const errMsg =
+        error?.response?.data?.message || "Terjadi kesalahan sistem";
+      toast.error(errMsg, {
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 5000,
+      });
+    } finally {
+      setSpinner(false);
+    }
+  };
+
   const getValidasi = async () => {
     try {
       const customConfig = {
@@ -1083,6 +1168,10 @@ const RL36 = () => {
     setActiveTab(tab);
   };
 
+  const handleWadahTabClick = (tab) => {
+    setActiveWadahTab(tab);
+  };
+
   return (
     <div
       className="container"
@@ -1093,7 +1182,7 @@ const RL36 = () => {
           <Modal.Title>Filter</Modal.Title>
         </Modal.Header>
 
-        <form onSubmit={getRL}>
+        <form onSubmit={activeWadahTab === "satusehat" ? getRLSatusehat : getRL}>
           <Modal.Body>
             {user.jenisUserId === 1 ? (
               <>
@@ -1313,6 +1402,28 @@ const RL36 = () => {
       <div className="row">
         <div className="col-md-12">
             <h4 className={style.pageHeader}> RL. 3.6 - Kebidanan</h4>
+          <ul className={`nav nav-tabs ${style.navTabs}`}>
+            <li className={`nav-item ${style.navItem}`}>
+              <button
+                type="button"
+                className={`${style.navLink} ${activeWadahTab === "sirs" ? style.active : ""}`}
+                onClick={() => handleWadahTabClick("sirs")}
+              >
+                SIRS
+              </button>
+            </li>
+            <li className={`nav-item ${style.navItem}`}>
+              <button
+                type="button"
+                className={`${style.navLink} ${activeWadahTab === "satusehat" ? style.active : ""}`}
+                onClick={() => handleWadahTabClick("satusehat")}
+              >
+                Satu Sehat
+              </button>
+            </li>
+          </ul>
+          {activeWadahTab === "sirs" ? (
+            <>
           <div className={style.toolbar}>
             {user.jenisUserId === 4 ? (
               <Link
@@ -1805,6 +1916,110 @@ const RL36 = () => {
               </div>
             </div>
           </div>
+          </>
+          ) : (
+            <>
+              <div className={style.toolbar}>
+                <button
+                  type="button"
+                  className={style.btnPrimary}
+                  onClick={handleShow}
+                >
+                  Filter
+                </button>
+                <DownloadTableExcel
+                  filename={namafileSatusehat}
+                  sheet="data RL 36 Satu Sehat"
+                  currentTableRef={tableSatusehatRef.current}
+                >
+                  <button type="button" className={style.btnPrimary}>
+                    Download
+                  </button>
+                </DownloadTableExcel>
+              </div>
+
+              {filterLabelSatusehat.length > 0 ? (
+                <div>
+                  <h5 style={{ fontSize: "14px" }}>
+                    filtered by{" "}
+                    {filterLabelSatusehat
+                      .map((value) => {
+                        return value;
+                      })
+                      .join(", ")}
+                  </h5>
+                </div>
+              ) : (
+                <></>
+              )}
+
+              <div className={style["table-container"]}>
+                <div className="table-responsive">
+                  <table
+                    className={style.table}
+                    ref={tableSatusehatRef}
+                    style={{ width: "180%" }}
+                  >
+                    <thead className={style.thead}>
+                      <tr className="main-header-row">
+                        <th>No.</th>
+                        <th>Jenis Kegiatan</th>
+                        <th>Nama Kegiatan</th>
+                        <th>Rujukan RS</th>
+                        <th>Rujukan Bidan</th>
+                        <th>Rujukan Puskesmas</th>
+                        <th>Rujukan Faskes Lain</th>
+                        <th>Non Medis</th>
+                        <th>Non Rujukan</th>
+                        <th>Dirujuk</th>
+                        <th>Hidup</th>
+                        <th>Mati</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dataRLSatusehat.map((value, index) => {
+                        const isNewGroup =
+                          index === 0 ||
+                          dataRLSatusehat[index - 1]?.jenis_kegiatan !== value?.jenis_kegiatan;
+
+                        return (
+                          <React.Fragment key={`${value?.jenis_kegiatan}-${value?.nama_kegiatan}-${index}`}>
+                            {isNewGroup && (
+                              <tr
+                                style={{
+                                  textAlign: "center",
+                                  backgroundColor: "#C4DFAA",
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                <td colSpan={12} style={{ textAlign: "left" }}>
+                                  {value?.jenis_kegiatan}
+                                </td>
+                              </tr>
+                            )}
+                            <tr>
+                              <td style={{ textAlign: "center" }}>{index + 1}</td>
+                              <td style={{ textAlign: "left" }}>{value?.jenis_kegiatan}</td>
+                              <td style={{ textAlign: "left" }}>{value?.nama_kegiatan}</td>
+                              <td style={{ textAlign: "center" }}>{value?.rujukan_rs || 0}</td>
+                              <td style={{ textAlign: "center" }}>{value?.rujukan_bidan || 0}</td>
+                              <td style={{ textAlign: "center" }}>{value?.rujukan_puskesmas || 0}</td>
+                              <td style={{ textAlign: "center" }}>{value?.rujukan_faskes_lain || 0}</td>
+                              <td style={{ textAlign: "center" }}>{value?.non_medis || 0}</td>
+                              <td style={{ textAlign: "center" }}>{value?.non_rujukan || 0}</td>
+                              <td style={{ textAlign: "center" }}>{value?.dirujuk || 0}</td>
+                              <td style={{ textAlign: "center" }}>{value?.hidup || 0}</td>
+                              <td style={{ textAlign: "center" }}>{value?.mati || 0}</td>
+                            </tr>
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

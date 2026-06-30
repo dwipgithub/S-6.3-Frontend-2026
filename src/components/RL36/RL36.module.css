@@ -10,18 +10,26 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
+  margin-top: 1rem;
   margin-bottom: 1rem;
+  padding-top: 0.25rem;
 }
 
 .btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   font-size: 0.95rem;
   font-weight: 500;
-  padding: 0.5rem 1rem;
+  padding: 0.55rem 1rem;
   border: none;
   border-radius: 6px;
   background: #00b9ad;
   color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
   transition: background 0.2s, transform 0.1s;
 }
 
@@ -44,6 +52,8 @@
 .navTabs {
   border-bottom: 2px solid #e2e8f0;
   gap: 0;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
 }
 
 .navTabs .navItem {
@@ -73,69 +83,58 @@
 
 /* ========== Excel-like table container ========== */
 .table-container {
-  max-height: 520px;
+  max-height: 620px;
   overflow: auto;
-  border: 1px solid #d4d4d4;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
   background: #fff;
 }
 
 /* ========== Excel-like table ========== */
-.table-container {
-    max-height: 500px;
-    /* Adjust the height as needed */
-    overflow-y: auto;
-}
-
 .table {
-    width: 400%;
-    border-collapse: collapse;
-    table-layout: fixed;
-    font-size: 15px;
-    /* Ensures column widths are consistent */
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 14px;
+  background: #fff;
 }
 
 .table th,
 .table td {
-    padding: 8px;
-    border: 1px solid #ddd;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid #e5e7eb;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
 .table thead th {
-    background-color: #fbfefe;
-    color: #59636e;
-    position: -webkit-sticky;
-    /* For Safari */
-    position: sticky;
-    top: 0;
-    /* Keeps the main header at the top */
-    z-index: 2;
-    /* Ensures the main header is above other content */
-    text-align: center;
-    vertical-align: middle;
+  background-color: #f8fafc;
+  color: #334155;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: center;
+  vertical-align: middle;
+  font-weight: 600;
 }
 
 .table .subheader-row th {
-    background-color: #fbfefe;
-    position: -webkit-sticky;
-    /* For Safari */
-    position: sticky;
-    top: 45px;
-    /* Adjust this to the height of the main header row */
-    z-index: 1;
-    /* Ensures the subheader is below the main header */
+  background-color: #f8fafc;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 45px;
+  z-index: 1;
 }
 
 .table .subsubheader-row th {
-    background-color: #fbfefe;
-    position: -webkit-sticky;
-    /* For Safari */
-    position: sticky;
-    top: 39px;
-    /* Adjust this to the height of the main header row */
-    z-index: 1;
-    /* Ensures the subheader is below the main header */
+  background-color: #f8fafc;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 39px;
+  z-index: 1;
 }
 
 .table thead th.sticky-header:nth-child(1),
@@ -156,12 +155,12 @@
 }
 
 .table .sticky-column {
-    position: -webkit-sticky; /* Safari */
-    position: sticky;
-    left: 0;
-    z-index: 2;              /* Lebih tinggi dari kolom lain */
-    background-color: #fff;  /* 🔴 Supaya tidak transparan */
-    border-right: 1px solid #dee2e6; /* Opsional: garis pemisah */
+  position: -webkit-sticky;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: #fff;
+  border-right: 1px solid #e5e7eb;
 }
 
 
@@ -218,11 +217,19 @@
 }
 
 .table .sticky-column-view {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    left: 0;
-    z-index: 0; /* Ensures sticky column is above other content */
-    background-color: #fbfefe;
+  position: -webkit-sticky;
+  position: sticky;
+  left: 0;
+  z-index: 0;
+  background-color: #fbfefe;
+}
+
+.table tbody tr:nth-child(even) td {
+  background-color: #fbfdff;
+}
+
+.table tbody tr:hover td {
+  background-color: #f0f7ff;
 }
 
 

@@ -13,6 +13,7 @@ import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import { getJenisPengunjungName, getSafeDataRL } from "./rl34Helpers";
 
 const BrandaRL34 = () => {
   const [bulan, setBulan] = useState(1);
@@ -385,11 +386,12 @@ const BrandaRL34 = () => {
 
   function handleDownloadExcel() {
     const header = ["No", "Jenis Kunjungan", "Jumlah"];
+    const safeData = getSafeDataRL(dataRL);
 
-    const body = dataRL.map((value, index) => {
+    const body = safeData.map((value, index) => {
       const data = [
         value.id,
-        value.jenis_pengunjung_rl_tiga_titik_tempat.nama,
+        getJenisPengunjungName(value),
         value.jumlah,
       ];
 

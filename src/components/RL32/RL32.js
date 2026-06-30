@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
@@ -10,7 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import Modal from "react-bootstrap/Modal";
 // import Table from 'react-bootstrap/Table'
-import { downloadExcel } from "react-export-table-to-excel";
+import { DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 
 const RL32 = () => {
@@ -32,7 +32,15 @@ const RL32 = () => {
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
   const [activeTab, setActiveTab] = useState("tab1");
+  const [activeWadahTab, setActiveWadahTab] = useState("sirs");
+  const [spinner, setSpinner] = useState(false);
+  const [dataRL32Satusehat, setDataRL32Satusehat] = useState([]);
+  const [namafileSatusehat, setNamaFileSatusehat] = useState("");
+  const [filterLabelSatusehat, setFilterLabelSatusehat] = useState([]);
+  const [namafile, setNamaFile] = useState("");
   const navigate = useNavigate();
+  const tableRef = useRef(null);
+  const tableSatusehatRef = useRef(null);
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
@@ -209,6 +217,91 @@ const RL32 = () => {
     setKeteranganValidasi(e.target.value);
   };
 
+  const getRL32Satusehat = async (e) => {
+  if (e) e.preventDefault();
+  const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+
+  const filter = [];
+  if (rumahSakit) filter.push("nama: ".concat(rumahSakit.nama));
+  filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
+  setFilterLabelSatusehat(filter);
+
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+
+    const apiKey = process.env.REACT_APP_SATUSEHAT_API_KEY;
+
+    if (apiKey) {
+      headers["X-API-Key"] = apiKey;
+    }
+
+    const results = await axios.get(
+      "/apisirs6v2/rltigatitikduasatusehat",
+      {
+        headers,
+        params: {
+          periode,
+          rsId: rumahSakit.id,
+        },
+      }
+    );
+
+    console.log("Response RL 3.2:", results.data);
+
+    const serverMessage =
+      results?.data?.message || "";
+
+    const items =
+      results?.data?.data?.daftar_jenis_pelayanan || [];
+
+    if (items.length === 0) {
+      setDataRL32Satusehat([]);
+
+      toast.info(
+        serverMessage ||
+          "Data belum tersedia untuk periode ini.",
+        {
+          position: toast.POSITION.TOP_RIGHT,
+          autoClose: 5000,
+        }
+      );
+    } else {
+      setDataRL32Satusehat(items);
+
+      setNamaFileSatusehat(
+        `rl32_satusehat_${periode}-01`
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Error RL 3.2 Satusehat:",
+      error
+    );
+
+    setDataRL32Satusehat([]);
+
+    const errMsg =
+      error?.response?.data?.message ||
+      "Terjadi kesalahan sistem";
+
+    toast.error(errMsg, {
+      position: toast.POSITION.TOP_RIGHT,
+      autoClose: 5000,
+    });
+  } finally {
+    setSpinner(false);
+
+    setTimeout(() => {
+      if (typeof handleClose === "function") {
+        handleClose();
+      }
+    }, 3000);
+  }
+};
+
   const getValidasi = async () => {
     try {
       const customConfig = {
@@ -306,6 +399,11 @@ const RL32 = () => {
       });
 
       setDataRL(rlTigaTitikDuaDetails);
+      if (results.data.data.length > 0) {
+        setNamaFile(
+          "rl32_" + results.data.data[0].rs_id + "_".concat(String(tahun).concat("-").concat(bulan).concat("-01"))
+        );
+      }
       setValidasiId(null);
       setStatusValidasi(0);
       setKeteranganValidasi("");
@@ -542,84 +640,20 @@ const RL32 = () => {
     }
   };
 
-  function handleDownloadExcel() {
-    const header = [
-      "No",
-      "Jenis Pelayanan",
-      "Pasien Awal Bulan",
-      "Pasien Masuk",
-      "Pasien Pindahan",
-      "Pasien Dipindahkan",
-      "Pasien Keluar Hidup",
-      "Pasien Pria Keluar Mati <48 Jam",
-      "Pasien Pria Keluar Mati >=48 Jam",
-      "Pasien Wanita Keluar Mati <48 Jam",
-      "Pasien Wanita Keluar Mati >=48 Jam",
-      "Jumlah Lama Dirawat",
-      "Pasien Akhir Bulan",
-      "Jumlah Hari Perawatan",
-      "Hari Perawatan VVIP",
-      "Hari Perawatan VIP",
-      "Hari Perawatan 1",
-      "Hari Perawatan 2",
-      "Hari Perawatan 3",
-      "Hari Perawatan Khusus",
-      "Jumlah Alokasi TT Awal Bulan",
-    ];
-
-    console.log(dataRL);
-
-    const body = dataRL.map((value, index) => {
-      const data = [
-        index + 1,
-        value.nama_jenis_pelayanan,
-        value.pasien_awal_bulan,
-        value.pasien_masuk,
-        value.pasien_pindahan,
-        value.pasien_dipindahkan,
-        value.pasien_keluar_hidup,
-        value.pasien_keluar_mati_kurang_dari_48_jam,
-        value.pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam,
-        value.pasien_wanita_keluar_mati_kurang_dari_48_jam,
-        value.pasien_wanita_keluar_mati_lebih_dari_atau_sama_dengan_48_jam,
-        value.jumlah_lama_dirawat,
-        hitungPasienAkhirBulan(index),
-        hitungJumlahHariPerawatan(index),
-        value.rincian_hari_perawatan_kelas_VVIP,
-        value.rincian_hari_perawatan_kelas_VIP,
-        value.rincian_hari_perawatan_kelas_1,
-        value.rincian_hari_perawatan_kelas_2,
-        value.rincian_hari_perawatan_kelas_3,
-        value.rincian_hari_perawatan_kelas_khusus,
-        value.jumlah_alokasi_tempat_tidur_awal_bulan
-      ];
-      return data;
-    });
-
-    console.log(body)
-
-    downloadExcel({
-      fileName: "react-export-table-to-excel -> downloadExcel method",
-      sheet: "react-export-table-to-excel",
-      tablePayload: {
-        header,
-        body: body,
-      },
-    });
-  }
-
   const handleTabClick = (tab) => {
     setActiveTab(tab);
+  };
+
+  const handleWadahTabClick = (tab) => {
+    setActiveWadahTab(tab);
   };
 
   const calculateTotalPasienAwalBulan = (data) => {
     return data.reduce((sum, item) => sum + item.pasien_awal_bulan, 0);
   };
-
-  const calculateTotalPasienMasuk = (data) => {
+   const calculateTotalPasienMasuk = (data) => {
     return data.reduce((sum, item) => sum + item.pasien_masuk, 0);
   };
-
   const calculateTotalPasienPindahan = (data) => {
     return data.reduce((sum, item) => sum + item.pasien_pindahan, 0);
   };
@@ -785,7 +819,7 @@ const RL32 = () => {
           <Modal.Title>Filter</Modal.Title>
         </Modal.Header>
 
-        <form onSubmit={getRL}>
+        <form onSubmit={activeWadahTab === "satusehat" ? getRL32Satusehat : getRL}>
           <Modal.Body>
             {user.jenisUserId === 1 ? (
               <>
@@ -844,12 +878,12 @@ const RL32 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                        name="rumahSakit"
-                        id="rumahSakit"
-                        className="form-select"
-                        value={rumahSakit?.id || 0}
-                        onChange={(e) => rumahSakitChangeHandler(e)}
-                      >
+                    name="rumahSakit"
+                    id="rumahSakit"
+                    typeof="select"
+                    className="form-select"
+                    onChange={(e) => rumahSakitChangeHandler(e)}
+                  >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -899,12 +933,12 @@ const RL32 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                        name="rumahSakit"
-                        id="rumahSakit"
-                        className="form-select"
-                        value={rumahSakit?.id || 0}
-                        onChange={(e) => rumahSakitChangeHandler(e)}
-                      >
+                    name="rumahSakit"
+                    id="rumahSakit"
+                    typeof="select"
+                    className="form-select"
+                    onChange={(e) => rumahSakitChangeHandler(e)}
+                  >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -929,12 +963,12 @@ const RL32 = () => {
                   style={{ width: "100%", paddingBottom: "5px" }}
                 >
                   <select
-                        name="rumahSakit"
-                        id="rumahSakit"
-                        className="form-select"
-                        value={rumahSakit?.id || 0}
-                        onChange={(e) => rumahSakitChangeHandler(e)}
-                      >
+                    name="rumahSakit"
+                    id="rumahSakit"
+                    typeof="select"
+                    className="form-select"
+                    onChange={(e) => rumahSakitChangeHandler(e)}
+                  >
                     <option key={0} value={0}>
                       Pilih
                     </option>
@@ -962,7 +996,6 @@ const RL32 = () => {
                 value={bulan}
                 onChange={bulanChangeHandler}
               >
-                <option value={0}>Pilih</option>
                 {daftarBulan.map((bulan) => {
                   return (
                     <option
@@ -989,6 +1022,7 @@ const RL32 = () => {
                 placeholder="Tahun"
                 value={tahun}
                 onChange={(e) => tahunChangeHandler(e)}
+                disabled={false}
               />
               <label htmlFor="tahun">Tahun</label>
             </div>
@@ -996,7 +1030,7 @@ const RL32 = () => {
           <Modal.Footer>
             <div className="mt-3 mb-3">
               <ToastContainer />
-              <button type="submit" className={style.btnPrimary}>
+              <button type="submit" className="btn btn-outline-success">
                 <HiSaveAs size={20} /> Terapkan
               </button>
             </div>
@@ -1006,140 +1040,168 @@ const RL32 = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <h4 className={style.pageHeader}>RL. 3.2 Rawat Inap</h4>
-          <div className={style.toolbar}>
-            {user.jenisUserId === 4 ? (
-              <Link
-                to={`/rl32/tambah/`}
-                className={style.btnPrimary}
-                style={{ textDecoration: "none" }}
+          <h4 className={style.pageHeader}> RL 3.2 Rawat Inap</h4>
+
+          <ul className={`nav nav-tabs ${style.navTabs}`}>
+            <li className={`nav-item ${style.navItem}`}>
+              <button
+                type="button"
+                className={`${style.navLink} ${activeWadahTab === "sirs" ? style.active : ""}`}
+                onClick={() => handleWadahTabClick("sirs")}
               >
-              Tambah
-              </Link>
-            ) : null}
-            <button
-              type="button"
-              className={style.btnPrimary}
-              onClick={handleShow}
-            >
-              Filter
-            </button>
-            <button
-              type="button"
-              className={style.btnPrimary}
-              onClick={handleDownloadExcel}
-            >
-              Download
-            </button>
-          </div>
+                SIRS
+              </button>
+            </li>
+            <li className={`nav-item ${style.navItem}`}>
+              <button
+                type="button"
+                className={`${style.navLink} ${activeWadahTab === "satusehat" ? style.active : ""}`}
+                onClick={() => handleWadahTabClick("satusehat")}
+              >
+                Satusehat
+              </button>
+            </li>
+          </ul>
 
-          <div className={style.filterLabel}>
-            {filterLabel.length > 0 ? (
-              <>
-                Filter: {filterLabel.map((value) => value).join(" · ")}
-              </>
-            ) : null}
-          </div>
-
-          <div>
-            <ul className={`nav nav-tabs ${style.navTabs}`}>
-              <li className={`nav-item ${style.navItem}`}>
+          <div className={`tab-content ${style.tabContent}`}>
+            <div
+              className={`tab-pane fade ${
+                activeWadahTab === "sirs" ? "show active" : ""
+              }`}
+            >
+              <div className={style.toolbar}>
+                {user.jenisUserId === 4 ? (
+                  <Link
+                    to={`/rl32/tambah/`}
+                    className={style.btnPrimary}
+                    style={{ textDecoration: "none" }}
+                  >
+                    Tambah
+                  </Link>
+                ) : (
+                  <></>
+                )}
                 <button
                   type="button"
-                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
-                  onClick={() => handleTabClick("tab1")}
+                  className={style.btnPrimary}
+                  onClick={handleShow}
                 >
-                  Data
+                  Filter
                 </button>
-              </li>
-              {[3, 4].includes(user.jenisUserId) ? (
-                <li className={`nav-item ${style.navItem}`}>
-                  <button
-                    type="button"
-                    className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
-                    onClick={() => handleTabClick("tab2")}
-                  >
-                    Validasi
+                <DownloadTableExcel
+                  filename={namafile}
+                  sheet="data RL 32"
+                  currentTableRef={tableRef.current}
+                >
+                  <button type="button" className={style.btnPrimary}>
+                    Download
                   </button>
-                </li>
-              ) : null}
-            </ul>
+                </DownloadTableExcel>
+              </div>
+              <div className={style.filterLabel}>
+                {filterLabel.length > 0 ? (
+                  <>
+                    Filter: {filterLabel.map((value) => value).join(" · ")}
+                  </>
+                ) : null}
+              </div>
+
+              <div>
+                <ul className={`nav nav-tabs ${style.navTabs}`}>
+                  <li className={`nav-item ${style.navItem}`}>
+                    <button
+                      type="button"
+                      className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                      onClick={() => handleTabClick("tab1")}
+                    >
+                      Data
+                    </button>
+                  </li>
+                  {[3, 4].includes(user.jenisUserId) ? (
+                    <li className={`nav-item ${style.navItem}`}>
+                      <button
+                        type="button"
+                        className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                        onClick={() => handleTabClick("tab2")}
+                      >
+                        Validasi
+                      </button>
+                    </li>
+                  ) : null}
+                </ul>
 
             <div className={`tab-content ${style.tabContent}`}>
-              <div
-                className={`tab-pane fade ${
-                  activeTab === "tab1" ? "show active" : ""
-                }`}
-              >
-                <div className={style["table-container"]}>
-                  
-
-                    <table className={style.table}>
-                      <thead className={style.thead}>
-                        <tr>
-                          <th rowSpan="2">No.</th>
-
-                          {/* ✅ kolom kondisional */}
-                          {isAksi && <th rowSpan="2">Aksi</th>}
-
-                          <th rowSpan="2">Jenis Pelayanan</th>
-                          <th rowSpan="2">Pasien Awal Bulan</th>
-                          <th rowSpan="2">Pasien Masuk</th>
-                          <th rowSpan="2">Pasien Pindahan</th>
-                          <th rowSpan="2">Pasien Dipindahkan</th>
-                          <th rowSpan="2">Pasien Keluar Hidup</th>
-
-                          <th colSpan="2">Pasien Pria Keluar Mati</th>
-                          <th colSpan="2">Pasien Wanita Keluar Mati</th>
-
-                          <th rowSpan="2">Jumlah Lama Dirawat</th>
-                          <th rowSpan="2">Pasien Akhir Bulan</th>
-                          <th rowSpan="2">Jumlah Hari Perawatan</th>
-
-                          <th colSpan="6">Rincian Hari Perawatan</th>
-                          <th rowSpan="2">TT Awal</th>
-                        </tr>
-
-                        <tr>
-                          <th>{"<48 jam"}</th>
-                          <th>{">=48 jam"}</th>
-                          <th>{"<48 jam"}</th>
-                          <th>{">=48 jam"}</th>
-
-                          <th>VVIP</th>
-                          <th>VIP</th>
-                          <th>1</th>
-                          <th>2</th>
-                          <th>3</th>
-                          <th>Khusus</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {dataRL.map((value, index) => (
-                          <tr key={value.id}>
-                            <td>{index + 1}</td>
-
-                            {/* ✅ kolom kondisional */}
-                            {isAksi && (
-                              <td>
-                                <div style={{ display: "flex" }}>
-                                  <button
-                                    className="btn btn-danger"
-                                    onClick={() => deleteConfirmation(value.id)}
-                                  >
-                                    Hapus
-                                  </button>
-
-                                  <Link
-                                    to={`/rl32/ubah/${value.id}`}
-                                    className="btn btn-warning"
-                                  >
-                                    Ubah
-                                  </Link>
-                                </div>
-                              </td>
-                            )}
+                  <div
+                    className={`tab-pane fade ${
+                      activeTab === "tab1" ? "show active" : ""
+                    }`}
+                  >
+                    <div className={style["table-container"]}>
+                      <div className="table-responsive">
+                        <table className={style.table} ref={tableRef}>
+                          <thead className={style.thead}>
+                            <tr>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>No.</th>
+                              {isAksi && <th rowSpan="2" style={{ verticalAlign: "middle" }}>Aksi</th>}
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jenis Pelayanan</th>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Awal Bulan</th>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Masuk</th>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Pindahan</th>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Dipindahkan</th>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Keluar Hidup</th>
+                              <th colSpan="2" style={{ textAlign: "center" }}>Pasien Pria Keluar Mati</th>
+                              <th colSpan="2" style={{ textAlign: "center" }}>Pasien Wanita Keluar Mati</th>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jumlah Lama Dirawat</th>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Akhir Bulan</th>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jumlah Hari Perawatan</th>
+                              <th colSpan="6" style={{ textAlign: "center" }}>Rincian Hari Perawatan</th>
+                              <th rowSpan="2" style={{ verticalAlign: "middle" }}>TT Awal</th>
+                            </tr>
+                            <tr className={style["subheader-row"]}>
+                              <th>{"<48 jam"}</th>
+                              <th>{">=48 jam"}</th>
+                              <th>{"<48 jam"}</th>
+                              <th>{">=48 jam"}</th>
+                              <th>VVIP</th>
+                              <th>VIP</th>
+                              <th>1</th>
+                              <th>2</th>
+                              <th>3</th>
+                              <th>Khusus</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dataRL.map((value, index) => (
+                              <tr key={value.id}>
+                                <td>{index + 1}</td>
+                                {isAksi && (
+                                  <td>
+                                    <div style={{ display: "flex" }}>
+                                      <button
+                                        className="btn btn-danger"
+                                        style={{
+                                          marginRight: "5px",
+                                          backgroundColor: "#FF6663",
+                                          border: "1px solid #FF6663",
+                                        }}
+                                        onClick={() => deleteConfirmation(value.id)}
+                                      >
+                                        Hapus
+                                      </button>
+                                      <Link
+                                        to={`/rl32/ubah/${value.id}`}
+                                        className="btn btn-warning"
+                                        style={{
+                                          backgroundColor: "#CFD35E",
+                                          border: "1px solid #CFD35E",
+                                          color: "#FFFFFF",
+                                        }}
+                                      >
+                                        Ubah
+                                      </Link>
+                                    </div>
+                                  </td>
+                                )}
 
                             <td>{value.nama_jenis_pelayanan}</td>
                             <td>{value.pasien_awal_bulan}</td>
@@ -1204,6 +1266,7 @@ const RL32 = () => {
                           )}
                       </tbody>
                     </table>
+                  </div>
                 </div>
               </div>
 
@@ -1261,9 +1324,8 @@ const RL32 = () => {
 
                                 {/* STATUS */}
                                 <div style={{ display: "flex", marginBottom: "4px" }}>
-                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px" }}><strong>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
                                     Status
-                                    </strong>
                                   </div>
                                   <div style={{ width: "10px" }}>:</div>
                                   <div>
@@ -1282,8 +1344,8 @@ const RL32 = () => {
                                   dataValidasi.catatan ||
                                   dataValidasi.keterangan) && (
                                   <div style={{ display: "flex", marginBottom: "4px" }}>
-                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px" }}><strong>
-                                      Catatan</strong>
+                                    <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                      Catatan
                                     </div>
                                     <div style={{ width: "10px" }}>:</div>
                                     <div>
@@ -1296,8 +1358,8 @@ const RL32 = () => {
 
                                 {/* DIBUAT */}
                                 <div style={{ display: "flex" }}>
-                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px" }}><strong>
-                                    Dibuat</strong>
+                                  <div style={{ width: "90px", textAlign: "left", paddingRight: "8px", fontWeight: "600" }}>
+                                    Dibuat
                                   </div>
                                   <div style={{ width: "10px" }}>:</div>
                                   <div>
@@ -1369,7 +1431,108 @@ const RL32 = () => {
                         )}
                       </>
                     )}
+                    </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`tab-pane fade ${
+                activeWadahTab === "satusehat" ? "show active" : ""
+              }`}
+            >
+              <div className={style.toolbar}>
+                <button
+                  type="button"
+                  className={style.btnPrimary}
+                  onClick={handleShow}
+                >
+                  Filter
+                </button>
+                <DownloadTableExcel
+                  filename={namafileSatusehat}
+                  sheet="data RL 32 Satusehat"
+                  currentTableRef={tableSatusehatRef.current}
+                >
+                  <button
+                    type="button"
+                    className={style.btnPrimary}
+                  >
+                    Download
+                  </button>
+                </DownloadTableExcel>
+              </div>
+              <div className={style.filterLabel}>
+                {filterLabelSatusehat.length > 0 ? (
+                  <>
+                    Filter: {filterLabelSatusehat.map((value) => value).join(" · ")}
+                  </>
+                ) : null}
+              </div>
+
+              <div className={style["table-container"]}>
+                <div className="table-responsive">
+                  <table className={style.table} ref={tableSatusehatRef}>
+                    <thead className={style.thead}>
+                      <tr>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>No.</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jenis Pelayanan</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Awal Bulan</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Masuk</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Pindahan</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Dipindahkan</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Keluar Hidup</th>
+                        <th colSpan="2" style={{ textAlign: "center" }}>Pasien Pria Keluar Mati</th>
+                        <th colSpan="2" style={{ textAlign: "center" }}>Pasien Wanita Keluar Mati</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jumlah Lama Dirawat</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Akhir Bulan</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jumlah Hari Perawatan</th>
+                        <th colSpan="6" style={{ textAlign: "center" }}>Rincian Hari Perawatan</th>
+                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>TT Awal</th>
+                      </tr>
+                      <tr className={style["subheader-row"]}>
+                        <th>{"<48 jam"}</th>
+                        <th>{">=48 jam"}</th>
+                        <th>{"<48 jam"}</th>
+                        <th>{">=48 jam"}</th>
+                        <th>VVIP</th>
+                        <th>VIP</th>
+                        <th>1</th>
+                        <th>2</th>
+                        <th>3</th>
+                        <th>Khusus</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dataRL32Satusehat.map((value, index) => (
+                        <tr key={index}>
+                          <td>{index + 1}</td>
+                          <td>{value.nama_jenis_pelayanan || value.jenis_pelayanan}</td>
+                          <td>{value.pasien_awal_bulan || 0}</td>
+                          <td>{value.pasien_masuk || 0}</td>
+                          <td>{value.pasien_pindahan || 0}</td>
+                          <td>{value.pasien_dipindahkan || 0}</td>
+                          <td>{value.pasien_keluar_hidup || 0}</td>
+                          <td>{value.mati_lk_kurang_48_jam || 0}</td>
+                          <td>{value.mati_lk_lebih_sama_48_jam || 0}</td>
+                          <td>{value.mati_pr_kurang_48_jam || 0}</td>
+                          <td>{value.mati_pr_lebih_sama_48_jam || 0}</td>
+                          <td>{value.jumlah_lama_dirawat || 0}</td>
+                          <td>{value.pasien_akhir_bulan || 0}</td>
+                          <td>{value.jumlah_hari_perawatan || 0}</td>
+                          <td>{value.hari_vvip || 0}</td>
+                          <td>{value.hari_vip || 0}</td>
+                          <td>{value.hari_kelas_1 || 0}</td>
+                          <td>{value.hari_kelas_2 || 0}</td>
+                          <td>{value.hari_kelas_3 || 0}</td>
+                          <td>{value.hari_kelas_khusus || 0}</td>
+                          <td>{value.alokasi_tempat_tidur_awal_bulan || 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
