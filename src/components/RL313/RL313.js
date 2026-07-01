@@ -13,6 +13,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 const RL313 = () => {
   // const [tahun, setTahun] = useState("2025");
@@ -98,6 +99,23 @@ const RL313 = () => {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+      }
+
       return config;
     },
     (error) => {
@@ -118,11 +136,6 @@ const RL313 = () => {
     const kabKotaId = e.target.value;
     getRumahSakit(kabKotaId);
   };
-
-  // const rumahSakitChangeHandler = (e) => {
-  //   const rsId = e.target.value;
-  //   showRumahSakit(rsId);
-  // };
 
   const handleSelectRumahSakit = (e) => {
     const id = e.target.value;
