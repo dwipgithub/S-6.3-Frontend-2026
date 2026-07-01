@@ -260,15 +260,16 @@ const RL34 = () => {
     let date = tahun + "-" + bulan + "-01";
     e.preventDefault();
     setSpinner(true);
-    if (rumahSakit == null) {
+    if (!rumahSakit || !rumahSakit.id) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
     setFilterLabel([]);
       const filter = [];
-      filter.push("nama: ".concat(rumahSakit.nama));
+      filter.push("nama: ".concat(rumahSakit.nama || "Rumah Sakit"));
 
       // Ambil nama bulan dari daftarBulan
       const bulanObj = daftarBulan.find(
@@ -610,17 +611,18 @@ const RL34 = () => {
 
   function handleDownloadExcel() {
   const header = ["No", "Jenis Kunjungan", "Jumlah"];
+  const safeData = getSafeDataRL(dataRL);
 
   // hitung total jumlah
-  const totalJumlah = dataRL.reduce((acc, item) => {
+  const totalJumlah = safeData.reduce((acc, item) => {
     return acc + Number(item.jumlah || 0);
   }, 0);
 
   // isi body data
-  const body = dataRL.map((value, index) => {
+  const body = safeData.map((value, index) => {
     return [
       index + 1,
-      value.jenis_pengunjung_rl_tiga_titik_tempat.nama,
+      getJenisPengunjungName(value),
       value.jumlah,
     ];
   });
@@ -982,7 +984,7 @@ const RL34 = () => {
                                         >
                                           Hapus
                                         </button>
-                                        {value.jenis_pengunjung_rl_tiga_titik_tempat.nama !== "Tidak Ada Data" && (
+                                        {getJenisPengunjungName(value) !== "Tidak Ada Data" && (
                                           <Link
                                             to={`/rl34/ubah/${value.id}`}
                                             className="btn btn-warning"
@@ -1001,7 +1003,7 @@ const RL34 = () => {
                                      : <></>
                                           }
                                     <td>
-                                        {value.jenis_pengunjung_rl_tiga_titik_tempat.nama}
+                                        {getJenisPengunjungName(value)}
                                     </td>
                                     <td style={{ textAlign: "center", verticalAlign: "middle" }}>
                                      {value.jumlah}

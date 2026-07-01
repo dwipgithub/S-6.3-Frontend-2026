@@ -227,58 +227,37 @@ export const FormUbahRL35 = () => {
 
   const getRLTigaTitikLimaById = async () => {
     setSpinner(true);
-    const response = await axiosJWT.get(
-      "/apisirs6v2/rltigatitiklimadetail/" + id,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-    console.log(response.data.data.jenis_kegiatan_rl_tiga_titik_lima.nama);
-    setNama(response.data.data.jenis_kegiatan_rl_tiga_titik_lima.nama);
-    // setNo(response.data.data.jenis_kegiatan.id);
-    // setJeniskegiatan(response.data.data.rl_lima_titik_dua_id);
-    setkunjunganPasienDalamKabkotaLaki(
-      response.data.data.kunjungan_pasien_dalam_kabkota_laki
-    );
-    setkunjunganPasienDalamKabkotaPerempuan(
-      response.data.data.kunjungan_pasien_dalam_kabkota_perempuan
-    );
-    setkunjunganPasienLuarKabkotaLaki(
-      response.data.data.kunjungan_pasien_luar_kabkota_laki
-    );
-    setkunjunganPasienLuarKabkotaPerempuan(
-      response.data.data.kunjungan_pasien_luar_kabkota_perempuan
-    );
-    setTotalKunjungan(response.data.data.total_kunjungan);
-    setTahun(response.data.data.tahun);
+    try {
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rltigatitiklimadetail/" + id,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    if (tahun.substring(5, 7) === "01") {
-      // setBulan('Januari')
-    } else if (tahun.substring(5, 7) === "02") {
-      // setBulan('Februari')
-    } else if (tahun.substring(5, 7) === "03") {
-      // setBulan('Maret')
-    } else if (tahun.substring(5, 7) === "04") {
-      // setBulan('April')
-    } else if (tahun.substring(5, 7) === "05") {
-      // setBulan('Mei')
-    } else if (tahun.substring(5, 7) === "06") {
-      // setBulan('Juni')
-    } else if (tahun.substring(5, 7) === "07") {
-      // setBulan('Juli')
-    } else if (tahun.substring(5, 7) === "08") {
-      // setBulan('Agustus')
-    } else if (tahun.substring(5, 7) === "09") {
-      // setBulan('September')
-    } else if (tahun.substring(5, 7) === "10") {
-      // setBulan('Oktober')
-    } else if (tahun.substring(5, 7) === "11") {
-      // setBulan('November')
-    } else if (tahun.substring(5, 7) === "12") {
-      // setBulan('Desember')
+      const activity = response?.data?.data?.jenis_kegiatan_rl_tiga_titik_lima;
+      setNama(activity?.nama || "Data kegiatan belum tersedia");
+      setkunjunganPasienDalamKabkotaLaki(
+        response?.data?.data?.kunjungan_pasien_dalam_kabkota_laki ?? 0
+      );
+      setkunjunganPasienDalamKabkotaPerempuan(
+        response?.data?.data?.kunjungan_pasien_dalam_kabkota_perempuan ?? 0
+      );
+      setkunjunganPasienLuarKabkotaLaki(
+        response?.data?.data?.kunjungan_pasien_luar_kabkota_laki ?? 0
+      );
+      setkunjunganPasienLuarKabkotaPerempuan(
+        response?.data?.data?.kunjungan_pasien_luar_kabkota_perempuan ?? 0
+      );
+      setTotalKunjungan(response?.data?.data?.total_kunjungan ?? 0);
+      setTahun(response?.data?.data?.tahun || "");
+    } catch (error) {
+      console.error(error);
+      setNama("Data kegiatan belum tersedia");
     }
+
     setSpinner(false);
   };
 
@@ -310,260 +289,245 @@ export const FormUbahRL35 = () => {
     }
   };
 
+  const periodParts = String(tahun || "").split("-");
+  const displayYear = periodParts[0] || "";
+  const displayMonth = periodParts[1] || "";
+
   return (
-    <div className="container" style={{ marginTop: "70px" }}>
+    <div className={`container ${style.pageWrapper}`}>
+      <div className={style.pageHeaderRow}>
+        <div>
+          <h3 className={style.pageTitle}>Ubah Data RL 3.5</h3>
+          <p className={style.pageSubtitle}>
+            Perbarui data kunjungan pasien untuk kegiatan yang dipilih.
+          </p>
+        </div>
+        <Link to="/rl35" className={style.backLink}>
+          <IoArrowBack size={18} />
+          <span>Kembali ke daftar RL 3.5</span>
+        </Link>
+      </div>
+
       <form onSubmit={updateDataRLLimaTitikDua}>
-        <div className="row">
-          <div className="col-md-6">
-            <div className="card">
-              <div className="card-body">
-                <h5 className="card-title h5">Profile Fasyankes</h5>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", display: "inline-block" }}
-                >
+        <div className="row g-3">
+          <div className="col-lg-6">
+            <div className={style.sectionCard}>
+              <h5 className={style.sectionTitle}>Profil Fasyankes</h5>
+              <div className={style.infoGrid}>
+                <div className={`form-floating ${style.infoField}`}>
                   <input
                     type="text"
                     className="form-control"
-                    id="floatingInput"
+                    id="namaRS"
                     value={namaRS}
                     disabled={true}
                   />
-                  <label htmlFor="floatingInput">Nama</label>
+                  <label htmlFor="namaRS">Nama</label>
                 </div>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", display: "inline-block" }}
-                >
+                <div className={`form-floating ${style.infoField}`}>
                   <input
                     type="text"
                     className="form-control"
-                    id="floatingInput"
+                    id="alamatRS"
                     value={alamatRS}
                     disabled={true}
                   />
-                  <label htmlFor="floatingInput">Alamat</label>
+                  <label htmlFor="alamatRS">Alamat</label>
                 </div>
-                <div
-                  className="form-floating"
-                  style={{ width: "50%", display: "inline-block" }}
-                >
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="floatingInput"
-                    value={namaPropinsi}
-                    disabled={true}
-                  />
-                  <label htmlFor="floatingInput">Provinsi </label>
-                </div>
-                <div
-                  className="form-floating"
-                  style={{ width: "50%", display: "inline-block" }}
-                >
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="floatingInput"
-                    value={namaKabKota}
-                    disabled={true}
-                  />
-                  <label htmlFor="floatingInput">Kab/Kota</label>
+                <div className="row g-2">
+                  <div className="col-md-6">
+                    <div className={`form-floating ${style.infoField}`}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="provinsiRS"
+                        value={namaPropinsi}
+                        disabled={true}
+                      />
+                      <label htmlFor="provinsiRS">Provinsi</label>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className={`form-floating ${style.infoField}`}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="kabKotaRS"
+                        value={namaKabKota}
+                        disabled={true}
+                      />
+                      <label htmlFor="kabKotaRS">Kab/Kota</label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div className="col-md-6">
-            <div className="card">
-              <div className="card-body">
-                <h5 className="card-title h5">Periode Laporan</h5>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", display: "inline-block" }}
-                >
+
+          <div className="col-lg-6">
+            <div className={style.sectionCard}>
+              <h5 className={style.sectionTitle}>Periode Laporan</h5>
+              <div className={style.infoGrid}>
+                <div className={`form-floating ${style.infoField}`}>
                   <input
                     name="tahun"
                     type="text"
                     className="form-control"
-                    id="floatingInput"
+                    id="tahunLaporan"
                     placeholder="Tahun"
-                    value={tahun.substring(0, 4)}
+                    value={displayYear}
                     onChange={(e) => changeHandlerSingle(e)}
                     disabled={true}
                   />
-                  <label htmlFor="floatingInput">Tahun</label>
+                  <label htmlFor="tahunLaporan">Tahun</label>
                 </div>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", display: "inline-block" }}
-                >
+                <div className={`form-floating ${style.infoField}`}>
                   <input
                     name="bulan"
                     type="text"
                     className="form-control"
-                    id="floatingInput"
-                    placeholder="bulan"
-                    value={tahun.substring(5, 7)}
+                    id="bulanLaporan"
+                    placeholder="Bulan"
+                    value={displayMonth}
                     onChange={(e) => changeHandlerSingle(e)}
                     disabled={true}
                   />
-                  <label htmlFor="floatingInput">Bulan</label>
+                  <label htmlFor="bulanLaporan">Bulan</label>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div className="row mt-3 mb-3">
-          <div className="col-md-12">
-            <Link to={`/rl35/`} style={{ textDecoration: "none" }}>
-              <IoArrowBack
-                size={30}
-                style={{ color: "gray", cursor: "pointer" }}
-              />
-              <span style={{ color: "gray" }}>
-                Ubah data RL 3.5 - Kunjungan{" "}
-              </span>
-            </Link>
-            <div className="container" style={{ textAlign: "center" }}>
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
-              {spinner && (
-                <Spinner animation="grow" variant="success"></Spinner>
-              )}
+
+        <div className="row mt-3">
+          <div className="col-12">
+            <div className={style.tableCard}>
+              <div className={style.tableHeaderBar}>
+                <div>
+                  <h5 className={style.sectionTitle}>Detail Kunjungan</h5>
+                  <p className={style.tableHint}>
+                    Isi angka kunjungan sesuai data terbaru yang tersedia.
+                  </p>
+                </div>
+                {spinner && (
+                  <div className={style.statusBox}>
+                    <Spinner animation="border" size="sm" variant="success" />
+                    <span>Sedang memuat</span>
+                  </div>
+                )}
+              </div>
+
+              <div className={style.tableWrapper}>
+                <table className={style.formTable}>
+                  <thead>
+                    <tr>
+                      <th rowSpan={2}>Jenis Kegiatan</th>
+                      <th colSpan={2}>Kunjungan Pasien Dalam Kota</th>
+                      <th colSpan={2}>Kunjungan Pasien Luar Kota</th>
+                      <th rowSpan={2}>Total Kunjungan</th>
+                    </tr>
+                    <tr>
+                      <th>Laki-Laki</th>
+                      <th>Perempuan</th>
+                      <th>Laki-Laki</th>
+                      <th>Perempuan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr key={id}>
+                      <td>
+                        <div className={style.nameBadge}>{nama}</div>
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          onFocus={handleFocus}
+                          maxLength={7}
+                          onInput={(e) => maxLengthCheck(e)}
+                          name="kunjungan_pasien_dalam_kabkota_laki"
+                          className={`form-control ${style.formInput}`}
+                          value={kunjungan_pasien_dalam_kabkota_laki}
+                          onChange={(e) => changeHandler(e)}
+                          onPaste={preventPasteNegative}
+                          onKeyPress={preventMinus}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          onFocus={handleFocus}
+                          maxLength={7}
+                          onInput={(e) => maxLengthCheck(e)}
+                          name="kunjungan_pasien_dalam_kabkota_perempuan"
+                          className={`form-control ${style.formInput}`}
+                          value={kunjungan_pasien_dalam_kabkota_perempuan}
+                          onChange={(e) => changeHandler(e)}
+                          onPaste={preventPasteNegative}
+                          onKeyPress={preventMinus}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          onFocus={handleFocus}
+                          maxLength={7}
+                          onInput={(e) => maxLengthCheck(e)}
+                          name="kunjungan_pasien_luar_kabkota_laki"
+                          className={`form-control ${style.formInput}`}
+                          value={kunjungan_pasien_luar_kabkota_laki}
+                          onChange={(e) => changeHandler(e)}
+                          onPaste={preventPasteNegative}
+                          onKeyPress={preventMinus}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          onFocus={handleFocus}
+                          maxLength={7}
+                          onInput={(e) => maxLengthCheck(e)}
+                          name="kunjungan_pasien_luar_kabkota_perempuan"
+                          className={`form-control ${style.formInput}`}
+                          value={kunjungan_pasien_luar_kabkota_perempuan}
+                          onChange={(e) => changeHandler(e)}
+                          onPaste={preventPasteNegative}
+                          onKeyPress={preventMinus}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          onFocus={handleFocus}
+                          maxLength={7}
+                          onInput={(e) => maxLengthCheck(e)}
+                          name="total_kunjungan"
+                          className={`form-control ${style.formInput}`}
+                          value={total_kunjungan}
+                          onChange={(e) => changeHandler(e)}
+                          onPaste={preventPasteNegative}
+                          onKeyPress={preventMinus}
+                          disabled={true}
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <table className={style.rlTable}>
-              <thead>
-                <tr>
-                  {/* <th rowSpan={2} style={{ width: "4%", verticalAlign: "middle" }}>No.</th> */}
-                  <th rowSpan={2} style={{ width: "25%" }}>
-                    Jenis Kegiatan
-                  </th>
-                  <th colSpan={2} style={{ textAlign: "center" }}>
-                    Kunjungan Pasien Dalam Kota
-                  </th>
-                  <th colSpan={2} style={{ textAlign: "center" }}>
-                    Kunjungan Pasien Luar Kota
-                  </th>
-                  <th rowSpan={2}>Total Kunjungan</th>
-                </tr>
-                <tr>
-                  <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                  <th style={{ textAlign: "center" }}>Perempuan</th>
-                  <th style={{ textAlign: "center" }}>Laki-Laki</th>
-                  <th style={{ textAlign: "center" }}>Perempuan</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr key={id}>
-                  {/* <td>
-                                        <input type='text' name='id' className="form-control" value="1" disabled={true}/>
-                                    </td> */}
-                  <td style={{ textAlign: "center" }}>{nama}</td>
-                  <td>
-                    <input
-                      style={{ textAlign: "center" }}
-                      type="number"
-                      min="0"
-                      onFocus={handleFocus}
-                      maxLength={7}
-                      onInput={(e) => maxLengthCheck(e)}
-                      name="kunjungan_pasien_dalam_kabkota_laki"
-                      className="form-control"
-                      value={kunjungan_pasien_dalam_kabkota_laki}
-                      onChange={(e) => changeHandler(e)}
-                      onPaste={preventPasteNegative}
-                      onKeyPress={preventMinus}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      style={{ textAlign: "center" }}
-                      type="number"
-                      min="0"
-                      onFocus={handleFocus}
-                      maxLength={7}
-                      onInput={(e) => maxLengthCheck(e)}
-                      name="kunjungan_pasien_dalam_kabkota_perempuan"
-                      className="form-control"
-                      value={kunjungan_pasien_dalam_kabkota_perempuan}
-                      onChange={(e) => changeHandler(e)}
-                      onPaste={preventPasteNegative}
-                      onKeyPress={preventMinus}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      style={{ textAlign: "center" }}
-                      type="number"
-                      min="0"
-                      onFocus={handleFocus}
-                      maxLength={7}
-                      onInput={(e) => maxLengthCheck(e)}
-                      name="kunjungan_pasien_luar_kabkota_laki"
-                      className="form-control"
-                      value={kunjungan_pasien_luar_kabkota_laki}
-                      onChange={(e) => changeHandler(e)}
-                      onPaste={preventPasteNegative}
-                      onKeyPress={preventMinus}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      style={{ textAlign: "center" }}
-                      type="number"
-                      min="0"
-                      onFocus={handleFocus}
-                      maxLength={7}
-                      onInput={(e) => maxLengthCheck(e)}
-                      name="kunjungan_pasien_luar_kabkota_perempuan"
-                      className="form-control"
-                      value={kunjungan_pasien_luar_kabkota_perempuan}
-                      onChange={(e) => changeHandler(e)}
-                      onPaste={preventPasteNegative}
-                      onKeyPress={preventMinus}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      style={{ textAlign: "center" }}
-                      type="number"
-                      min="0"
-                      onFocus={handleFocus}
-                      maxLength={7}
-                      onInput={(e) => maxLengthCheck(e)}
-                      name="total_kunjungan"
-                      className="form-control"
-                      value={total_kunjungan}
-                      onChange={(e) => changeHandler(e)}
-                      onPaste={preventPasteNegative}
-                      onKeyPress={preventMinus}
-                      disabled={true}
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </div>
-        <div className="mt-3 mb-3">
+
+        <div className={style.actionBar}>
           <ToastContainer />
           <button
             type="submit"
-            disabled={buttonStatus}
-            className="btn btn-outline-success"
+            disabled={buttonStatus || spinner}
+            className={style.actionButton}
           >
             <HiSaveAs /> Update
           </button>

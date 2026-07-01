@@ -14,6 +14,7 @@ import Table from "react-bootstrap/Table";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import { getStatusSatset } from "../../api/status_satset.js";
+import { getJenisPengunjungName, getSafeDataRL } from "./rl34Helpers";
 
 export default function TabMenu34() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -689,17 +690,18 @@ const handleShow = () => {
 
   function handleDownloadExcel() {
     const header = ["No", "Jenis Kunjungan", "Jumlah"];
+    const safeData = getSafeDataRL(dataRL);
   
     // hitung total jumlah
-    const totalJumlah = dataRL.reduce((acc, item) => {
+    const totalJumlah = safeData.reduce((acc, item) => {
       return acc + Number(item.jumlah || 0);
     }, 0);
   
     // isi body data
-    const body = dataRL.map((value, index) => {
+    const body = safeData.map((value, index) => {
       return [
         index + 1,
-        value.jenis_pengunjung_rl_tiga_titik_tempat.nama,
+        getJenisPengunjungName(value),
         value.jumlah,
       ];
     });
@@ -1071,7 +1073,7 @@ const handleShow = () => {
                                   >
                                     Hapus
                                   </button>
-                                  {value.jenis_pengunjung_rl_tiga_titik_tempat.nama !== "Tidak Ada Data" && (
+                                  {getJenisPengunjungName(value) !== "Tidak Ada Data" && (
                                     <Link
                                       to={`/rl34/ubah/${value.id}`}
                                       className="btn btn-warning"
@@ -1090,7 +1092,7 @@ const handleShow = () => {
                               : <></>
                                     }
                               <td>
-                                  {value.jenis_pengunjung_rl_tiga_titik_tempat.nama}
+                                  {getJenisPengunjungName(value)}
                               </td>
                               <td style={{ textAlign: "center", verticalAlign: "middle" }}>
                               {value.jumlah}

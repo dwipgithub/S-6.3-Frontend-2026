@@ -35,10 +35,219 @@
   transform: translateY(0);
 }
 
+.btnPrimary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .filterLabel {
   font-size: 0.875rem;
   color: #5a6c7d;
   margin-bottom: 1rem;
+}
+
+.satusehatControlPanel {
+  border: 1px solid #d9dee7;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
+  background: #f8fafc;
+}
+
+.satusehatPanelTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 14px;
+}
+
+.satusehatControlRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end; /* Sumbu bawah input dan button akan sejajar */
+}
+
+.satusehatField,
+.satusehatFieldSmall {
+  min-width: 140px;
+}
+
+.satusehatField {
+  width: 220px;
+}
+
+.satusehatFieldSmall {
+  width: 110px;
+}
+
+.satusehatLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5a6c7d;
+  margin-bottom: 6px;
+}
+
+.satusehatInputWrap {
+  position: relative;
+}
+
+.satusehatInputIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  z-index: 1;
+}
+
+.satusehatSelect,
+.satusehatInput {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 12px 0 36px;
+  background: #fff;
+  color: #334155;
+  font-size: 14px;
+}
+
+.satusehatActionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.satusehatActionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end; /* Mengubah flex-start menjadi flex-end */
+}
+
+.satusehatActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.satusehatActionButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.satusehatFilterButton {
+  background: #2563eb;
+}
+
+.satusehatSyncButton {
+  background: #6cc4b1;
+}
+
+.satusehatExcelButton {
+  background: #0f9f6e;
+}
+
+.satusehatActionHelp {
+  font-size: 12px;
+  color: #7c8aa0;
+  line-height: 1.4;
+}
+
+.satusehatInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.satusehatInfoCard {
+  border: 1px solid #d9dee7;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+  min-height: 150px;
+}
+
+.satusehatInfoTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #2563eb;
+  margin-bottom: 14px;
+}
+
+.satusehatLegendItem,
+.satusehatStatusItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.satusehatLegendBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.satusehatStatusIcon {
+  color: #94a3b8;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.satusehatSourceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 90px;
+}
+
+.satusehatSourceText {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #4b5563;
+  margin: 0;
+}
+
+.satusehatSourceIcon {
+  font-size: 34px;
+  color: #93c5fd;
+  flex-shrink: 0;
+}
+
+.outerTabLink {
+  color: #00b9ad !important;
+  font-weight: 600;
+}
+
+.outerTabLink:hover {
+  color: #00b9ad !important;
 }
 
 .navTabs {
@@ -239,6 +448,16 @@
   position: sticky;
   left: 0;
   z-index: 1; /* Ensures sticky column is above other content */
+}
+
+@media (max-width: 991px) {
+  .satusehatInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .satusehatActionGroup {
+    width: 100%;
+  }
 }
 
 /* ========== Form Validasi (tab Validasi) ========== */

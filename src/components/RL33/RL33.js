@@ -1,9 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
 import style from "./RL33.module.css";
-import { HiSaveAs } from "react-icons/hi";
+import {
+  FaCalendarAlt,
+  FaClock,
+  FaDatabase,
+  FaFileExcel,
+  FaInfoCircle,
+  FaSyncAlt,
+} from "react-icons/fa";
+import { HiFilter, HiPlus, HiSaveAs } from "react-icons/hi";
 import { confirmAlert } from "react-confirm-alert";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -23,6 +31,7 @@ const RL33 = () => {
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
   const [daftarKabKota, setDaftarKabKota] = useState([]);
   const [dataRL, setDataRL] = useState([]);
+  const [dataRLSatusehat, setDataRLSatusehat] = useState([]);
   const [token, setToken] = useState("");
   const [expire, setExpire] = useState("");
   const [show, setShow] = useState(false);
@@ -32,8 +41,24 @@ const RL33 = () => {
   const [validasiId, setValidasiId] = useState(null);
   const [dataValidasi, setDataValidasi] = useState(null);
   const [activeTab, setActiveTab] = useState("tab1");
+  const [activeWadahTab, setActiveWadahTab] = useState("sirs");
+  const [filterLabelSatusehat, setFilterLabelSatusehat] = useState([]);
+  const [isSyncingSatusehat, setIsSyncingSatusehat] = useState(false);
+  const [isSyncCooldown, setIsSyncCooldown] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState(null);
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
+  const syncCooldownTimeoutRef = useRef(null);
+  const syncCooldownMinutes = 5;
+  const syncCooldownMs = syncCooldownMinutes * 60 * 1000;
+
+  useEffect(() => {
+    return () => {
+      if (syncCooldownTimeoutRef.current) {
+        clearTimeout(syncCooldownTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     refreshToken();
@@ -243,6 +268,144 @@ const getDataRLTigaTitikTiga = async (e) => {
     });
   }
 };
+
+  const getDataRLTigaTitikTigaSatusehat = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!rumahSakit || !rumahSakit.id || rumahSakit.id === 0) {
+      toast(`rumah sakit harus dipilih`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (!tahun || !bulan) {
+      toast(`periode wajib diisi`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+
+    const filter = [];
+    filter.push("Nama: ".concat(rumahSakit.nama));
+    filter.push(
+      "Periode ".concat(
+        String(months[bulan - 1].label).concat(" ").concat(tahun)
+      )
+    );
+    setFilterLabelSatusehat(filter);
+
+    try {
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      const results = await axiosJWT.get(
+        "/apisirs6v2/getDataRLTigaTitikTigaSatusehatLocal",
+        {
+          headers,
+          params: {
+            rsId: rumahSakit.id,
+            month_year: periode,
+          },
+        }
+      );
+
+      const arr = results?.data?.data || [];
+      setDataRLSatusehat(Array.isArray(arr) ? arr : []);
+    } catch (error) {
+      setDataRLSatusehat([]);
+      const detailMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.message ||
+        "Terjadi kesalahan";
+      toast.error(detailMessage);
+    }
+  };
+
+  const startSyncCooldown = () => {
+    setIsSyncCooldown(true);
+
+    if (syncCooldownTimeoutRef.current) {
+      clearTimeout(syncCooldownTimeoutRef.current);
+    }
+
+    syncCooldownTimeoutRef.current = setTimeout(() => {
+      setIsSyncCooldown(false);
+    }, syncCooldownMs);
+  };
+
+  const syncDataRLTigaTitikTigaSatusehat = async () => {
+    if (!rumahSakit || !rumahSakit.id || rumahSakit.id === 0) {
+      toast("rumah sakit harus dipilih", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (!tahun || !bulan) {
+      toast("periode wajib diisi", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (isSyncingSatusehat || isSyncCooldown) {
+      toast(`Sync Satusehat masih dibatasi, tunggu ${syncCooldownMinutes} menit.`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+
+    try {
+      setIsSyncingSatusehat(true);
+
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      const apiKey = process.env.REACT_APP_SATUSEHAT_API_KEY;
+      if (apiKey) {
+        headers["X-API-Key"] = apiKey;
+      }
+
+      await axiosJWT.get("/apisirs6v2/rltigatitiktigasatusehat", {
+        headers,
+        params: {
+          rsId: rumahSakit.id,
+          periode,
+        },
+      });
+
+      toast.success("Sync Satusehat berhasil.", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+
+      setLastSyncAt(new Date());
+      await getDataRLTigaTitikTigaSatusehat();
+      startSyncCooldown();
+    } catch (error) {
+      console.log(error);
+      const detailMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.message ||
+        "Gagal sync Satusehat";
+      toast.error(detailMessage, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      startSyncCooldown();
+    } finally {
+      setIsSyncingSatusehat(false);
+    }
+  };
 
   // const hapusData = async (id) => {
   //   const customConfig = {
@@ -666,18 +829,56 @@ const simpanValidasi = async (e) => {
 };
 
   const handleTabClick = (tab) => {
+    if (tab === "tab2") {
+      if (!rumahSakit || !rumahSakit.id) {
+        toast("RS belum dipilih", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
+    }
 
-  if (tab === "tab2") {
-    if (!rumahSakit || !rumahSakit.id) {
-      toast("RS belum dipilih", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
+    setActiveTab(tab);
+  };
+
+  const handleWadahTabClick = (tab) => {
+    setActiveWadahTab(tab);
+  };
+
+  const formatLastSyncAt = (value) => {
+    if (!value) return "-";
+
+    try {
+      return new Intl.DateTimeFormat("id-ID", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(new Date(value));
+    } catch (error) {
+      return "-";
+    }
+  };
+
+  const handleSatusehatFilterClick = () => {
+    if (user.jenisUserId !== 4 && (!rumahSakit || !rumahSakit.id)) {
+      handleShow();
       return;
     }
-  }
 
-  setActiveTab(tab);
-};
+    getDataRLTigaTitikTigaSatusehat();
+  };
+
+  const handleSatusehatSyncClick = () => {
+    if (user.jenisUserId !== 4 && (!rumahSakit || !rumahSakit.id)) {
+      handleShow();
+      return;
+    }
+
+    syncDataRLTigaTitikTigaSatusehat();
+  };
 
   const months = [
     { value: "1", label: "Januari" },
@@ -808,6 +1009,61 @@ function handleDownloadExcel() {
 
 }
 
+function handleDownloadExcelSatusehat() {
+
+  const header = [
+    "No",
+    "Month Year",
+    "IHS Organization",
+    "Kategori",
+    "Jenis Pelayanan",
+    "Total Pasien Rujukan",
+    "Total Pasien Non Rujukan",
+    "Tindak Lanjut Dirawat",
+    "Tindak Lanjut Dirujuk",
+    "Tindak Lanjut Pulang",
+    "Mati di IGD (L)",
+    "Mati di IGD (P)",
+    "DOA (L)",
+    "DOA (P)",
+    "Luka-luka (L)",
+    "Luka-luka (P)",
+    "False Emergency",
+  ];
+
+  const body = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
+    (value, index) => [
+      index + 1,
+      value.month_year,
+      value.ihs_organization,
+      value.kategori,
+      value.jenis_pelayanan,
+      value.total_pasien_rujukan,
+      value.total_pasien_non_rujukan,
+      value.tindak_lanjut_dirawat,
+      value.tindak_lanjut_dirujuk,
+      value.tindak_lanjut_pulang,
+      value.mati_di_igd_laki_laki,
+      value.mati_di_igd_perempuan,
+      value.doa_laki_laki,
+      value.doa_perempuan,
+      value.luka_luka_laki_laki,
+      value.luka_luka_perempuan,
+      value.false_emergency,
+    ]
+  );
+
+  downloadExcel({
+    fileName: "RL_3_3_SatuSehat",
+    sheet: "RL 3.3 SatuSehat",
+    tablePayload: {
+      header,
+      body,
+    },
+  });
+
+}
+
   return (
     <div
       className="container"
@@ -818,7 +1074,13 @@ function handleDownloadExcel() {
           <Modal.Title>Filter</Modal.Title>
         </Modal.Header>
 
-        <form onSubmit={getDataRLTigaTitikTiga}>
+        <form
+          onSubmit={
+            activeWadahTab === "satusehat"
+              ? getDataRLTigaTitikTigaSatusehat
+              : getDataRLTigaTitikTiga
+          }
+        >
           <Modal.Body>
             {user.jenisUserId === 1 ? (
               <>
@@ -1035,52 +1297,76 @@ function handleDownloadExcel() {
 
       <div className="row">
         <div className="col-md-12">
-            <h4 className={style.pageHeader}>RL. 3.3 - Rawat Darurat</h4>
-          <div className={style.toolbar}>
-            {user.jenisUserId === 4 ? (
-              <Link
-                to={`/rl33/tambah/`}
+          <h4 className={style.pageHeader}>RL. 3.3 - Rawat Darurat</h4>
+          <ul className="nav nav-tabs border-bottom mb-0">
+            <li className="nav-item">
+              <button
                 type="button"
-                className={style.btnPrimary}
-                style={{ textDecoration: "none" }}
+                className={`nav-link ${style.outerTabLink} ${activeWadahTab === "sirs" ? "active" : ""}`}
+                onClick={() => handleWadahTabClick("sirs")}
               >
-                Tambah
-              </Link>
-            ) : (
-              <></>
-            )}
-            <button
-              type="button"
-              className={style.btnPrimary}
-              onClick={handleShow}
-            >
-              Filter
-            </button>
-            <button
-              type="button"
-              className={style.btnPrimary}
-              onClick={handleDownloadExcel}
-            >
-              Download
-            </button>
-          </div>
+                SIRS
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                type="button"
+                className={`nav-link ${style.outerTabLink} ${activeWadahTab === "satusehat" ? "active" : ""}`}
+                onClick={() => handleWadahTabClick("satusehat")}
+              >
+                SATUSEHAT
+              </button>
+            </li>
+          </ul>
 
-          {filterLabel.length > 0 ? (
-            <div>
-              <h5 style={{ fontSize: "14px" }}>
-                Filtered By{" "}
-                {filterLabel
-                  .map((value) => {
-                    return value;
-                  })
-                  .join(", ")}
-              </h5>
-            </div>
-          ) : (
-            <></>
-          )}
+          <div className="tab-content mt-0">
+          {activeWadahTab === "sirs" ? (
+            <div className="border rounded-bottom p-4 shadow-sm bg-white">
+              <div className={style.toolbar}>
+                {user.jenisUserId === 4 ? (
+                  <Link
+                    to={`/rl33/tambah/`}
+                    type="button"
+                    className={style.btnPrimary}
+                    style={{ textDecoration: "none" }}
+                  >
+                    <HiPlus size={18} /> Tambah
+                  </Link>
+                ) : (
+                  <></>
+                )}
+                <button
+                  type="button"
+                  className={style.btnPrimary}
+                  onClick={handleShow}
+                >
+                  <HiFilter size={18} /> Filter
+                </button>
+                <button
+                  type="button"
+                  className={style.btnPrimary}
+                  onClick={handleDownloadExcel}
+                >
+                  <FaFileExcel size={18} /> Download Excel
+                </button>
+              </div>
 
-          <div>
+              {filterLabel.length > 0 ? (
+                <div>
+                  <h5 style={{ fontSize: "14px" }}>
+                    filtered by{" "}
+                    {filterLabel
+                      .map((value) => {
+                        return value;
+                      })
+                      .join(", ")}
+                  </h5>
+                </div>
+              ) : (
+                <></>
+              )}
+
+              <div>
             <ul className={`nav nav-tabs ${style.navTabs}`}>
               <li className={`nav-item ${style.navItem}`}>
                 <button
@@ -1303,7 +1589,6 @@ function handleDownloadExcel() {
                 </div>
                 </div>
               </div>
-
               <div
                 className={`tab-pane fade ${
                   activeTab === "tab2" ? "show active" : ""
@@ -1468,6 +1753,236 @@ function handleDownloadExcel() {
                   </div>
               </div>
             </div>
+              </div>
+            </div>
+          ) : (
+            <div className="border rounded-bottom p-4 shadow-sm bg-white">
+              <div className={style.satusehatControlPanel}>
+                <h5 className={style.satusehatPanelTitle}>Periode Data</h5>
+                <div className={style.satusehatControlRow}>
+                  <div className={style.satusehatField}>
+                    <label className={style.satusehatLabel}>Bulan</label>
+                    <div className={style.satusehatInputWrap}>
+                      <FaCalendarAlt className={style.satusehatInputIcon} />
+                      <select
+                        className={style.satusehatSelect}
+                        value={bulan}
+                        onChange={(e) => setBulan(e.target.value)}
+                      >
+                        {months.map((value) => (
+                          <option key={value.value} value={value.value}>
+                            {value.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className={style.satusehatFieldSmall}>
+                    <label className={style.satusehatLabel}>Tahun</label>
+                    <div className={style.satusehatInputWrap}>
+                      <FaCalendarAlt className={style.satusehatInputIcon} />
+                      <input
+                        type="number"
+                        className={style.satusehatInput}
+                        value={tahun}
+                        onChange={(e) => setTahun(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={style.satusehatActionGroup}>
+                    <div className={style.satusehatActionItem}>
+                      <button
+                        type="button"
+                        className={`${style.satusehatActionButton} ${style.satusehatFilterButton}`}
+                        onClick={handleSatusehatFilterClick}
+                      >
+                        <HiFilter size={18} /> FILTER
+                      </button>
+                    </div>
+
+                    <div className={style.satusehatActionItem}>
+                      <button
+                        type="button"
+                        className={`${style.satusehatActionButton} ${style.satusehatSyncButton}`}
+                        onClick={handleSatusehatSyncClick}
+                        disabled={isSyncingSatusehat || isSyncCooldown}
+                      >
+                        <FaSyncAlt size={16} />{" "}
+                        {isSyncingSatusehat
+                          ? "SYNCING..."
+                          : isSyncCooldown
+                          ? "SYNC DITAHAN"
+                          : "SYNC SATUSEHAT"}
+                      </button>
+                    </div>
+
+                    <div className={style.satusehatActionItem}>
+                      <button
+                        type="button"
+                        className={`${style.satusehatActionButton} ${style.satusehatExcelButton}`}
+                        onClick={handleDownloadExcelSatusehat}
+                      >
+                        <FaFileExcel size={16} /> DOWNLOAD EXCEL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={style.satusehatInfoGrid}>
+                <div className={style.satusehatInfoCard}>
+                  <h6 className={style.satusehatInfoTitle}>
+                    <FaInfoCircle /> KETERANGAN TOMBOL
+                  </h6>
+                  <div className={style.satusehatLegendItem}>
+                    <span className={`${style.satusehatLegendBadge} ${style.satusehatFilterButton}`}>
+                      <HiFilter size={14} />
+                    </span>
+                    <span>
+                      <strong>FILTER</strong> : Menampilkan data dari database SIRS Online
+                    </span>
+                  </div>
+                  <div className={style.satusehatLegendItem}>
+                    <span className={`${style.satusehatLegendBadge} ${style.satusehatSyncButton}`}>
+                      <FaSyncAlt size={12} />
+                    </span>
+                    <span>
+                      <strong>SYNC SATUSEHAT</strong> : Mengambil data terbaru dari SATUSEHAT
+                    </span>
+                  </div>
+                  <div className={style.satusehatLegendItem}>
+                    <span className={`${style.satusehatLegendBadge} ${style.satusehatExcelButton}`}>
+                      <FaFileExcel size={12} />
+                    </span>
+                    <span>
+                      <strong>DOWNLOAD EXCEL</strong> : Mengunduh data hasil filter
+                    </span>
+                  </div>
+                </div>
+
+                <div className={style.satusehatInfoCard}>
+                  <h6 className={style.satusehatInfoTitle}>
+                    <FaSyncAlt /> STATUS SINKRONISASI
+                  </h6>
+                  <div className={style.satusehatStatusItem}>
+                    <FaCalendarAlt className={style.satusehatStatusIcon} />
+                    <span>
+                      Terakhir Sync : <strong>{formatLastSyncAt(lastSyncAt)}</strong>
+                    </span>
+                  </div>
+                  <div className={style.satusehatStatusItem}>
+                    <FaClock className={style.satusehatStatusIcon} />
+                    <span>
+                      Interval Sync : <strong>{syncCooldownMinutes} Menit</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className={style.satusehatInfoCard}>
+                  <h6 className={style.satusehatInfoTitle}>
+                    <FaDatabase /> SUMBER DATA
+                  </h6>
+                  <div className={style.satusehatSourceRow}>
+                    <p className={style.satusehatSourceText}>
+                      {dataRLSatusehat.length > 0
+                        ? "Data yang ditampilkan berasal dari database SIRS Online."
+                        : "Belum ada data yang ditampilkan. Gunakan filter atau sync terlebih dahulu."}
+                    </p>
+                    <FaDatabase className={style.satusehatSourceIcon} />
+                  </div>
+                </div>
+              </div>
+
+              {filterLabelSatusehat.length > 0 ? (
+                <div className={style.filterLabel}>
+                  filtered by{" "}
+                  {filterLabelSatusehat
+                    .map((value) => {
+                      return value;
+                    })
+                    .join(", ")}
+                </div>
+              ) : (
+                <></>
+              )}
+
+              <div className={style["table-container"]}>
+                <div className="table-responsive">
+                  <table className={style.table}>
+                    <thead className={style.thead}>
+                      <tr>
+                        <th className={style["sticky-header"]}>No.</th>
+                        <th className={style["sticky-header"]}>Kategori</th>
+                        <th className={style["sticky-header"]}>
+                          Jenis Pelayanan
+                        </th>
+                        <th>Total Pasien Rujukan</th>
+                        <th>Total Pasien Non Rujukan</th>
+                        <th>Tindak Lanjut Dirawat</th>
+                        <th>Tindak Lanjut Dirujuk</th>
+                        <th>Tindak Lanjut Pulang</th>
+                        <th>Mati di IGD (L)</th>
+                        <th>Mati di IGD (P)</th>
+                        <th>DOA (L)</th>
+                        <th>DOA (P)</th>
+                        <th>Luka-luka (L)</th>
+                        <th>Luka-luka (P)</th>
+                        <th>False Emergency</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(Array.isArray(dataRLSatusehat)
+                        ? dataRLSatusehat
+                        : []
+                      ).length > 0 ? (
+                        (Array.isArray(dataRLSatusehat)
+                          ? dataRLSatusehat
+                          : []
+                        ).map((value, index) => (
+                          <tr
+                            key={`${value.kategori || ""}-${value.jenis_pelayanan || ""}-${index}`}
+                          >
+                            <td className={style["sticky-column"]}>
+                              {index + 1}
+                            </td>
+                            <td
+                              className={style["sticky-column"]}
+                              style={{ textAlign: "left" }}
+                            >
+                              {value.kategori}
+                            </td>
+                            <td style={{ textAlign: "left" }}>
+                              {value.jenis_pelayanan}
+                            </td>
+                            <td>{value.total_pasien_rujukan || 0}</td>
+                            <td>{value.total_pasien_non_rujukan || 0}</td>
+                            <td>{value.tindak_lanjut_dirawat || 0}</td>
+                            <td>{value.tindak_lanjut_dirujuk || 0}</td>
+                            <td>{value.tindak_lanjut_pulang || 0}</td>
+                            <td>{value.mati_di_igd_laki_laki || 0}</td>
+                            <td>{value.mati_di_igd_perempuan || 0}</td>
+                            <td>{value.doa_laki_laki || 0}</td>
+                            <td>{value.doa_perempuan || 0}</td>
+                            <td>{value.luka_luka_laki_laki || 0}</td>
+                            <td>{value.luka_luka_perempuan || 0}</td>
+                            <td>{value.false_emergency || 0}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={15} style={{ textAlign: "center" }}>
+                            Tidak ada data.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
           </div>
         </div>
       </div>
