@@ -18,6 +18,7 @@ import { getStatusSatset } from "../../api/status_satset.js";
 import { getDataSatusehat } from "../../api/rlLimasatuSatusehat.js";
 import { FaSlidersH, FaDownload, FaSync } from "react-icons/fa";
 import Spinner from "react-bootstrap/Spinner";
+import CryptoJS from "crypto-js";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -236,6 +237,22 @@ function TabOne() {
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
+      }
+
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
       }
       return config;
     },
@@ -2708,7 +2725,7 @@ function TabTwo() {
   };
 
   const getPageData = async (requestedPage = 1, requestedLimit = limit) => {
-    setDataRL([]); // 🔥 reset dulu
+    setDataRL([]);
 
     const config2 = {
       headers: {
@@ -2750,9 +2767,9 @@ function TabTwo() {
 
       const current = mapICD.get(icd);
 
-      current.total_kunjungan.male += item.male_visits;
-      current.total_kunjungan.female += item.female_visits;
-      current.total_kunjungan.total += item.total_visits;
+      current.total_kunjungan.male = item.male_visits;
+      current.total_kunjungan.female = item.female_visits;
+      current.total_kunjungan.total = item.total_visits;
 
       current.umur.push({
         age_group: item.age_groups_satusehat?.name || "-",

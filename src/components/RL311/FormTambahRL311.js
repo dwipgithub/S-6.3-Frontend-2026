@@ -11,6 +11,7 @@ import Table from "react-bootstrap/Table";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 //import { Link } from 'react-router-dom'
 import { IoArrowBack } from "react-icons/io5";
+import CryptoJS from "crypto-js";
 
 const FormTambahRL311 = () => {
   const [namaRS, setNamaRS] = useState("");
@@ -79,6 +80,23 @@ const FormTambahRL311 = () => {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+      }
+
       return config;
     },
     (error) => {

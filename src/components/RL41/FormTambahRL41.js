@@ -10,6 +10,7 @@ import Table from "react-bootstrap/Table";
 import { IoArrowBack } from "react-icons/io5";
 import { Spinner } from "react-bootstrap";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 
 const FormTambahRL41 = () => {
   const [tahun, setTahun] = useState("");
@@ -54,7 +55,7 @@ const FormTambahRL41 = () => {
 
   const today = new Date();
   const currentYear = today.getFullYear();
-  
+
   const years = [];
   for (let y = startYear; y <= currentYear; y++) {
     years.push(y);
@@ -100,6 +101,23 @@ const FormTambahRL41 = () => {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+      }
+
       return config;
     },
     (error) => {
