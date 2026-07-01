@@ -13,6 +13,7 @@ import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import { getJenisPengunjungName, getSafeDataRL } from "./rl34Helpers";
 import CryptoJS from "crypto-js";
 
 const RL34 = () => {
