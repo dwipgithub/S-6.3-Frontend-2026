@@ -25,6 +25,9 @@ import {
   FaDatabase,
   FaCalendarAlt,
 } from "react-icons/fa";
+import * as XLSX from "xlsx";
+import { SiMicrosoftexcel } from "react-icons/si";
+import { FaFilter } from "react-icons/fa";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -1867,6 +1870,7 @@ function TabTwo() {
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
   const pollingRef = useRef(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     refreshToken();
@@ -2165,6 +2169,211 @@ function TabTwo() {
     </div>
   );
 
+  const handleDownloadExcel = async () => {
+    if (!isFilterApplied) {
+      toast("Terapkan filter terlebih dahulu", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+
+    try {
+      // ── Step 1: Fetch halaman pertama, pakai limit max (200) ──
+      const MAX_LIMIT = 200;
+      const firstRes = await axiosJWT.get(
+        "/apisirs6v2/rlempattitiksatusatusehat",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            rsId: user.satKerId,
+            periode: `${tahun}-${bulan}`,
+            page: 1,
+            limit: MAX_LIMIT,
+          },
+        },
+      );
+
+      const { totalPages: tp } = firstRes.data.pagination;
+      let allData = [...(firstRes.data.data ?? [])];
+
+      // ── Step 2: Fetch sisa halaman secara paralel ──
+      if (tp > 1) {
+        const remainingPages = Array.from({ length: tp - 1 }, (_, i) => i + 2);
+        const results = await Promise.all(
+          remainingPages.map((p) =>
+            axiosJWT.get("/apisirs6v2/rlempattitiksatusatusehat", {
+              headers: { Authorization: `Bearer ${token}` },
+              params: {
+                rsId: user.satKerId,
+                periode: `${tahun}-${bulan}`,
+                page: p,
+                limit: MAX_LIMIT,
+              },
+            }),
+          ),
+        );
+        results.forEach((r) => allData.push(...(r.data.data ?? [])));
+      }
+
+      // ── Step 3: Susun header ──
+      const headers = [
+        "No",
+        "Kode ICD-10",
+        "Diagnosis Penyakit",
+        // 25 kelompok umur × L & P
+        "< 1 Jam L",
+        "< 1 Jam P",
+        "1-23 Jam L",
+        "1-23 Jam P",
+        "1-7 Hari L",
+        "1-7 Hari P",
+        "8-28 Hari L",
+        "8-28 Hari P",
+        "29 Hari-<3 Bln L",
+        "29 Hari-<3 Bln P",
+        "3-<6 Bln L",
+        "3-<6 Bln P",
+        "6-11 Bln L",
+        "6-11 Bln P",
+        "1-4 Th L",
+        "1-4 Th P",
+        "5-9 Th L",
+        "5-9 Th P",
+        "10-14 Th L",
+        "10-14 Th P",
+        "15-19 Th L",
+        "15-19 Th P",
+        "20-24 Th L",
+        "20-24 Th P",
+        "25-29 Th L",
+        "25-29 Th P",
+        "30-34 Th L",
+        "30-34 Th P",
+        "35-39 Th L",
+        "35-39 Th P",
+        "40-44 Th L",
+        "40-44 Th P",
+        "45-49 Th L",
+        "45-49 Th P",
+        "50-54 Th L",
+        "50-54 Th P",
+        "55-59 Th L",
+        "55-59 Th P",
+        "60-64 Th L",
+        "60-64 Th P",
+        "65-69 Th L",
+        "65-69 Th P",
+        "70-74 Th L",
+        "70-74 Th P",
+        "75-79 Th L",
+        "75-79 Th P",
+        "80-84 Th L",
+        "80-84 Th P",
+        "≥85 Th L",
+        "≥85 Th P",
+        // Keluar Hidup/Mati
+        "Keluar Hidup/Mati L",
+        "Keluar Hidup/Mati P",
+        "Keluar Hidup/Mati Total",
+        // Keluar Mati
+        "Keluar Mati L",
+        "Keluar Mati P",
+        "Keluar Mati Total",
+      ];
+
+      // ── Step 4: Susun baris data ──
+      const rows = allData.map((v, i) => [
+        i + 1,
+        v.kode_icd,
+        v.diagnosis,
+        v.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
+        v.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
+        v.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
+        v.jmlh_pas_hidup_mati_umur_gen_1_23jam_p,
+        v.jmlh_pas_hidup_mati_umur_gen_1_7hr_l,
+        v.jmlh_pas_hidup_mati_umur_gen_1_7hr_p,
+        v.jmlh_pas_hidup_mati_umur_gen_8_28hr_l,
+        v.jmlh_pas_hidup_mati_umur_gen_8_28hr_p,
+        v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l,
+        v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p,
+        v.jmlh_pas_hidup_mati_umur_gen_3_6bln_l,
+        v.jmlh_pas_hidup_mati_umur_gen_3_6bln_p,
+        v.jmlh_pas_hidup_mati_umur_gen_6_11bln_l,
+        v.jmlh_pas_hidup_mati_umur_gen_6_11bln_p,
+        v.jmlh_pas_hidup_mati_umur_gen_1_4th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_1_4th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_5_9th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_5_9th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_10_14th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_10_14th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_15_19th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_15_19th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_20_24th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_20_24th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_25_29th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_25_29th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_30_34th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_30_34th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_35_39th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_35_39th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_40_44th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_40_44th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_45_49th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_45_49th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_50_54th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_50_54th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_55_59th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_55_59th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_60_64th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_60_64th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_65_69th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_65_69th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_70_74th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_70_74th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_75_79th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_75_79th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_80_84th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_80_84th_p,
+        v.jmlh_pas_hidup_mati_umur_gen_lebih85th_l,
+        v.jmlh_pas_hidup_mati_umur_gen_lebih85th_p,
+        v.keluar_hidup_mati_l,
+        v.keluar_hidup_mati_p,
+        v.keluar_hidup_mati_total,
+        v.keluar_mati_l,
+        v.keluar_mati_p,
+        v.keluar_mati_total,
+      ]);
+
+      // ── Step 5: Generate & trigger download ──
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+      // Auto-width kolom (opsional tapi bagus)
+      ws["!cols"] = headers.map((h, i) =>
+        i === 2 ? { wch: 35 } : { wch: Math.max(h.length + 2, 8) },
+      );
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, `RL4.1 ${tahun}-${bulan}`);
+      XLSX.writeFile(wb, `RL4.1_${tahun}-${bulan}.xlsx`);
+
+      toast("Download berhasil!", {
+        type: "success",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    } catch (err) {
+      console.error(err);
+      toast("Gagal download Excel", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div
       className="container"
@@ -2372,7 +2581,7 @@ function TabTwo() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    <FaSlidersH size={14} /> FILTER
+                    <FaFilter size={14} /> FILTER
                   </button>
                   {/* <div
                     style={{
@@ -2452,9 +2661,15 @@ function TabTwo() {
                   </div> */}
                 </div>
 
-                {/* DOWNLOAD EXCEL */}
                 <div style={{ textAlign: "center" }}>
                   <button
+                    onClick={handleDownloadExcel}
+                    disabled={!isFilterApplied || isDownloading}
+                    title={
+                      !isFilterApplied
+                        ? "Terapkan filter terlebih dahulu"
+                        : "Download semua data ke Excel"
+                    }
                     style={{
                       background: "#059669",
                       color: "#fff",
@@ -2463,27 +2678,29 @@ function TabTwo() {
                       padding: "9px 18px",
                       fontWeight: 700,
                       fontSize: 13,
-                      cursor: "pointer",
+                      cursor:
+                        isFilterApplied && !isDownloading
+                          ? "pointer"
+                          : "not-allowed",
+                      opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
                       display: "flex",
                       alignItems: "center",
                       gap: 7,
                       whiteSpace: "nowrap",
                     }}
                   >
-                    <HiSaveAs size={15} /> DOWNLOAD EXCEL
+                    {isDownloading ? (
+                      <>
+                        <Spinner animation="border" size="sm" /> Mengunduh...
+                      </>
+                    ) : (
+                      <>
+                        <>
+                          <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
+                        </>
+                      </>
+                    )}
                   </button>
-                  {/* <div
-                    style={{
-                      fontSize: 10,
-                      color: "#94a3b8",
-                      marginTop: 5,
-                      maxWidth: 140,
-                      lineHeight: 1.4,
-                      textAlign: "center",
-                    }}
-                  >
-                    Mengunduh data hasil filter
-                  </div> */}
                 </div>
               </div>
             </div>
@@ -2542,7 +2759,7 @@ function TabTwo() {
 
               {[
                 {
-                  icon: <FaSlidersH size={11} />,
+                  icon: <FaFilter size={11} />,
                   bg: "#1d4ed8",
                   label: "FILTER",
                   desc: "Menampilkan data dari database SIRS Online",
@@ -2554,7 +2771,7 @@ function TabTwo() {
                   desc: "Mengambil data terbaru dari SATUSEHAT",
                 },
                 {
-                  icon: <HiSaveAs size={12} />,
+                  icon: <SiMicrosoftexcel size={15} />,
                   bg: "#059669",
                   label: "DOWNLOAD EXCEL",
                   desc: "Mengunduh data hasil filter",
