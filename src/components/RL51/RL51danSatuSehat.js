@@ -19,6 +19,16 @@ import { getDataSatusehat } from "../../api/rlLimasatuSatusehat.js";
 import { FaSlidersH, FaDownload, FaSync } from "react-icons/fa";
 import Spinner from "react-bootstrap/Spinner";
 import CryptoJS from "crypto-js";
+import {
+  FaSyncAlt,
+  FaFileExcel,
+  FaInfoCircle,
+  FaDatabase,
+  FaCalendarAlt,
+} from "react-icons/fa";
+import * as XLSX from "xlsx";
+import { SiMicrosoftexcel } from "react-icons/si";
+import { FaFilter } from "react-icons/fa";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -2524,7 +2534,7 @@ function TabOne() {
 
 function TabTwo() {
   const [bulan, setBulan] = useState("01");
-  const [tahun, setTahun] = useState("2025");
+  const [tahun, setTahun] = useState(new Date().getFullYear());
   const [daftarBulan, setDaftarBulan] = useState([]);
   const [filterLabel, setFilterLabel] = useState([]);
   const [rumahSakit, setRumahSakit] = useState("");
@@ -2534,29 +2544,73 @@ function TabTwo() {
   const [dataRL, setDataRL] = useState([]);
   const [token, setToken] = useState("");
   const [expire, setExpire] = useState("");
-  const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
   const navigate = useNavigate();
   const tableRef = useRef(null);
-  const [namafile, setNamaFile] = useState("");
   const { CSRFToken } = useCSRFTokenContext();
-  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20); // default limit, bisa kamu sesuaikan
+  const [limit] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
-  const [initialDataLoaded, setInitialDataLoaded] = React.useState(false);
-  const [masterUmur, setMasterUmur] = React.useState([]);
-  const [sudahFilter, setSudahFilter] = useState(false);
+  const [masterUmur, setMasterUmur] = useState([]);
+  const [sync, setSync] = useState({});
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+  const [loadingTable, setLoadingTable] = useState(false);
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const [isDownloading, setIsDownloading] = useState(false);
+  const pollingRef = useRef(null);
+  const MANUAL_SYNC_COOLDOWN = 5; // menit
 
   useEffect(() => {
     refreshToken();
     getBulan();
-    getMasterUmur();
+    return () => clearInterval(pollingRef.current); // cleanup polling saat unmount
   }, []);
 
+  // Muat pilihan lokasi (provinsi/kabkota/rumah sakit) sesuai jenis user,
+  // menggantikan logic handleShow() lama yang dulu dipanggil saat modal dibuka.
   useEffect(() => {
-    setInitialDataLoaded(false);
-  }, [bulan, tahun, rumahSakit]);
+    if (!user || !user.jenisUserId) return;
+    const { jenisUserId, satKerId } = user;
+    switch (jenisUserId) {
+      case 1:
+        getProvinsi();
+        break;
+      case 2:
+        getKabKota(satKerId);
+        break;
+      case 3:
+        getRumahSakit(satKerId);
+        break;
+      case 4:
+        showRumahSakit(satKerId);
+        break;
+      default:
+        break;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.jenisUserId]);
+
+  useEffect(() => {
+    if (token) getMasterUmur();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  useEffect(() => {
+    setNow(Date.now());
+    if (!sync.lastSync || sync.isUpdating) return;
+
+    const elapsed = (Date.now() - new Date(sync.lastSync).getTime()) / 60000;
+    if (elapsed >= MANUAL_SYNC_COOLDOWN) return;
+
+    const remainingMs = (MANUAL_SYNC_COOLDOWN - elapsed) * 60 * 1000;
+    const timeout = setTimeout(() => setNow(Date.now()), remainingMs);
+    return () => clearTimeout(timeout);
+  }, [sync.lastSync, sync.isUpdating]);
+
+  useEffect(() => {
+    setIsManualSyncing(false);
+  }, [sync]);
 
   const refreshToken = async () => {
     try {
@@ -2568,7 +2622,6 @@ function TabTwo() {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
-      showRumahSakit(decoded.satKerId);
       setExpire(decoded.exp);
       setUser(decoded);
     } catch (error) {
@@ -2583,85 +2636,56 @@ function TabTwo() {
     async (config) => {
       const currentDate = new Date();
       if (expire * 1000 < currentDate.getTime()) {
-        const customConfig = {
-          headers: {
-            "XSRF-TOKEN": CSRFToken,
-          },
-        };
-        const response = await axios.get("/apisirs6v2/token", customConfig);
+        const response = await axios.get("/apisirs6v2/token", {
+          headers: { "XSRF-TOKEN": CSRFToken },
+        });
         config.headers.Authorization = `Bearer ${response.data.accessToken}`;
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase(),
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET,
+        ).toString();
+
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+        config.headers["XSRF-TOKEN"] = CSRFToken;
+      }
+
       return config;
     },
-    (error) => {
-      return Promise.reject(error);
-    },
+    (error) => Promise.reject(error),
   );
 
-  const getBulan = async () => {
-    const results = [];
-    results.push({
-      key: "Januari",
-      value: "01",
-    });
-    results.push({
-      key: "Febuari",
-      value: "02",
-    });
-    results.push({
-      key: "Maret",
-      value: "03",
-    });
-    results.push({
-      key: "April",
-      value: "04",
-    });
-    results.push({
-      key: "Mei",
-      value: "05",
-    });
-    results.push({
-      key: "Juni",
-      value: "06",
-    });
-    results.push({
-      key: "Juli",
-      value: "07",
-    });
-    results.push({
-      key: "Agustus",
-      value: "08",
-    });
-    results.push({
-      key: "September",
-      value: "09",
-    });
-    results.push({
-      key: "Oktober",
-      value: "10",
-    });
-    results.push({
-      key: "November",
-      value: "11",
-    });
-    results.push({
-      key: "Desember",
-      value: "12",
-    });
-
-    setDaftarBulan([...results]);
+  const getBulan = () => {
+    setDaftarBulan([
+      { key: "Januari", value: "01" },
+      { key: "Februari", value: "02" },
+      { key: "Maret", value: "03" },
+      { key: "April", value: "04" },
+      { key: "Mei", value: "05" },
+      { key: "Juni", value: "06" },
+      { key: "Juli", value: "07" },
+      { key: "Agustus", value: "08" },
+      { key: "September", value: "09" },
+      { key: "Oktober", value: "10" },
+      { key: "November", value: "11" },
+      { key: "Desember", value: "12" },
+    ]);
   };
 
-  const bulanChangeHandler = (e) => {
-    setBulan(e.target.value);
-  };
-
-  const tahunChangeHandler = (event) => {
-    setTahun(event.target.value);
-  };
+  const bulanChangeHandler = (e) => setBulan(e.target.value);
+  const tahunChangeHandler = (e) => setTahun(e.target.value);
 
   const provinsiChangeHandler = (e) => {
     const provinsiId = e.target.value;
@@ -2681,96 +2705,90 @@ function TabTwo() {
   const getRumahSakit = async (kabKotaId) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          kabKotaId: kabKotaId,
-        },
+        headers: { Authorization: `Bearer ${token}` },
+        params: { kabKotaId },
       });
       setDaftarRumahSakit(response.data.data);
-    } catch (error) {}
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const showRumahSakit = async (id) => {
     try {
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       setRumahSakit(response.data.data);
-    } catch (error) {}
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const getInitialData = async () => {
-    const customConfig = {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      params: {
-        rsId: rumahSakit.id,
-        periode: `${tahun}-${bulan}`,
-      },
-    };
-    const results = await axiosJWT.get(
-      "/apisirs6v2/rllimatitiksatusatusehat",
-      customConfig,
-    );
-    // proses results jika perlu
-
-    setInitialDataLoaded(true);
+  const getProvinsi = async () => {
+    try {
+      const response = await axiosJWT.get("/apisirs6v2/provinsi", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDaftarProvinsi(response.data.data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const getPageData = async (requestedPage = 1, requestedLimit = limit) => {
-    setDataRL([]);
+  const getKabKota = async (provinsiId) => {
+    try {
+      const response = await axiosJWT.get("/apisirs6v2/kabkota", {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { provinsiId },
+      });
+      setDaftarKabKota(response.data.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
-    const config2 = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      params: {
-        rsId: rumahSakit.id,
-        periode: `${tahun}-${bulan}`,
-        page: requestedPage,
-        limit: requestedLimit,
-      },
-    };
+  const getMasterUmur = async () => {
+    try {
+      const res = await axiosJWT.get("/apisirs6v2/getMasterumursatusehat", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMasterUmur(res.data.data);
+    } catch (error) {
+      console.error("Gagal load master umur", error);
+    }
+  };
 
-    const responseShow = await axiosJWT.get(
-      "/apisirs6v2/rllimatitiksatusatusehatpage",
-      config2,
-    );
+  const transformDataWithMasterUmur = (groupedData, masterUmurList) => {
+    return groupedData.map((item) => {
+      const umurMap = {};
+      masterUmurList.forEach((umur) => {
+        umurMap[umur.name] = 0;
+      });
+      item.umur.forEach((u) => {
+        const ageName = u.age_group || "-";
+        umurMap[ageName] = u.kunjungan_baru.total ?? 0;
+      });
+      return { ...item, umurMap };
+    });
+  };
 
-    const rawData = responseShow.data.data;
-    const { pages } = responseShow.data.pagination || {};
-
-    // Transformasi data supaya group per ICD 10
+  const groupByICD = (rawData) => {
     const mapICD = new Map();
-
     rawData.forEach((item) => {
       const icd = item.icd_10;
       if (!mapICD.has(icd)) {
         mapICD.set(icd, {
           icd_10: icd,
           diagnosis: item.diagnosis,
-          total_kunjungan: {
-            male: 0,
-            female: 0,
-            total: 0,
-          },
+          total_kunjungan: { male: 0, female: 0, total: 0 },
           umur: [],
         });
       }
-
       const current = mapICD.get(icd);
-
       current.total_kunjungan.male = item.male_visits;
       current.total_kunjungan.female = item.female_visits;
       current.total_kunjungan.total = item.total_visits;
-
       current.umur.push({
         age_group: item.age_groups_satusehat?.name || "-",
         kunjungan_baru: {
@@ -2780,708 +2798,1204 @@ function TabTwo() {
         },
       });
     });
-
-    const groupedData = Array.from(mapICD.values());
-    const finalData = transformDataWithMasterUmur(groupedData, masterUmur);
-    setDataRL(finalData);
-    setPage(requestedPage);
-    setTotalPages(pages || 1);
+    return Array.from(mapICD.values());
   };
 
-  const getRL = async (e, requestedPage = 1, requestedLimit = limit) => {
-    if (e) e.preventDefault();
+  const fetchData = async (
+    pageNumber = 1,
+    isBackground = false,
+    currentToken = token,
+  ) => {
+    if (!currentToken || !rumahSakit?.id) return;
+    if (!isBackground) setLoadingTable(true);
 
-    if (!rumahSakit) {
-      toast(`Rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
+    try {
+      const res = await axiosJWT.get("/apisirs6v2/rllimatitiksatusatusehat", {
+        headers: { Authorization: `Bearer ${currentToken}` },
+        params: {
+          rsId: rumahSakit.id,
+          periode: `${tahun}-${bulan}`,
+          page: pageNumber,
+          limit,
+        },
       });
-      return;
-    }
 
-    const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
-    setFilterLabel(filter);
-    handleClose();
+      const rawData = res.data.data ?? [];
+      const newSync = res.data.sync ?? {};
+      const { pages } = res.data.pagination || {};
 
-    setLoading(true);
-    try {
-      if (!initialDataLoaded) {
-        await getInitialData(); // hanya dipanggil sekali
-      }
-      await getPageData(requestedPage, requestedLimit); // dipanggil setiap kali request page
-    } catch (error) {
-      const detailMessage =
-        error.response?.data?.detail || error.message || "Terjadi kesalahan";
-      toast.error(detailMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const groupedData = groupByICD(rawData);
+      const finalData = transformDataWithMasterUmur(groupedData, masterUmur);
 
-  const getDataRL = async (e, requestedPage = 1, requestedLimit = limit) => {
-    if (e) e.preventDefault();
+      setDataRL(finalData);
+      setSync(newSync);
+      setPage(pageNumber);
+      setTotalPages(pages || 1);
 
-    if (!rumahSakit) {
-      toast(`Rumah sakit harus dipilih`, {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-
-    const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
-    setFilterLabel(filter);
-    handleClose();
-
-    setLoading(true);
-    try {
-      //   if (!initialDataLoaded) {
-      //     // await getInitialData(); // hanya dipanggil sekali
-      //   }
-      await getPageData(requestedPage, requestedLimit); // dipanggil setiap kali request page
-    } catch (error) {
-      const detailMessage =
-        error.response?.data?.detail || error.message || "Terjadi kesalahan";
-      toast.error(detailMessage);
-    } finally {
-      setLoading(false);
-      setSudahFilter(true);
-    }
-  };
-
-  const tarikDataSatusehat = async () => {
-    try {
-      setLoading(true);
-      const response = await getDataSatusehat(
-        axiosJWT,
-        token,
-        rumahSakit.id,
-        tahun,
-        bulan,
-      );
-
-      if (response.status) {
-        toast.success(response.message);
-        getDataRL();
-      } else {
-        toast.error("Status SatuSehat : " + response.message);
+      if (
+        !newSync.isUpdating &&
+        (newSync.status === "success" || newSync.status === "failed")
+      ) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+        setLoadingTable(false);
       }
     } catch (err) {
-      toast.error("Gagal menarik data Satusehat.");
-    } finally {
-      setLoading(false);
+      console.error(err);
+      toast.error("Gagal mengambil data");
     }
+
+    if (!isBackground) setLoadingTable(false);
   };
 
-  const fetchData = (newPage) => {
-    getRL(null, newPage, limit);
+  const startPolling = (currentToken) => {
+    clearInterval(pollingRef.current);
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await axiosJWT.get("/apisirs6v2/rllimatitiksatusatusehat", {
+          headers: { Authorization: `Bearer ${currentToken}` },
+          params: {
+            rsId: rumahSakit.id,
+            periode: `${tahun}-${bulan}`,
+            page: 1,
+            limit,
+          },
+        });
+
+        const newSync = res.data.sync ?? {};
+        setSync(newSync);
+
+        if (
+          !newSync.isUpdating &&
+          (newSync.status === "success" || newSync.status === "failed")
+        ) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          await fetchData(1, false, currentToken);
+          setLoadingTable(false);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 4000);
   };
 
-  const getMasterUmur = async () => {
-    try {
-      const config2 = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
+  const getRLSatusehat = async (e) => {
+    if (e) e.preventDefault();
 
-      const res = await axiosJWT.get(
-        "/apisirs6v2/getMasterumursatusehat",
-        config2,
-      );
-
-      setMasterUmur(res.data.data); // asumsi master umur di res.data.data
-    } catch (error) {
-      console.error("Gagal load master umur", error);
+    if (!rumahSakit?.id) {
+      toast("Rumah sakit harus dipilih", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
     }
-  };
-
-  const transformDataWithMasterUmur = (groupedData, masterUmur) => {
-    return groupedData.map((item) => {
-      // buat objek umur lengkap dengan default 0
-      const umurMap = {};
-      masterUmur.forEach((umur) => {
-        umurMap[umur.name] = 0; // default 0 kunjungan total
+    if (!tahun || !bulan) {
+      toast("Pilih Bulan & Tahun", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
       });
+      return;
+    }
 
-      // isi data umur dari item.umur
-      item.umur.forEach((u) => {
-        const ageName = u.age_group || "-";
-        umurMap[ageName] = u.kunjungan_baru.total ?? 0;
-      });
+    const periode = `${tahun}-${bulan}`;
+    setFilterLabel([`Rumah Sakit: ${rumahSakit.nama}`, `Periode: ${periode}`]);
+    setIsFilterApplied(true);
+    setDataRL([]);
+    setLoadingTable(true);
 
-      return {
-        ...item,
-        umurMap, // ini yang akan dipakai di render
-      };
+    await fetchData(1, false, token);
+
+    setSync((prevSync) => {
+      if (
+        prevSync.isUpdating ||
+        prevSync.status === "never" ||
+        prevSync.status === "syncing"
+      ) {
+        setLoadingTable(true);
+        startPolling(token);
+      }
+      return prevSync;
     });
   };
 
-  const handleClose = () => setShow(false);
-
-  const handleShow = () => {
-    const jenisUserId = user.jenisUserId;
-    const satKerId = user.satKerId;
-    switch (jenisUserId) {
-      case 1:
-        getProvinsi();
-        setBulan(1);
-        setShow(true);
-        break;
-      case 2:
-        getKabKota(satKerId);
-        setBulan(1);
-        setShow(true);
-        break;
-      case 3:
-        getRumahSakit(satKerId);
-        setBulan(1);
-        setShow(true);
-        break;
-      case 4:
-        showRumahSakit(satKerId);
-        setBulan(1);
-        setShow(true);
-        break;
-      default:
-    }
-  };
-
-  const getProvinsi = async () => {
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      const results = await axiosJWT.get("/apisirs6v2/provinsi", customConfig);
-
-      const daftarProvinsi = results.data.data.map((value) => {
-        return value;
-      });
-
-      setDaftarProvinsi(daftarProvinsi);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const getKabKota = async (provinsiId) => {
-    try {
-      const customConfig = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          provinsiId: provinsiId,
-        },
-      };
-      const results = await axiosJWT.get("/apisirs6v2/kabkota", customConfig);
-
-      const daftarKabKota = results.data.data.map((value) => {
-        return value;
-      });
-
-      setDaftarKabKota(daftarKabKota);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const LoadingTable = ({ data, loading }) => {
-    let no = 0;
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
     return (
-      <>
-        <div className="table-container mt-2 mb-1 pb-2">
-          {loading && (
-            <div
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                backgroundColor: "rgba(255,255,255,0.7)",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                zIndex: 9999,
-                flexDirection: "column",
-              }}
-            >
-              <div className="spinner" />
-              <div
-                style={{
-                  marginTop: 10,
-                  fontWeight: "bold",
-                  color: "#007bff",
-                }}
-              >
-                Mohon Tunggu...
-              </div>
-            </div>
-          )}
-
-          <div style={{ overflowX: "auto" }}>
-            <Table
-              className={style.table}
-              striped
-              bordered
-              responsive
-              style={{
-                filter: loading ? "blur(2px)" : "none",
-                width: "500%",
-                minWidth: 900,
-              }}
-              ref={tableRef}
-            >
-              <thead>
-                <tr>
-                  <th
-                    rowSpan={3}
-                    style={{ verticalAlign: "middle", textAlign: "center" }}
-                  >
-                    No.
-                  </th>
-                  <th
-                    rowSpan={3}
-                    style={{ verticalAlign: "middle", textAlign: "center" }}
-                  >
-                    ICD 10
-                  </th>
-                  <th
-                    rowSpan={3}
-                    style={{
-                      verticalAlign: "middle",
-                      textAlign: "left",
-                      width: "300px",
-                    }}
-                  >
-                    Diagnosis
-                  </th>
-                  <th
-                    colSpan={masterUmur.length * 3}
-                    style={{ textAlign: "center" }}
-                  >
-                    Kunjungan Kasus Baru per Umur
-                  </th>
-
-                  <th colSpan={3} rowSpan={2} style={{ textAlign: "center" }}>
-                    Total Kunjungan
-                  </th>
-                </tr>
-                <tr>
-                  {masterUmur.map((umur) => (
-                    <th
-                      key={umur.name}
-                      colSpan={3}
-                      style={{ textAlign: "center" }}
-                    >
-                      {umur.name}
-                    </th>
-                  ))}
-                </tr>
-                <tr>
-                  {masterUmur.map((umur) => (
-                    <React.Fragment key={`${umur.name}-sub`}>
-                      <th style={{ textAlign: "center" }}>L</th>
-                      <th style={{ textAlign: "center" }}>P</th>
-                      <th style={{ textAlign: "center" }}>Total</th>
-                    </React.Fragment>
-                  ))}
-                  <th style={{ textAlign: "center" }}>Laki-laki</th>
-                  <th style={{ textAlign: "center" }}>Perempuan</th>
-                  <th style={{ textAlign: "center" }}>Total</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td
-                      colSpan={6 + masterUmur.length * 3}
-                      style={{ textAlign: "center", padding: "20px" }}
-                    >
-                      Loading...
-                    </td>
-                  </tr>
-                )}
-
-                {!loading && dataRL.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={6 + masterUmur.length * 3}
-                      style={{ textAlign: "center" }}
-                    >
-                      Tidak ada data
-                    </td>
-                  </tr>
-                )}
-
-                {!loading &&
-                  dataRL.map((item, idx) => (
-                    <tr key={item.icd_10} style={{ verticalAlign: "middle" }}>
-                      <td style={{ textAlign: "center" }}>
-                        {" "}
-                        {idx + 1 + (page - 1) * limit}
-                      </td>
-                      <td style={{ textAlign: "center" }}>{item.icd_10}</td>
-                      <td>{item.diagnosis}</td>
-                      {masterUmur.map((umur) => {
-                        const umurData = item.umur.find(
-                          (u) => u.age_group === umur.name,
-                        );
-                        return (
-                          <React.Fragment key={`${item.icd_10}-${umur.name}`}>
-                            <td style={{ textAlign: "center" }}>
-                              {umurData?.kunjungan_baru?.male ?? "0"}
-                            </td>
-                            <td style={{ textAlign: "center" }}>
-                              {umurData?.kunjungan_baru?.female ?? "0"}
-                            </td>
-                            <td style={{ textAlign: "center" }}>
-                              {umurData?.kunjungan_baru?.total ?? "0"}
-                            </td>
-                          </React.Fragment>
-                        );
-                      })}
-                      <td style={{ textAlign: "center" }}>
-                        {item.total_kunjungan?.male ?? "-"}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        {item.total_kunjungan?.female ?? "-"}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        {item.total_kunjungan?.total ?? "-"}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </Table>
-
-            {/* Pagination Controls */}
-            <div style={{ marginTop: 20, textAlign: "center" }}>
-              <button
-                onClick={() => fetchData(page - 1)}
-                disabled={page <= 1 || loading}
-                style={{ marginRight: 10 }}
-              >
-                Prev
-              </button>
-
-              <span>
-                Page {page} of {totalPages}
-              </span>
-
-              <button
-                onClick={() => fetchData(page + 1)}
-                disabled={page >= totalPages || loading}
-                style={{ marginLeft: 10 }}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
+      new Date(dateStr).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) +
+      " WIB"
     );
   };
 
-  return (
-    <div className="container">
-      <ToastContainer />
-      <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
-        <Modal.Header closeButton>
-          <Modal.Title>Filter</Modal.Title>
-        </Modal.Header>
+  const minutesSinceSync = sync.lastSync
+    ? (now - new Date(sync.lastSync).getTime()) / 60000
+    : null;
 
-        <form onSubmit={getDataRL}>
-          <Modal.Body>
-            {user.jenisUserId === 1 ? (
-              <>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="provinsi"
-                    id="provinsi"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => provinsiChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarProvinsi.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <label htmlFor="provinsi">Provinsi</label>
-                </div>
+  const canSync =
+    isFilterApplied &&
+    !sync.isUpdating &&
+    !isManualSyncing &&
+    (minutesSinceSync === null || minutesSinceSync >= MANUAL_SYNC_COOLDOWN);
 
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="kabKota"
-                    id="kabKota"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => kabKotaChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarKabKota.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <label htmlFor="kabKota">Kab/Kota</label>
-                </div>
+  const cooldownLeft =
+    minutesSinceSync !== null
+      ? Math.max(0, MANUAL_SYNC_COOLDOWN - minutesSinceSync).toFixed(1)
+      : null;
 
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarRumahSakit.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <label htmlFor="rumahSakit">Rumah Sakit</label>
-                </div>
-              </>
-            ) : (
-              <></>
-            )}
-            {user.jenisUserId === 2 ? (
-              <>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="kabKota"
-                    id="kabKota"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => kabKotaChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarKabKota.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <label htmlFor="kabKota">Kab/Kota</label>
-                </div>
+  const handleManualSync = async () => {
+    if (!canSync) return;
 
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarRumahSakit.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <label htmlFor="rumahSakit">Rumah Sakit</label>
-                </div>
-              </>
-            ) : (
-              <></>
-            )}
-            {user.jenisUserId === 3 ? (
-              <>
-                <div
-                  className="form-floating"
-                  style={{ width: "100%", paddingBottom: "5px" }}
-                >
-                  <select
-                    name="rumahSakit"
-                    id="rumahSakit"
-                    typeof="select"
-                    className="form-select"
-                    onChange={(e) => rumahSakitChangeHandler(e)}
-                  >
-                    <option key={0} value={0}>
-                      Pilih
-                    </option>
-                    {daftarRumahSakit.map((nilai) => {
-                      return (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <label htmlFor="rumahSakit">Rumah Sakit</label>
-                </div>
-              </>
-            ) : (
-              <></>
-            )}
-            <div
-              className="form-floating"
-              style={{ width: "70%", display: "inline-block" }}
-            >
-              <select
-                typeof="select"
-                className="form-control"
-                onChange={bulanChangeHandler}
-                required
+    setIsManualSyncing(true);
+    setLoadingTable(true);
+
+    try {
+      await axiosJWT.post(
+        "/apisirs6v2/rllimatitiksatusatusehat/sync",
+        { rsId: rumahSakit.id, periode: `${tahun}-${bulan}` },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "XSRF-TOKEN": CSRFToken,
+          },
+        },
+      );
+      startPolling(token);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal memulai sync");
+      setLoadingTable(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    if (!isFilterApplied || !rumahSakit?.id) {
+      toast("Terapkan filter terlebih dahulu", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+
+    try {
+      // ── Step 1: Fetch halaman pertama.
+      // NOTE: endpoint /rllimatitiksatusatusehat (getDataRL51WithSyncStatus)
+      // membalas 400 kalau limit terlalu besar (mis. 200), jadi pakai `limit`
+      // yang sama dengan yang dipakai fetchData() biasa — sudah terbukti valid.
+      const firstRes = await axiosJWT.get(
+        "/apisirs6v2/rllimatitiksatusatusehat",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            rsId: rumahSakit.id,
+            periode: `${tahun}-${bulan}`,
+            page: 1,
+            limit,
+          },
+        },
+      );
+
+      const { pages: tp } = firstRes.data.pagination || {};
+      let allRaw = [...(firstRes.data.data ?? [])];
+
+      // ── Step 2: Fetch sisa halaman secara paralel ──
+      if (tp > 1) {
+        const remainingPages = Array.from({ length: tp - 1 }, (_, i) => i + 2);
+        const results = await Promise.all(
+          remainingPages.map((p) =>
+            axiosJWT.get("/apisirs6v2/rllimatitiksatusatusehat", {
+              headers: { Authorization: `Bearer ${token}` },
+              params: {
+                rsId: rumahSakit.id,
+                periode: `${tahun}-${bulan}`,
+                page: p,
+                limit,
+              },
+            }),
+          ),
+        );
+        results.forEach((r) => allRaw.push(...(r.data.data ?? [])));
+      }
+
+      // ── Step 3: Group per ICD-10 (sama seperti tampilan tabel) ──
+      const groupedData = groupByICD(allRaw);
+      const finalData = transformDataWithMasterUmur(groupedData, masterUmur);
+
+      // ── Step 4: Susun header (kolom umur dinamis dari masterUmur) ──
+      const headers = ["No", "Kode ICD-10", "Diagnosis Penyakit"];
+      masterUmur.forEach((umur) => {
+        headers.push(`${umur.name} L`, `${umur.name} P`, `${umur.name} Total`);
+      });
+      headers.push(
+        "Total Kunjungan L",
+        "Total Kunjungan P",
+        "Total Kunjungan Total",
+      );
+
+      // ── Step 5: Susun baris data ──
+      const rows = finalData.map((item, i) => {
+        const row = [i + 1, item.icd_10, item.diagnosis];
+        masterUmur.forEach((umur) => {
+          const umurData = item.umur.find((u) => u.age_group === umur.name);
+          row.push(
+            umurData?.kunjungan_baru?.male ?? 0,
+            umurData?.kunjungan_baru?.female ?? 0,
+            umurData?.kunjungan_baru?.total ?? 0,
+          );
+        });
+        row.push(
+          item.total_kunjungan?.male ?? 0,
+          item.total_kunjungan?.female ?? 0,
+          item.total_kunjungan?.total ?? 0,
+        );
+        return row;
+      });
+
+      // ── Step 6: Generate & trigger download ──
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      ws["!cols"] = headers.map((h, i) =>
+        i === 2 ? { wch: 35 } : { wch: Math.max(h.length + 2, 8) },
+      );
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, `RL5.1 ${tahun}-${bulan}`);
+      XLSX.writeFile(wb, `RL5.1_${tahun}-${bulan}.xlsx`);
+
+      toast("Download berhasil!", {
+        type: "success",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    } catch (err) {
+      console.error(err);
+      toast("Gagal download Excel", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Komponen loading di dalam tabel (samakan dengan RL41)
+  const TableLoading = () => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "60px 0",
+        gap: 16,
+      }}
+    >
+      <Spinner animation="border" variant="primary" />
+      <p style={{ margin: 0, color: "#555", fontSize: 14 }}>
+        Sedang mengambil data dari SatuSehat, mohon tunggu...
+      </p>
+    </div>
+  );
+
+  const DataTable = ({ data, loadingTable: bgLoading }) => (
+    <div
+      className="table-container mt-2 mb-1 pb-2"
+      style={{ position: "relative" }}
+    >
+      {bgLoading && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(255,255,255,0.7)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 10,
+            flexDirection: "column",
+          }}
+        >
+          <Spinner animation="border" variant="primary" />
+        </div>
+      )}
+
+      <div style={{ overflowX: "auto" }}>
+        <Table
+          className={style.table}
+          striped
+          bordered
+          responsive
+          style={{
+            filter: bgLoading ? "blur(2px)" : "none",
+            width: "500%",
+            minWidth: 900,
+          }}
+          ref={tableRef}
+        >
+          <thead>
+            <tr>
+              <th
+                rowSpan={3}
+                style={{ verticalAlign: "middle", textAlign: "center" }}
               >
-                <option value="">Pilih Bulan</option>
-                {daftarBulan.map((bulan) => {
+                No.
+              </th>
+              <th
+                rowSpan={3}
+                style={{ verticalAlign: "middle", textAlign: "center" }}
+              >
+                ICD 10
+              </th>
+              <th
+                rowSpan={3}
+                style={{
+                  verticalAlign: "middle",
+                  textAlign: "left",
+                  width: "300px",
+                }}
+              >
+                Diagnosis
+              </th>
+              <th
+                colSpan={masterUmur.length * 3}
+                style={{ textAlign: "center" }}
+              >
+                Kunjungan Kasus Baru per Umur
+              </th>
+              <th colSpan={3} rowSpan={2} style={{ textAlign: "center" }}>
+                Total Kunjungan
+              </th>
+            </tr>
+            <tr>
+              {masterUmur.map((umur) => (
+                <th key={umur.name} colSpan={3} style={{ textAlign: "center" }}>
+                  {umur.name}
+                </th>
+              ))}
+            </tr>
+            <tr>
+              {masterUmur.map((umur) => (
+                <React.Fragment key={`${umur.name}-sub`}>
+                  <th style={{ textAlign: "center" }}>L</th>
+                  <th style={{ textAlign: "center" }}>P</th>
+                  <th style={{ textAlign: "center" }}>Total</th>
+                </React.Fragment>
+              ))}
+              <th style={{ textAlign: "center" }}>Laki-laki</th>
+              <th style={{ textAlign: "center" }}>Perempuan</th>
+              <th style={{ textAlign: "center" }}>Total</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {data.map((item, idx) => (
+              <tr key={item.icd_10} style={{ verticalAlign: "middle" }}>
+                <td style={{ textAlign: "center" }}>
+                  {idx + 1 + (page - 1) * limit}
+                </td>
+                <td style={{ textAlign: "center" }}>{item.icd_10}</td>
+                <td>{item.diagnosis}</td>
+                {masterUmur.map((umur) => {
+                  const umurData = item.umur.find(
+                    (u) => u.age_group === umur.name,
+                  );
                   return (
-                    <option
-                      key={bulan.value}
-                      name={bulan.key}
-                      value={bulan.value}
-                    >
-                      {bulan.key}
-                    </option>
+                    <React.Fragment key={`${item.icd_10}-${umur.name}`}>
+                      <td style={{ textAlign: "center" }}>
+                        {umurData?.kunjungan_baru?.male ?? "0"}
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        {umurData?.kunjungan_baru?.female ?? "0"}
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        {umurData?.kunjungan_baru?.total ?? "0"}
+                      </td>
+                    </React.Fragment>
                   );
                 })}
-              </select>
-              <label>Bulan</label>
-            </div>
-            <div
-              className="form-floating"
-              style={{ width: "30%", display: "inline-block" }}
+                <td style={{ textAlign: "center" }}>
+                  {item.total_kunjungan?.male ?? "-"}
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  {item.total_kunjungan?.female ?? "-"}
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  {item.total_kunjungan?.total ?? "-"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+
+        {totalPages > 1 && (
+          <div
+            style={{
+              padding: "12px 0",
+              display: "flex",
+              justifyContent: "center",
+              gap: 12,
+              borderTop: "1px solid #ddd",
+            }}
+          >
+            <button disabled={page <= 1} onClick={() => fetchData(page - 1)}>
+              ◀ Prev
+            </button>
+            <span>
+              Halaman {page} / {totalPages}
+            </span>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => fetchData(page + 1)}
             >
-              <input
-                name="tahun"
-                type="number"
-                className="form-control"
-                id="tahun"
-                placeholder="Tahun"
-                value={tahun}
-                onChange={(e) => tahunChangeHandler(e)}
-                disabled={false}
-              />
-              <label htmlFor="tahun">Tahun</label>
-            </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <div className="mt-3 mb-3">
-              <ToastContainer />
-              <button type="submit" className={style.btnPrimary}>
-                <HiSaveAs size={20} /> Terapkan
-              </button>
-            </div>
-          </Modal.Footer>
-        </form>
-      </Modal>
+              Next ▶
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      className="container"
+      style={{ marginTop: "0px", marginBottom: "70px" }}
+    >
+      <ToastContainer />
 
       <div className="row">
         <div className="col-md-12">
-          <div style={{ marginBottom: "10px" }}>
-            <button className={style.btnPrimary} onClick={handleShow}>
-              {/* <FaSlidersH /> */}
-              Filter
-            </button>
+          <div
+            style={{
+              background: "var(--color-background-primary, #fff)",
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+              padding: "16px 20px",
+              marginBottom: 14,
+            }}
+          >
+            <p
+              style={{
+                fontWeight: 700,
+                fontSize: 13,
+                color: "#1e293b",
+                margin: "0 0 14px 0",
+                letterSpacing: 0.2,
+              }}
+            >
+              Periode Data
+            </p>
 
-            {sudahFilter && (
-              <button
-                className={style.btnPrimary}
-                style={{ marginLeft: "10px" }}
-                onClick={tarikDataSatusehat}
-                disabled={loading}
-              >
-                {loading ? "Memproses..." : "Tarik Data"}
-              </button>
-            )}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              {/* Provinsi - hanya jenisUserId 1 */}
+              {user.jenisUserId === 1 && (
+                <div>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      color: "#64748b",
+                      display: "block",
+                      marginBottom: 5,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Provinsi
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 7,
+                      padding: "7px 10px",
+                      background: "#f8fafc",
+                      minWidth: 170,
+                    }}
+                  >
+                    <select
+                      onChange={provinsiChangeHandler}
+                      style={{
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        flex: 1,
+                        fontSize: 13,
+                        color: "#334155",
+                      }}
+                    >
+                      <option value={0}>Pilih</option>
+                      {daftarProvinsi.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
 
-            {/* <DownloadTableExcel
-              filename={namafile}
-              sheet="data RL 51"
-              currentTableRef={tableRef.current}
-            > */}
-            {/* <button
-                className="btn"
+              {/* Kab/Kota - jenisUserId 1 & 2 */}
+              {(user.jenisUserId === 1 || user.jenisUserId === 2) && (
+                <div>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      color: "#64748b",
+                      display: "block",
+                      marginBottom: 5,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Kab/Kota
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 7,
+                      padding: "7px 10px",
+                      background: "#f8fafc",
+                      minWidth: 170,
+                    }}
+                  >
+                    <select
+                      onChange={kabKotaChangeHandler}
+                      style={{
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        flex: 1,
+                        fontSize: 13,
+                        color: "#334155",
+                      }}
+                    >
+                      <option value={0}>Pilih</option>
+                      {daftarKabKota.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Rumah Sakit - jenisUserId 1, 2 & 3 */}
+              {(user.jenisUserId === 1 ||
+                user.jenisUserId === 2 ||
+                user.jenisUserId === 3) && (
+                <div>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      color: "#64748b",
+                      display: "block",
+                      marginBottom: 5,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Rumah Sakit
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 7,
+                      padding: "7px 10px",
+                      background: "#f8fafc",
+                      minWidth: 200,
+                    }}
+                  >
+                    <select
+                      onChange={rumahSakitChangeHandler}
+                      style={{
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        flex: 1,
+                        fontSize: 13,
+                        color: "#334155",
+                      }}
+                    >
+                      <option value={0}>Pilih</option>
+                      {daftarRumahSakit.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Bulan */}
+              <div>
+                <label
+                  style={{
+                    fontSize: 12,
+                    color: "#64748b",
+                    display: "block",
+                    marginBottom: 5,
+                    fontWeight: 500,
+                  }}
+                >
+                  Bulan
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 7,
+                    padding: "7px 10px",
+                    background: "#f8fafc",
+                    minWidth: 155,
+                  }}
+                >
+                  <FaCalendarAlt
+                    size={13}
+                    color="#94a3b8"
+                    style={{ marginRight: 7, flexShrink: 0 }}
+                  />
+                  <select
+                    value={bulan}
+                    onChange={bulanChangeHandler}
+                    style={{
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
+                      flex: 1,
+                      fontSize: 13,
+                      color: "#334155",
+                    }}
+                  >
+                    {daftarBulan.map((b) => (
+                      <option key={b.value} value={b.value}>
+                        {b.key}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Tahun */}
+              <div>
+                <label
+                  style={{
+                    fontSize: 12,
+                    color: "#64748b",
+                    display: "block",
+                    marginBottom: 5,
+                    fontWeight: 500,
+                  }}
+                >
+                  Tahun
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 7,
+                    padding: "7px 10px",
+                    background: "#f8fafc",
+                    width: 125,
+                  }}
+                >
+                  <FaCalendarAlt
+                    size={13}
+                    color="#94a3b8"
+                    style={{ marginRight: 7, flexShrink: 0 }}
+                  />
+                  <input
+                    type="number"
+                    value={tahun}
+                    onChange={tahunChangeHandler}
+                    style={{
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
+                      width: "100%",
+                      fontSize: 13,
+                      color: "#334155",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Tombol */}
+              <div
                 style={{
-                  fontSize: "18px",
-                  marginLeft: "5px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  flexWrap: "wrap",
                 }}
               >
-                {" "}
-                Download
-              </button> */}
-            {/* </DownloadTableExcel> */}
+                <div style={{ textAlign: "center" }}>
+                  <button
+                    onClick={getRLSatusehat}
+                    style={{
+                      background: "#1d4ed8",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 7,
+                      padding: "9px 18px",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <FaFilter size={14} /> FILTER
+                  </button>
+                </div>
+
+                <div style={{ textAlign: "center" }}>
+                  <button
+                    onClick={handleManualSync}
+                    disabled={!canSync || !isFilterApplied}
+                    title={
+                      !isFilterApplied
+                        ? "Terapkan filter terlebih dahulu"
+                        : isManualSyncing || sync.isUpdating
+                          ? "Sedang sinkronisasi..."
+                          : !canSync
+                            ? `Tunggu ${cooldownLeft} menit lagi`
+                            : "Klik untuk sync manual"
+                    }
+                    style={{
+                      background: "#059669",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 7,
+                      padding: "9px 18px",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      cursor:
+                        canSync && isFilterApplied ? "pointer" : "not-allowed",
+                      opacity: canSync && isFilterApplied ? 1 : 0.55,
+                    }}
+                  >
+                    {isManualSyncing || sync.isUpdating ? (
+                      <>
+                        <Spinner animation="border" size="sm" /> Syncing...
+                      </>
+                    ) : (
+                      <>
+                        <FaSyncAlt size={14} /> SYNC SATUSEHAT
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div style={{ textAlign: "center" }}>
+                  <button
+                    onClick={handleDownloadExcel}
+                    disabled={!isFilterApplied || isDownloading}
+                    title={
+                      !isFilterApplied
+                        ? "Terapkan filter terlebih dahulu"
+                        : "Download semua data ke Excel"
+                    }
+                    style={{
+                      background: "#059669",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 7,
+                      padding: "9px 18px",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor:
+                        isFilterApplied && !isDownloading
+                          ? "pointer"
+                          : "not-allowed",
+                      opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Spinner animation="border" size="sm" /> Mengunduh...
+                      </>
+                    ) : (
+                      <>
+                        <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <h5 style={{ fontSize: "14px" }}>
-              {filterLabel.length > 0 ? (
-                <>
-                  filtered by{" "}
-                  {filterLabel
-                    .map((value) => {
-                      return value;
-                    })
-                    .join(", ")}
-                </>
-              ) : (
-                <></>
-              )}
-            </h5>
+          <div
+            style={{
+              display: "flex",
+              gap: 14,
+              marginBottom: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Card 1: Keterangan Tombol */}
+            <div
+              style={{
+                flex: "1 1 240px",
+                border: "1.5px solid #3b82f6",
+                borderRadius: 10,
+                padding: "14px 16px",
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  marginBottom: 13,
+                }}
+              >
+                <div
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    background: "#dbeafe",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <FaInfoCircle size={12} color="#2563eb" />
+                </div>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: "#2563eb",
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  KETERANGAN TOMBOL
+                </span>
+              </div>
+
+              {[
+                {
+                  icon: <FaFilter size={11} />,
+                  bg: "#1d4ed8",
+                  label: "FILTER",
+                  desc: "Menampilkan data dari database SIRS Online",
+                },
+                {
+                  icon: <FaSyncAlt size={11} />,
+                  bg: "#059669",
+                  label: "SYNC SATUSEHAT",
+                  desc: "Mengambil data terbaru dari SATUSEHAT",
+                },
+                {
+                  icon: <SiMicrosoftexcel size={15} />,
+                  bg: "#059669",
+                  label: "DOWNLOAD EXCEL",
+                  desc: "Mengunduh data hasil filter",
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 9,
+                    marginBottom: 9,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: item.bg,
+                      borderRadius: 5,
+                      width: 26,
+                      height: 26,
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+                  <div
+                    style={{ fontSize: 12, color: "#475569", lineHeight: 1.45 }}
+                  >
+                    <strong style={{ fontWeight: 700 }}>{item.label}</strong>
+                    {" : "}
+                    {item.desc}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Card 2: Status Sinkronisasi */}
+            <div
+              style={{
+                flex: "1 1 210px",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: 10,
+                padding: "14px 16px",
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  marginBottom: 14,
+                }}
+              >
+                <FaSyncAlt size={15} color="#059669" />
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: "#059669",
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  STATUS SINKRONISASI
+                </span>
+              </div>
+
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 11 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "#f1f5f9",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <FaCalendarAlt size={13} color="#64748b" />
+                  </div>
+                  <span style={{ fontSize: 12, color: "#475569" }}>
+                    Terakhir Sync&nbsp;:&nbsp;
+                    <strong>
+                      {sync.lastSync ? formatDate(sync.lastSync) : "-"}
+                    </strong>
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "#f1f5f9",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: 15, lineHeight: 1, color: "#64748b" }}
+                    >
+                      ⏱
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, color: "#475569" }}>
+                    Interval Sync&nbsp;:&nbsp;
+                    <strong>{MANUAL_SYNC_COOLDOWN} Menit</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Sumber Data */}
+            <div
+              style={{
+                flex: "1 1 180px",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: 10,
+                padding: "14px 16px",
+                background: "#fff",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  marginBottom: 12,
+                }}
+              >
+                <FaDatabase size={14} color="#3b82f6" />
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: "#3b82f6",
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  SUMBER DATA
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  flex: 1,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "#475569",
+                    margin: 0,
+                    flex: 1,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Data yang ditampilkan bersumber dari database{" "}
+                  <strong>SIRS Online</strong>. Informasi disajikan berdasarkan
+                  data yang tersedia pada sistem.
+                </p>
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <FaDatabase size={38} color="#bfdbfe" />
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: -3,
+                      right: -6,
+                      background: "#059669",
+                      color: "#fff",
+                      borderRadius: "50%",
+                      width: 18,
+                      height: 18,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      lineHeight: 1,
+                    }}
+                  >
+                    ✓
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <LoadingTable
-            data={dataRL}
-            loading={loading}
-            page={page}
-            totalPages={totalPages}
-            fetchData={fetchData}
-          />
+          {/* Filter label + status sync */}
+          <div className={style.filterLabel}>
+            {filterLabel.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <h5 style={{ fontSize: "14px", margin: 0 }}>
+                  Filtered By {filterLabel.join(", ")}
+                </h5>
+                {isFilterApplied && sync.status === "success" && (
+                  <span style={{ fontSize: 12, color: "gray" }}>
+                    ✓ Diperbarui: {formatDate(sync.lastSync)} ({sync.totalData}{" "}
+                    data)
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Konten utama */}
+          {!isFilterApplied ? (
+            <div
+              style={{
+                backgroundColor: "#fff3cd",
+                border: "1px solid #ffc107",
+                color: "#856404",
+                padding: 15,
+                borderRadius: 4,
+                textAlign: "center",
+              }}
+            >
+              <strong>Silakan pilih filter terlebih dahulu.</strong>
+            </div>
+          ) : loadingTable && dataRL.length === 0 ? (
+            <TableLoading />
+          ) : !loadingTable &&
+            dataRL.length === 0 &&
+            sync.status === "success" ? (
+            <div
+              style={{
+                backgroundColor: "#d1ecf1",
+                border: "1px solid #bee5eb",
+                color: "#0c5460",
+                padding: 15,
+                borderRadius: 4,
+                textAlign: "center",
+              }}
+            >
+              <strong>
+                Data tidak ditemukan di SatuSehat untuk periode ini.
+              </strong>
+            </div>
+          ) : !loadingTable &&
+            dataRL.length === 0 &&
+            sync.status === "failed" ? (
+            <div
+              style={{
+                backgroundColor: "#f8d7da",
+                border: "1px solid #f5c6cb",
+                color: "#721c24",
+                padding: 15,
+                borderRadius: 4,
+                textAlign: "center",
+              }}
+            >
+              <strong>
+                Gagal mengambil data dari SatuSehat. Coba filter ulang.
+              </strong>
+            </div>
+          ) : (
+            <DataTable data={dataRL} loadingTable={loadingTable} />
+          )}
         </div>
       </div>
     </div>
