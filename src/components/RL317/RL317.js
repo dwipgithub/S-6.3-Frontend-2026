@@ -15,6 +15,9 @@ import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
 
+import { Tabs, Tab } from "react-bootstrap";
+import RL317SatuSehat from "./RL317SatuSehat";
+
 export const RL317 = () => {
   // const [tahun, setTahun] = useState('')
   // const [namaRS, setNamaRS] = useState('')
@@ -794,380 +797,411 @@ export const RL317 = () => {
               RL 3.17 - Farmasi Pengadaan Obat
             </h4>
           </div>
-          <div className={style.toolbar}>
-            {user.jenisUserId === 4 ? (
-              <Link
-                to={`/rl317/tambah/`}
-                className={style.btnPrimary}
-                style={{ textDecoration: "none" }}
-              >
-                Tambah
-              </Link>
-            ) : (
-              <></>
-            )}
-            <button className={style.btnPrimary} onClick={handleShow}>
-              Filter
-            </button>
-            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
-              Download
-            </button>
-          </div>
 
-          <div className={style.filterLabel}>
-            {filterLabel.length > 0 ? (
-              <div>
-                <h5 style={{ fontSize: "14px" }}>
-                  Filtered By{" "}
-                  {filterLabel
-                    .map((value) => {
-                      return value;
-                    })
-                    .join(", ")}
-                </h5>
-              </div>
-            ) : (
-              <></>
-            )}
-          </div>
-
-          <div>
-            <ul className={`nav nav-tabs ${style.navTabs}`}>
-              <li className={`nav-item ${style.navItem}`}>
-                <button
-                  type="button"
-                  className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
-                  onClick={() => handleTabClick("tab1")}
-                >
-                  Data
-                </button>
-              </li>
-              {user.jenisUserId === 1 ||
-              user.jenisUserId === 2 ||
-              user.jenisUserId === 3 ||
-              user.jenisUserId === 4 ? (
-                //   &&
-                // dataRL.length > 0 &&
-                // rumahSakit != null
-                <li className={`nav-item ${style.navItem}`}>
-                  <button
-                    type="button"
-                    className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
-                    onClick={() => handleTabClick("tab2")}
+          <Tabs defaultActiveKey="sirs" id="rl317-main-tabs" className="mb-3">
+            <Tab eventKey="sirs" title="SIRS">
+              <div className={style.toolbar}>
+                {user.jenisUserId === 4 ? (
+                  <Link
+                    to={`/rl317/tambah/`}
+                    className={style.btnPrimary}
+                    style={{ textDecoration: "none" }}
                   >
-                    Validasi
-                  </button>
-                </li>
-              ) : null}
-            </ul>
+                    Tambah
+                  </Link>
+                ) : (
+                  <></>
+                )}
+                <button className={style.btnPrimary} onClick={handleShow}>
+                  Filter
+                </button>
+                <button
+                  className={style.btnPrimary}
+                  onClick={handleDownloadExcel}
+                >
+                  Download
+                </button>
+              </div>
 
-            <div className={`tab-content ${style.tabContent}`}>
-              <div
-                className={`tab-pane fade ${
-                  activeTab === "tab1" ? "show active" : ""
-                }`}
-              >
-                <div className={style.tableContainer}>
-                  <table className={`table table-bordered ${style.table}`}>
-                    <thead>
-                      <tr>
-                        <th style={{ width: "5%" }}>No</th>
+              <div className={style.filterLabel}>
+                {filterLabel.length > 0 ? (
+                  <div>
+                    <h5 style={{ fontSize: "14px" }}>
+                      Filtered By{" "}
+                      {filterLabel
+                        .map((value) => {
+                          return value;
+                        })
+                        .join(", ")}
+                    </h5>
+                  </div>
+                ) : (
+                  <></>
+                )}
+              </div>
 
-                        {user.jenisUserId === 4 && (
-                          <th
-                            className={style["sticky-header"]}
-                            style={{ width: "9%" }}
-                          >
-                            Aksi
-                          </th>
-                        )}
+              <div>
+                <ul className={`nav nav-tabs ${style.navTabs}`}>
+                  <li className={`nav-item ${style.navItem}`}>
+                    <button
+                      type="button"
+                      className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                      onClick={() => handleTabClick("tab1")}
+                    >
+                      Data
+                    </button>
+                  </li>
+                  {user.jenisUserId === 1 ||
+                  user.jenisUserId === 2 ||
+                  user.jenisUserId === 3 ||
+                  user.jenisUserId === 4 ? (
+                    //   &&
+                    // dataRL.length > 0 &&
+                    // rumahSakit != null
+                    <li className={`nav-item ${style.navItem}`}>
+                      <button
+                        type="button"
+                        className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                        onClick={() => handleTabClick("tab2")}
+                      >
+                        Validasi
+                      </button>
+                    </li>
+                  ) : null}
+                </ul>
 
-                        <th style={{ textAlign: "center" }}>Golongan Obat</th>
-                        <th style={{ width: "27%", textAlign: "center" }}>
-                          Jumlah Item Obat
-                        </th>
-                        <th style={{ width: "27%", textAlign: "center" }}>
-                          Jumlah Item Obat yang Tersedia di Rumah Sakit
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dataRL.map((value, index) => {
-                        return (
-                          <tr key={value.id}>
-                            {/* <td>
-                              <input
-                                type="text"
-                                name="id"
-                                className="form-control"
-                                value={value.no_golongan_obat}
-                                disabled={true}
-                              />
-                            </td> */}
-                            <td className={style["sticky-column-view"]}>
-                              {index + 1}
-                            </td>
+                <div className={`tab-content ${style.tabContent}`}>
+                  <div
+                    className={`tab-pane fade ${
+                      activeTab === "tab1" ? "show active" : ""
+                    }`}
+                  >
+                    <div className={style.tableContainer}>
+                      <table className={`table table-bordered ${style.table}`}>
+                        <thead>
+                          <tr>
+                            <th style={{ width: "5%" }}>No</th>
+
                             {user.jenisUserId === 4 && (
+                              <th
+                                className={style["sticky-header"]}
+                                style={{ width: "9%" }}
+                              >
+                                Aksi
+                              </th>
+                            )}
+
+                            <th style={{ textAlign: "center" }}>
+                              Golongan Obat
+                            </th>
+                            <th style={{ width: "27%", textAlign: "center" }}>
+                              Jumlah Item Obat
+                            </th>
+                            <th style={{ width: "27%", textAlign: "center" }}>
+                              Jumlah Item Obat yang Tersedia di Rumah Sakit
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dataRL.map((value, index) => {
+                            return (
+                              <tr key={value.id}>
+                                {/* <td>
+                                    <input
+                                      type="text"
+                                      name="id"
+                                      className="form-control"
+                                      value={value.no_golongan_obat}
+                                      disabled={true}
+                                    />
+                                  </td> */}
+                                <td className={style["sticky-column-view"]}>
+                                  {index + 1}
+                                </td>
+                                {user.jenisUserId === 4 && (
+                                  <td
+                                    className={style["sticky-column"]}
+                                    style={{ textAlign: "center" }}
+                                  >
+                                    {value.no_golongan_obat !== 4 &&
+                                    value.no_golongan_obat !== 2 ? (
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          justifyContent: "center",
+                                          alignItems: "center",
+                                        }}
+                                      >
+                                        {user.jenisUserId === 4 ? (
+                                          <>
+                                            {/* Tombol Hapus (selalu ada) */}
+                                            <button
+                                              className="btn btn-danger"
+                                              style={{
+                                                margin: "0 5px 0 0",
+                                                backgroundColor: "#FF6663",
+                                                border: "1px solid #FF6663",
+                                              }}
+                                              type="button"
+                                              onClick={(e) =>
+                                                deleteConfirmation(value.id)
+                                              }
+                                            >
+                                              Hapus
+                                            </button>
+
+                                            {/* Tombol Ubah hanya jika bukan 0 */}
+                                            {Number(value.no_golongan_obat) !==
+                                              0 && (
+                                              <Link
+                                                to={`/rl317/ubah/${value.id}`}
+                                                className="btn btn-warning"
+                                                style={{
+                                                  margin: "0 5px 0 0",
+                                                  backgroundColor: "#CFD35E",
+                                                  border: "1px solid #CFD35E",
+                                                  color: "#FFFFFF",
+                                                }}
+                                              >
+                                                Ubah
+                                              </Link>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <></>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      ""
+                                    )}
+                                  </td>
+                                )}
+                                <td style={{ textAlign: "left" }}>
+                                  {value.nama_golongan_obat}
+                                </td>
+                                <td>
+                                  <center>{value.jumlah_item_obat}</center>
+                                </td>
+                                <td>
+                                  <center>{value.jumlah_item_obat_rs}</center>
+                                </td>
+                              </tr>
+                            );
+                          })}
+
+                          {dataRL.length > 0 && (
+                            <tr className="table-light fw-bold">
                               <td
-                                className={style["sticky-column"]}
+                                colSpan={user.jenisUserId === 4 ? 3 : 2}
                                 style={{ textAlign: "center" }}
                               >
-                                {value.no_golongan_obat !== 4 &&
-                                value.no_golongan_obat !== 2 ? (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      alignItems: "center",
-                                    }}
-                                  >
-                                    {user.jenisUserId === 4 ? (
-                                      <>
-                                        {/* Tombol Hapus (selalu ada) */}
-                                        <button
-                                          className="btn btn-danger"
-                                          style={{
-                                            margin: "0 5px 0 0",
-                                            backgroundColor: "#FF6663",
-                                            border: "1px solid #FF6663",
-                                          }}
-                                          type="button"
-                                          onClick={(e) =>
-                                            deleteConfirmation(value.id)
-                                          }
-                                        >
-                                          Hapus
-                                        </button>
-
-                                        {/* Tombol Ubah hanya jika bukan 0 */}
-                                        {Number(value.no_golongan_obat) !==
-                                          0 && (
-                                          <Link
-                                            to={`/rl317/ubah/${value.id}`}
-                                            className="btn btn-warning"
-                                            style={{
-                                              margin: "0 5px 0 0",
-                                              backgroundColor: "#CFD35E",
-                                              border: "1px solid #CFD35E",
-                                              color: "#FFFFFF",
-                                            }}
-                                          >
-                                            Ubah
-                                          </Link>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <></>
-                                    )}
-                                  </div>
-                                ) : (
-                                  ""
-                                )}
+                                TOTAL
                               </td>
-                            )}
-                            <td style={{ textAlign: "left" }}>
-                              {value.nama_golongan_obat}
-                            </td>
-                            <td>
-                              <center>{value.jumlah_item_obat}</center>
-                            </td>
-                            <td>
-                              <center>{value.jumlah_item_obat_rs}</center>
-                            </td>
-                          </tr>
-                        );
-                      })}
 
-                      {dataRL.length > 0 && (
-                        <tr className="table-light fw-bold">
-                          <td
-                            colSpan={user.jenisUserId === 4 ? 3 : 2}
-                            style={{ textAlign: "center" }}
-                          >
-                            TOTAL
-                          </td>
-
-                          <td style={{ textAlign: "center" }}>
-                            <strong>{total_obat}</strong>
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                            <strong>{total_obat_rs}</strong>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div
-                className={`tab-pane fade ${
-                  activeTab === "tab2" ? "show active" : ""
-                }`}
-              >
-                <div className={style.validasiCard}>
-                  <h3 className={style.validasiCardTitle}>Validasi RL 3.17</h3>
-                  {!isFilterApplied ? (
-                    <div
-                      style={{
-                        backgroundColor: "#fff3cd",
-                        border: "1px solid #ffc107",
-                        color: "#856404",
-                        padding: "15px",
-                        borderRadius: "4px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <strong>
-                        Silakan pilih filter terlebih dahulu untuk menampilkan
-                        data.
-                      </strong>
+                              <td style={{ textAlign: "center" }}>
+                                <strong>{total_obat}</strong>
+                              </td>
+                              <td style={{ textAlign: "center" }}>
+                                <strong>{total_obat_rs}</strong>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
-                  ) : idValidasi ? (
-                    <div
-                      style={{
-                        backgroundColor: "#E9ECEF",
-                        padding: "15px",
-                        borderRadius: "5px",
-                        marginBottom: "20px",
-                      }}
-                    >
-                      <p style={{ margin: "0" }}>
-                        <strong
-                          style={{ width: "100px", display: "inline-block" }}
-                        >
-                          Status
-                        </strong>
-                        :{" "}
-                        {idValidasiSubmited == 1
-                          ? "Perlu Perbaikan"
-                          : idValidasiSubmited == 2
-                            ? "Selesai Diperbaiki"
-                            : "Disetujui"}
-                      </p>
-                      <p style={{ margin: "0" }}>
-                        <strong
-                          style={{ width: "100px", display: "inline-block" }}
-                        >
-                          Catatan
-                        </strong>
-                        : {keteranganValidasi || "-"}
-                      </p>
-                      <p style={{ margin: "0" }}>
-                        <strong
-                          style={{ width: "100px", display: "inline-block" }}
-                        >
-                          Tanggal
-                        </strong>
-                        :{" "}
-                        {tglValidasi
-                          ? new Date(tglValidasi).toLocaleString("id-ID", {
-                              day: "2-digit",
-                              month: "long",
-                              year: "numeric",
-                            })
-                          : "-"}
-                      </p>
-                    </div>
-                  ) : (
-                    user.jenisUserId !== 3 && (
-                      <div
-                        style={{
-                          backgroundColor: "#fff3cd",
-                          border: "1px solid #ffc107",
-                          color: "#856404",
-                          padding: "15px",
-                          borderRadius: "4px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <strong>Data Belum di Validasi</strong>
-                      </div>
-                    )
-                  )}
+                  </div>
 
-                  {dataRL.length > 0 && rumahSakit?.id ? (
-                    isValidated ? (
-                      <div
-                        style={{
-                          backgroundColor: "#fff3cd",
-                          border: "1px solid #ffc107",
-                          color: "#856404",
-                          padding: "15px",
-                          borderRadius: "4px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div className="text-center">
-                          <strong>Data telah di validasi</strong>
+                  <div
+                    className={`tab-pane fade ${
+                      activeTab === "tab2" ? "show active" : ""
+                    }`}
+                  >
+                    <div className={style.validasiCard}>
+                      <h3 className={style.validasiCardTitle}>
+                        Validasi RL 3.17
+                      </h3>
+                      {!isFilterApplied ? (
+                        <div
+                          style={{
+                            backgroundColor: "#fff3cd",
+                            border: "1px solid #ffc107",
+                            color: "#856404",
+                            padding: "15px",
+                            borderRadius: "4px",
+                            textAlign: "center",
+                          }}
+                        >
+                          <strong>
+                            Silakan pilih filter terlebih dahulu untuk
+                            menampilkan data.
+                          </strong>
                         </div>
-                      </div>
-                    ) : (
-                      (user.jenisUserId === 3 ||
-                        (user.jenisUserId === 4 && idValidasi)) && (
-                        <form onSubmit={simpanValidasi}>
-                          <ToastContainer />
-
-                          <div className={style.validasiFormGroup}>
-                            <label htmlFor="statusValidasi">Status</label>
-                            <select
-                              id="statusValidasi"
-                              name="statusValidasi"
-                              value={statusValidasi || ""}
-                              required
-                              onChange={(e) => statusValidasiChangeHadler(e)}
+                      ) : idValidasi ? (
+                        <div
+                          style={{
+                            backgroundColor: "#E9ECEF",
+                            padding: "15px",
+                            borderRadius: "5px",
+                            marginBottom: "20px",
+                          }}
+                        >
+                          <p style={{ margin: "0" }}>
+                            <strong
+                              style={{
+                                width: "100px",
+                                display: "inline-block",
+                              }}
                             >
-                              {user.jenisUserId === 4 ? (
-                                <>
-                                  <option value="" disabled>
-                                    Pilih Status
-                                  </option>
-                                  <option value="2">Selesai Diperbaiki</option>
-                                </>
-                              ) : (
-                                <>
-                                  <option value="" disabled>
-                                    Pilih Status
-                                  </option>
-                                  <option value="1">Perlu Perbaikan</option>
-                                  <option value="3">Disetujui</option>
-                                </>
-                              )}
-                            </select>
+                              Status
+                            </strong>
+                            :{" "}
+                            {idValidasiSubmited == 1
+                              ? "Perlu Perbaikan"
+                              : idValidasiSubmited == 2
+                                ? "Selesai Diperbaiki"
+                                : "Disetujui"}
+                          </p>
+                          <p style={{ margin: "0" }}>
+                            <strong
+                              style={{
+                                width: "100px",
+                                display: "inline-block",
+                              }}
+                            >
+                              Catatan
+                            </strong>
+                            : {keteranganValidasi || "-"}
+                          </p>
+                          <p style={{ margin: "0" }}>
+                            <strong
+                              style={{
+                                width: "100px",
+                                display: "inline-block",
+                              }}
+                            >
+                              Tanggal
+                            </strong>
+                            :{" "}
+                            {tglValidasi
+                              ? new Date(tglValidasi).toLocaleString("id-ID", {
+                                  day: "2-digit",
+                                  month: "long",
+                                  year: "numeric",
+                                })
+                              : "-"}
+                          </p>
+                        </div>
+                      ) : (
+                        user.jenisUserId !== 3 && (
+                          <div
+                            style={{
+                              backgroundColor: "#fff3cd",
+                              border: "1px solid #ffc107",
+                              color: "#856404",
+                              padding: "15px",
+                              borderRadius: "4px",
+                              textAlign: "center",
+                            }}
+                          >
+                            <strong>Data Belum di Validasi</strong>
                           </div>
+                        )
+                      )}
 
-                          {user.jenisUserId === 3 ? (
-                            <>
+                      {dataRL.length > 0 && rumahSakit?.id ? (
+                        isValidated ? (
+                          <div
+                            style={{
+                              backgroundColor: "#fff3cd",
+                              border: "1px solid #ffc107",
+                              color: "#856404",
+                              padding: "15px",
+                              borderRadius: "4px",
+                              textAlign: "center",
+                            }}
+                          >
+                            <div className="text-center">
+                              <strong>Data telah di validasi</strong>
+                            </div>
+                          </div>
+                        ) : (
+                          (user.jenisUserId === 3 ||
+                            (user.jenisUserId === 4 && idValidasi)) && (
+                            <form onSubmit={simpanValidasi}>
+                              <ToastContainer />
+
                               <div className={style.validasiFormGroup}>
-                                <label htmlFor="keteranganValidasi">
-                                  Catatan
-                                </label>
-                                <textarea
-                                  id="keteranganValidasi"
-                                  name="keteranganValidasi"
-                                  value={keteranganValidasi}
+                                <label htmlFor="statusValidasi">Status</label>
+                                <select
+                                  id="statusValidasi"
+                                  name="statusValidasi"
+                                  value={statusValidasi || ""}
+                                  required
                                   onChange={(e) =>
-                                    keteranganValidasiChangeHadler(e)
+                                    statusValidasiChangeHadler(e)
                                   }
-                                  placeholder="Tambahkan catatan (opsional)"
-                                  rows={4}
-                                  disabled={user.jenisUserId === 4}
-                                />
+                                >
+                                  {user.jenisUserId === 4 ? (
+                                    <>
+                                      <option value="" disabled>
+                                        Pilih Status
+                                      </option>
+                                      <option value="2">
+                                        Selesai Diperbaiki
+                                      </option>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <option value="" disabled>
+                                        Pilih Status
+                                      </option>
+                                      <option value="1">Perlu Perbaikan</option>
+                                      <option value="3">Disetujui</option>
+                                    </>
+                                  )}
+                                </select>
                               </div>
-                            </>
-                          ) : null}
 
-                          <button type="submit" className={style.btnPrimary}>
-                            <HiSaveAs size={20} /> Simpan
-                          </button>
-                        </form>
-                      )
-                    )
-                  ) : null}
+                              {user.jenisUserId === 3 ? (
+                                <>
+                                  <div className={style.validasiFormGroup}>
+                                    <label htmlFor="keteranganValidasi">
+                                      Catatan
+                                    </label>
+                                    <textarea
+                                      id="keteranganValidasi"
+                                      name="keteranganValidasi"
+                                      value={keteranganValidasi}
+                                      onChange={(e) =>
+                                        keteranganValidasiChangeHadler(e)
+                                      }
+                                      placeholder="Tambahkan catatan (opsional)"
+                                      rows={4}
+                                      disabled={user.jenisUserId === 4}
+                                    />
+                                  </div>
+                                </>
+                              ) : null}
+
+                              <button
+                                type="submit"
+                                className={style.btnPrimary}
+                              >
+                                <HiSaveAs size={20} /> Simpan
+                              </button>
+                            </form>
+                          )
+                        )
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </Tab>
+            <Tab eventKey="satusehat" title="SATUSEHAT">
+              <RL317SatuSehat />
+            </Tab>
+          </Tabs>
         </div>
       </div>
     </div>
