@@ -2567,8 +2567,6 @@ function TabTwo() {
     return () => clearInterval(pollingRef.current); // cleanup polling saat unmount
   }, []);
 
-  // Muat pilihan lokasi (provinsi/kabkota/rumah sakit) sesuai jenis user,
-  // menggantikan logic handleShow() lama yang dulu dipanggil saat modal dibuka.
   useEffect(() => {
     if (!user || !user.jenisUserId) return;
     const { jenisUserId, satKerId } = user;
