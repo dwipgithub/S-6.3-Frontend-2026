@@ -29,6 +29,7 @@ import {
 import * as XLSX from "xlsx";
 import { SiMicrosoftexcel } from "react-icons/si";
 import { FaFilter } from "react-icons/fa";
+import Pagination from "../Pagination/Pagination.js";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -3022,7 +3023,7 @@ function TabTwo() {
       const finalData = transformDataWithMasterUmur(groupedData, masterUmur);
 
       // ── Step 4: Susun header (kolom umur dinamis dari masterUmur) ──
-      const headers = ["No", "Kode ICD-10", "Diagnosis Penyakit"];
+      const headers = ["No", "Kode ICD-10", "Diagnosis Penyakit", "Periode"];
       masterUmur.forEach((umur) => {
         headers.push(`${umur.name} L`, `${umur.name} P`, `${umur.name} Total`);
       });
@@ -3034,7 +3035,7 @@ function TabTwo() {
 
       // ── Step 5: Susun baris data ──
       const rows = finalData.map((item, i) => {
-        const row = [i + 1, item.icd_10, item.diagnosis];
+        const row = [i + 1, item.icd_10, item.diagnosis, `${tahun}-${bulan}`];
         masterUmur.forEach((umur) => {
           const umurData = item.umur.find((u) => u.age_group === umur.name);
           row.push(
@@ -3228,7 +3229,7 @@ function TabTwo() {
           </tbody>
         </Table>
 
-        {totalPages > 1 && (
+        {/* {totalPages > 1 && (
           <div
             style={{
               padding: "12px 0",
@@ -3251,6 +3252,14 @@ function TabTwo() {
               Next ▶
             </button>
           </div>
+        )} */}
+
+        {totalPages > 1 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={(newPage) => fetchData(newPage)}
+          />
         )}
       </div>
     </div>
@@ -3608,7 +3617,9 @@ function TabTwo() {
                 <div style={{ textAlign: "center" }}>
                   <button
                     onClick={handleDownloadExcel}
-                    disabled={!isFilterApplied || isDownloading}
+                    disabled={
+                      !isFilterApplied || isDownloading || dataRL.length === 0
+                    }
                     title={
                       !isFilterApplied
                         ? "Terapkan filter terlebih dahulu"
@@ -3888,8 +3899,8 @@ function TabTwo() {
                   }}
                 >
                   Data yang ditampilkan bersumber dari database{" "}
-                  <strong>SIRS Online</strong>. Informasi disajikan berdasarkan
-                  data yang tersedia pada sistem.
+                  <strong>SATUSEHAT</strong> yang sudah tersimpan dalam database{" "}
+                  <strong>SIRS</strong>.
                 </p>
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   <FaDatabase size={38} color="#bfdbfe" />
@@ -3931,12 +3942,12 @@ function TabTwo() {
                 <h5 style={{ fontSize: "14px", margin: 0 }}>
                   Filtered By {filterLabel.join(", ")}
                 </h5>
-                {isFilterApplied && sync.status === "success" && (
+                {/* {isFilterApplied && sync.status === "success" && (
                   <span style={{ fontSize: 12, color: "gray" }}>
                     ✓ Diperbarui: {formatDate(sync.lastSync)} ({sync.totalData}{" "}
                     data)
                   </span>
-                )}
+                )} */}
               </div>
             )}
           </div>
@@ -3971,7 +3982,7 @@ function TabTwo() {
               }}
             >
               <strong>
-                Data tidak ditemukan di SatuSehat untuk periode ini.
+                Data tidak ditemukan di SATUSEHAT untuk periode ini.
               </strong>
             </div>
           ) : !loadingTable &&

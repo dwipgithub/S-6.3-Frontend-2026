@@ -28,6 +28,7 @@ import {
 import * as XLSX from "xlsx";
 import { SiMicrosoftexcel } from "react-icons/si";
 import { FaFilter } from "react-icons/fa";
+import Pagination from "../Pagination/Pagination.js";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -2223,6 +2224,7 @@ function TabTwo() {
         "No",
         "Kode ICD-10",
         "Diagnosis Penyakit",
+        "Periode",
         // 25 kelompok umur × L & P
         "< 1 Jam L",
         "< 1 Jam P",
@@ -2289,6 +2291,7 @@ function TabTwo() {
         i + 1,
         v.kode_icd,
         v.diagnosis,
+        `${tahun}-${bulan}`,
         v.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
         v.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
         v.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
@@ -2664,7 +2667,9 @@ function TabTwo() {
                 <div style={{ textAlign: "center" }}>
                   <button
                     onClick={handleDownloadExcel}
-                    disabled={!isFilterApplied || isDownloading}
+                    disabled={
+                      !isFilterApplied || isDownloading || dataRL.length === 0
+                    }
                     title={
                       !isFilterApplied
                         ? "Terapkan filter terlebih dahulu"
@@ -2944,9 +2949,9 @@ function TabTwo() {
                     lineHeight: 1.6,
                   }}
                 >
-                  Data yang ditampilkan bersumber dari database{" "}
-                  <strong>SIRS Online</strong>. Informasi disajikan berdasarkan
-                  data yang tersedia pada sistem.
+                  Data yang ditampilkan bersumber dari{" "}
+                  <strong>SATUSEHAT</strong> yang sudah tersimpan dalam database{" "}
+                  <strong>SIRS</strong>.
                 </p>
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   <FaDatabase size={38} color="#bfdbfe" />
@@ -2988,7 +2993,7 @@ function TabTwo() {
                 <h5 style={{ fontSize: "14px", margin: 0 }}>
                   Filtered By {filterLabel.join(", ")}
                 </h5>
-                {isFilterApplied && (
+                {/* {isFilterApplied && (
                   <span style={{ fontSize: 12, color: "gray" }}>
                     {sync.status === "success" && (
                       <span style={{ fontSize: 12, color: "gray" }}>
@@ -2997,7 +3002,7 @@ function TabTwo() {
                       </span>
                     )}
                   </span>
-                )}
+                )} */}
               </div>
             )}
           </div>
@@ -3032,7 +3037,7 @@ function TabTwo() {
               }}
             >
               <strong>
-                Data tidak ditemukan di SatuSehat untuk periode ini.
+                Data tidak ditemukan di SATUSEHAT untuk periode ini.
               </strong>
             </div>
           ) : !loadingTable &&
@@ -3330,7 +3335,7 @@ function TabTwo() {
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {/* {totalPages > 1 && (
                   <div
                     style={{
                       padding: "12px 0",
@@ -3356,6 +3361,14 @@ function TabTwo() {
                       Next ▶
                     </button>
                   </div>
+                )} */}
+
+                {totalPages > 1 && (
+                  <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={(newPage) => fetchData(newPage)}
+                  />
                 )}
               </div>
             </div>
