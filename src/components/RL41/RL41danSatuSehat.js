@@ -1852,7 +1852,7 @@ function TabOne() {
 
 function TabTwo() {
   const [tahun, setTahun] = useState(new Date().getFullYear());
-  const [bulan, setBulan] = useState("");
+  const [bulan, setBulan] = useState("01");
   const [dataRL, setDataRL] = useState([]);
   const [token, setToken] = useState("");
   const [expire, setExpire] = useState("");
