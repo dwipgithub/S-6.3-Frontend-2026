@@ -120,6 +120,7 @@ export default function TabMenu() {
             {/* TAB SIRS */}
             <li className="nav-item">
               <button
+                style={{ color: activeTab === "tab1" ? "#00b9ad" : "black" }}
                 className={`nav-link ${activeTab === "tab1" ? "active" : ""}`}
                 onClick={() => setActiveTab("tab1")}
               >
@@ -131,8 +132,8 @@ export default function TabMenu() {
             {user.jenisUserId === 4 && statusSatset === 1 && (
               <li className="nav-item">
                 <button
-                  style={{ color: "black" }}
-                  className={`nav-link ${activeTab === "tab2" ? "active" : ""}`}
+                  style={{ color: activeTab === "tab2" ? "#00b9ad" : "black" }}
+                  className={`nav-link ${activeTab === "tab1" ? "active" : ""}`}
                   onClick={() => setActiveTab("tab2")}
                 >
                   SATUSEHAT
