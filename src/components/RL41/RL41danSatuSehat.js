@@ -117,6 +117,7 @@ export default function TabMenu() {
             {/* TAB SIRS */}
             <li className="nav-item">
               <button
+                style={{ color: activeTab === "tab1" ? "#00b9ad" : "black" }}
                 className={`nav-link ${activeTab === "tab1" ? "active" : ""}`}
                 onClick={() => setActiveTab("tab1")}
               >
@@ -128,7 +129,7 @@ export default function TabMenu() {
             {user.jenisUserId === 4 && statusSatset === 1 && (
               <li className="nav-item">
                 <button
-                  style={{ color: "black" }}
+                  style={{ color: activeTab === "tab2" ? "#00b9ad" : "black" }}
                   className={`nav-link ${activeTab === "tab2" ? "active" : ""}`}
                   onClick={() => setActiveTab("tab2")}
                 >
@@ -1862,6 +1863,10 @@ function TabTwo() {
   const [show, setShow] = useState(false);
   const [filterLabel, setFilterLabel] = useState([]);
   const [daftarBulan, setDaftarBulan] = useState([]);
+  const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
+  const [daftarProvinsi, setDaftarProvinsi] = useState([]);
+  const [daftarKabKota, setDaftarKabKota] = useState([]);
+  const [rumahSakit, setRumahSakit] = useState("");
   const [sync, setSync] = useState({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -1878,6 +1883,78 @@ function TabTwo() {
     getBulan();
     return () => clearInterval(pollingRef.current); // cleanup polling saat unmount
   }, []);
+
+  useEffect(() => {
+    if (!user || !user.jenisUserId) return;
+    const { jenisUserId, satKerId } = user;
+    switch (jenisUserId) {
+      case 1:
+        getProvinsi();
+        break;
+      case 2:
+        getKabKota(satKerId);
+        break;
+      case 3:
+        getRumahSakit(satKerId);
+        break;
+      case 4:
+        showRumahSakit(satKerId);
+        break;
+      default:
+        break;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.jenisUserId]);
+
+  const provinsiChangeHandler = (e) => {
+    const provinsiId = e.target.value;
+    getKabKota(provinsiId);
+  };
+
+  const kabKotaChangeHandler = (e) => {
+    const kabKotaId = e.target.value;
+    getRumahSakit(kabKotaId);
+  };
+
+  const rumahSakitChangeHandler = (e) => {
+    const rsId = e.target.value;
+    showRumahSakit(rsId);
+  };
+
+  const getProvinsi = async () => {
+    try {
+      const response = await axiosJWT.get("/apisirs6v2/provinsi", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDaftarProvinsi(response.data.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getKabKota = async (provinsiId) => {
+    try {
+      const response = await axiosJWT.get("/apisirs6v2/kabkota", {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { provinsiId },
+      });
+      setDaftarKabKota(response.data.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getRumahSakit = async (kabKotaId) => {
+    try {
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { kabKotaId },
+      });
+      setDaftarRumahSakit(response.data.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const refreshToken = async () => {
     try {
@@ -2036,7 +2113,7 @@ function TabTwo() {
           setLoadingTable(false);
         }
 
-        console.log(newSync.status);
+        // console.log(newSync.status);
       } catch (err) {
         console.error(err);
       }
@@ -2054,7 +2131,8 @@ function TabTwo() {
     }
 
     const periode = `${tahun}-${bulan}`;
-    setFilterLabel([`Periode: ${periode}`]);
+    // setFilterLabel([`Periode: ${periode}`]);
+    setFilterLabel([`Rumah Sakit: ${rumahSakit.nama}`, `Periode: ${periode}`]);
     setIsFilterApplied(true);
     setDataRL([]);
     setLoadingTable(true); // tampilkan loading di tabel
@@ -2374,6 +2452,17 @@ function TabTwo() {
       });
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const showRumahSakit = async (id) => {
+    try {
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRumahSakit(response.data.data);
+    } catch (error) {
+      console.error(error);
     }
   };
 
