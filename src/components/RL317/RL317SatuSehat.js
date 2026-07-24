@@ -33,6 +33,10 @@ const RL317SatuSehat = () => {
     MANUAL_SYNC_COOLDOWN,
   } = useRL317(axiosJWT, token, CSRFToken, user);
 
+  const handleDownloadExcel = () => {
+    exportRL317ExcelSatuSehat(dataRL);
+  };
+
   return (
     <div
       className="container"
@@ -47,6 +51,7 @@ const RL317SatuSehat = () => {
             setTahun={setTahun}
             handleManualSync={handleManualSync}
             getRL={getRL}
+            handleDownloadExcel={handleDownloadExcel}
             canSync={canSync}
             isManualSyncing={isManualSyncing}
             isFilterApplied={isFilterApplied}

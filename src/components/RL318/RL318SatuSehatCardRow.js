@@ -241,9 +241,8 @@ const SatuSehatCardRow = ({ sync, manualSyncCooldown }) => {
               lineHeight: 1.6,
             }}
           >
-            Data yang ditampilkan bersumber dari database{" "}
-            <strong>SIRS Online</strong>. Informasi disajikan berdasarkan data
-            yang tersedia pada sistem.
+            Data yang ditampilkan bersumber dari  <strong>SATUSEHAT</strong>{" "}
+            yang sudah tersimpan dalam database<strong>SIRS</strong>.
           </p>
           <div style={{ position: "relative", flexShrink: 0 }}>
             <FaDatabase size={38} color="#bfdbfe" />
