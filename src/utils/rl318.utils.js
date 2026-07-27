@@ -4,11 +4,8 @@ export const calculateTotals = (data = []) => {
   return data.reduce(
     (acc, item) => {
       acc.jumlahRawatInap += Number(item.rawat_inap) || 0;
-
       acc.jumlahRawatJalan += Number(item.rawat_jalan) || 0;
-
       acc.jumlahIgd += Number(item.igd) || 0;
-
       acc.jumlahTotalResep += Number(item.total_resep) || 0;
 
       return acc;
@@ -22,9 +19,11 @@ export const calculateTotals = (data = []) => {
   );
 };
 
-export const exportRL318ExcelSatuSehat = (data = []) => {
+export const exportRL318ExcelSatuSehat = (data = [], tahun) => {
   const header = [
+    "No",
     "Golongan Obat",
+    "Periode",
     "Rawat Jalan",
     "IGD",
     "Rawat Inap",
@@ -37,19 +36,22 @@ export const exportRL318ExcelSatuSehat = (data = []) => {
   let totalResep = 0;
 
   const body = data.map((item, index) => {
-    const jumlahRawatInap = Number(item.rawat_inap) || 0;
     const jumlahRawatJalan = Number(item.rawat_jalan) || 0;
     const jumlahIgd = Number(item.igd) || 0;
+    const jumlahRawatInap = Number(item.rawat_inap) || 0;
     const jumlahTotalResep = Number(item.total_resep) || 0;
 
     totalRawatJalan += jumlahRawatJalan;
-    totalRawatInap += jumlahRawatInap;
     totalIgd += jumlahIgd;
+    totalRawatInap += jumlahRawatInap;
     totalResep += jumlahTotalResep;
 
     return [
       index + 1,
-      item.rl_tiga_titik_delapan_belas_golongan_obat?.nama ?? "-",
+      item.nama_golongan_obat ??
+        item.rl_tiga_titik_delapan_belas_golongan_obat?.nama ??
+        "-",
+      tahun,
       jumlahRawatJalan,
       jumlahIgd,
       jumlahRawatInap,
@@ -60,6 +62,7 @@ export const exportRL318ExcelSatuSehat = (data = []) => {
   body.push([
     "",
     "TOTAL",
+    "",
     totalRawatJalan,
     totalIgd,
     totalRawatInap,
@@ -67,7 +70,7 @@ export const exportRL318ExcelSatuSehat = (data = []) => {
   ]);
 
   downloadExcel({
-    fileName: "RL318-Farmasi Resep",
+    fileName: `RL318-Farmasi Resep-${tahun}`,
     sheet: "Farmasi Resep",
     tablePayload: {
       header,
