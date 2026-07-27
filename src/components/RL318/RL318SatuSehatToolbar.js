@@ -7,6 +7,7 @@ const RL318Toolbar = ({
   setTahun,
   handleManualSync,
   getRL,
+  handleDownloadExcel,
   canSync,
   isManualSyncing,
   isFilterApplied,
@@ -171,6 +172,8 @@ const RL318Toolbar = ({
           {/* DOWNLOAD EXCEL */}
           <div style={{ textAlign: "center" }}>
             <button
+              onClick={handleDownloadExcel}
+              // disabled={dataRL?.length === 0}
               style={{
                 background: "#059669",
                 color: "#fff",
