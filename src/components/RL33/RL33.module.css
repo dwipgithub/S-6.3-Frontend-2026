@@ -241,15 +241,6 @@
   flex-shrink: 0;
 }
 
-.outerTabLink {
-  color: #00b9ad !important;
-  font-weight: 600;
-}
-
-.outerTabLink:hover {
-  color: #00b9ad !important;
-}
-
 .navTabs {
   border-bottom: 2px solid #e2e8f0;
   gap: 0;

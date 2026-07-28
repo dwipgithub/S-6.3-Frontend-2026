@@ -4,12 +4,23 @@ import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
 import style from "./RL36.module.css";
 import { HiSaveAs } from "react-icons/hi";
+import {
+  FaCalendarAlt,
+  FaClock,
+  FaDatabase,
+  FaFileExcel,
+  FaInfoCircle,
+  FaSyncAlt,
+  FaCheckCircle,
+  FaFilter,
+} from "react-icons/fa";
+import { SiMicrosoftexcel } from "react-icons/si";
 import { confirmAlert } from "react-confirm-alert";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "react-confirm-alert/src/react-confirm-alert.css";
-// import Table from "react-bootstrap/Table";
 import Modal from "react-bootstrap/Modal";
+import { Spinner } from "react-bootstrap";
 import { downloadExcel, DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
@@ -43,9 +54,22 @@ const RL36 = () => {
   const [submittedBulan, setSubmittedBulan] = useState(null);
   const [submittedTahun, setSubmittedTahun] = useState(null);
   const [submittedRumahSakit, setSubmittedRumahSakit] = useState(null);
+  const [dataCount, setDataCount] = useState([]);
+  const [isSyncingSatusehat, setIsSyncingSatusehat] = useState(false);
+  const [isSyncCooldown, setIsSyncCooldown] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [hasFilteredSatusehat, setHasFilteredSatusehat] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [submittedBulanSatusehat, setSubmittedBulanSatusehat] = useState(null);
+  const [submittedTahunSatusehat, setSubmittedTahunSatusehat] = useState(null);
+  const [submittedRumahSakitSatusehat, setSubmittedRumahSakitSatusehat] = useState(null);
   const { CSRFToken } = useCSRFTokenContext();
   const tableRef = useRef(null);
   const tableSatusehatRef = useRef(null);
+  const syncCooldownTimeoutRef = useRef(null);
+  const syncCooldownMinutes = 5;
+  const syncCooldownMs = syncCooldownMinutes * 60 * 1000;
 
   // Load validasi data when user opens Validasi tab or when submitted filters change
   useEffect(() => {
@@ -66,6 +90,90 @@ const RL36 = () => {
     getLastYear().then((results) => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (syncCooldownTimeoutRef.current) {
+        clearTimeout(syncCooldownTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSyncCooldown || !lastSyncAt) return;
+    const elapsed = (Date.now() - new Date(lastSyncAt).getTime()) / 60000;
+    if (elapsed >= syncCooldownMinutes) return;
+    const remainingMs = (syncCooldownMinutes - elapsed) * 60 * 1000;
+    const t = setTimeout(() => setIsSyncCooldown(false), remainingMs);
+    return () => clearTimeout(t);
+  }, [isSyncCooldown, lastSyncAt, syncCooldownMinutes]);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const months = [
+    { value: "1", label: "Januari" },
+    { value: "2", label: "Februari" },
+    { value: "3", label: "Maret" },
+    { value: "4", label: "April" },
+    { value: "5", label: "Mei" },
+    { value: "6", label: "Juni" },
+    { value: "7", label: "Juli" },
+    { value: "8", label: "Agustus" },
+    { value: "9", label: "September" },
+    { value: "10", label: "Oktober" },
+    { value: "11", label: "November" },
+    { value: "12", label: "Desember" },
+  ];
+
+  const getSelectedRsId = () => {
+    const rsFromState = rumahSakit && rumahSakit.id ? rumahSakit.id : null;
+    if (rsFromState && String(rsFromState) !== "0") return Number(rsFromState);
+    if (user && user.jenisUserId === 4 && user.satKerId) return Number(user.satKerId);
+    return null;
+  };
+
+  const minutesSinceSync = lastSyncAt
+    ? (now - new Date(lastSyncAt).getTime()) / 60000
+    : null;
+  const canSync =
+    !isSyncingSatusehat &&
+    (minutesSinceSync === null || minutesSinceSync >= syncCooldownMinutes) &&
+    !isSyncCooldown;
+  const cooldownLeft =
+    minutesSinceSync !== null
+      ? Math.max(0, syncCooldownMinutes - minutesSinceSync).toFixed(1)
+      : null;
+
+  const formatLastSyncAt = (value) => {
+    if (!value) return "-";
+    try {
+      return new Intl.DateTimeFormat("id-ID", {
+        day: "numeric",
+        month: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(new Date(value)).replace(".", ":").replace(".", ":") + " WIB";
+    } catch (error) {
+      return "-";
+    }
+  };
+
+  const startSyncCooldown = () => {
+    setIsSyncCooldown(true);
+
+    if (syncCooldownTimeoutRef.current) {
+      clearTimeout(syncCooldownTimeoutRef.current);
+    }
+
+    syncCooldownTimeoutRef.current = setTimeout(() => {
+      setIsSyncCooldown(false);
+    }, syncCooldownMs);
+  };
 
   const refreshToken = async () => {
     try {
@@ -439,19 +547,41 @@ const RL36 = () => {
   };
 
   const getRL = async (e) => {
+    if (e) e.preventDefault();
     let date = tahun + "-" + bulan + "-01";
-    e.preventDefault();
     setSpinner(true);
-    if (!rumahSakit || !rumahSakit.id) {
+
+    const rsId = getSelectedRsId();
+    if (!rsId) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
+      setSpinner(false);
       return;
     }
+
+    if (!rumahSakit || !rumahSakit.id || String(rumahSakit.id) === "0") {
+      try {
+        const detailRs = await axiosJWT.get("/apisirs6v2/rumahsakit/" + rsId, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setRumahSakit(detailRs.data.data || { id: rsId, nama: "Rumah Sakit" });
+      } catch (e) {
+        setRumahSakit({ id: rsId, nama: "Rumah Sakit" });
+      }
+    }
+
+    const rsLabel = rumahSakit?.nama || "Rumah Sakit";
     const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
+    filter.push("nama: ".concat(rsLabel));
     filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
     setFilterLabel(filter);
+
+    setValidasiId(null);
+    setStatusValidasi(0);
+    setKeteranganValidasi("");
+    setDataValidasi(null);
+
     try {
       const customConfig = {
         headers: {
@@ -459,7 +589,7 @@ const RL36 = () => {
           Authorization: `Bearer ${token}`,
         },
         params: {
-          rsId: rumahSakit.id,
+          rsId: rsId,
           tahun: date,
         },
       };
@@ -467,6 +597,17 @@ const RL36 = () => {
         "/apisirs6v2/rltigatitikenam",
         customConfig
       );
+
+      if (!results.data.data || results.data.data.length === 0) {
+        setDataRL([]);
+        setDataCount([]);
+        toast.info("Data RL tidak ditemukan untuk filter ini", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        handleClose();
+        setSpinner(false);
+        return;
+      }
 
       const rlTigaTitikEnamDetails = results.data.data.map((value) => {
         return value.rl_tiga_titik_enam_details;
@@ -489,8 +630,6 @@ const RL36 = () => {
           : 0
       );
 
-      // console.log(sortedProducts)
-
       let groups = [];
 
       sortedProducts.reduce(function (res, value) {
@@ -507,7 +646,6 @@ const RL36 = () => {
               groupNo:
                 value.jenis_kegiatan_rl_tiga_titik_enam
                   .group_jenis_kegiatan_header_rl_tiga_titik_enam.no,
-              // jumlah: 0,
               rmRumahSakit: 0,
               rmBidan: 0,
               rmPuskesmas: 0,
@@ -587,7 +725,6 @@ const RL36 = () => {
             groupNo: element.groupNo,
             groupNama: element.groupNama,
             details: filterData,
-            // subTotal: element.jumlah,
             subTotalRmRumahSakit: element.rmRumahSakit,
             subTotalRmBidan: element.rmBidan,
             subTotalRmPuskesmas: element.rmPuskesmas,
@@ -605,16 +742,20 @@ const RL36 = () => {
           });
         }
       });
-      // console.log(data);
       setDataRL(data);
+      setDataCount(results.data.dataCount || []);
+      toast.success(
+        `Berhasil memuat data RL 3.6`,
+        {
+          position: toast.POSITION.TOP_RIGHT,
+        }
+      );
       handleClose();
 
-      // Simpan filter yang di-submit
       setSubmittedBulan(bulan);
       setSubmittedTahun(tahun);
       setSubmittedRumahSakit(rumahSakit);
       
-      // Load validasi data setelah filter diterapkan
       try {
         const validasiConfig = {
           headers: {
@@ -622,7 +763,7 @@ const RL36 = () => {
             Authorization: `Bearer ${token}`,
           },
           params: {
-            rsId: rumahSakit.id,
+            rsId: rsId,
             periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
           },
         };
@@ -981,23 +1122,36 @@ const RL36 = () => {
     });
   }
 
-  const getRLSatusehat = async (e) => {
+  const getDataRLTigaTitikEnamSatusehat = async (e) => {
     if (e) e.preventDefault();
 
-    if (!rumahSakit || !rumahSakit.id) {
-      toast("rumah sakit harus dipilih", {
+    const rsId = getSelectedRsId();
+    if (!rsId) {
+      toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
     }
 
-    setSpinner(true);
+    if (!tahun || !bulan) {
+      toast(`periode wajib diisi`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
     const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
-    const bulanLaporan = `${periode}-01`;
+    const bulanLaporan = `${periode}`;
     const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
-    filter.push("periode: ".concat(periode));
+    filter.push("Provinsi: ".concat(rumahSakit?.provinsi_nama ?? "-"));
+    filter.push("Rumah Sakit: ".concat(rumahSakit?.nama ?? "-"));
+    filter.push("Periode: ".concat(periode));
     setFilterLabelSatusehat(filter);
+    setHasFilteredSatusehat(true);
+
+    setSubmittedBulanSatusehat(bulan);
+    setSubmittedTahunSatusehat(tahun);
+    setSubmittedRumahSakitSatusehat(rumahSakit);
 
     try {
       const headers = {
@@ -1005,72 +1159,183 @@ const RL36 = () => {
         Authorization: `Bearer ${token}`,
       };
 
-      try {
-        const apiKey = process.env.REACT_APP_SATUSEHAT_API_KEY;
-        if (apiKey) {
-          headers["X-API-Key"] = apiKey;
-        }
-
-        await axios.get("/apisirs6v2/rltigatitikenamsatusehat", {
-          headers,
-          params: {
-            periode,
-            rsId: rumahSakit.id,
-          },
-        });
-      } catch (apiError) {
-        console.log(apiError);
-      }
-
-      const localResults = await axios.get(
+      const results = await axiosJWT.get(
         "/apisirs6v2/getDataRLTigaTitikEnamSatusehatLocal",
         {
           headers,
           params: {
+            rsId: rsId,
             bulan_laporan: bulanLaporan,
-            rsId: rumahSakit.id,
           },
         }
       );
 
-      const items = localResults?.data?.data || [];
-
-      if (items.length === 0) {
-        setDataRLSatusehat([]);
-        toast.info("Data belum tersedia untuk periode ini.", {
-          position: toast.POSITION.TOP_RIGHT,
-          autoClose: 5000,
-        });
-      } else {
-        setDataRLSatusehat(items);
-        setNamaFileSatusehat(`rl36_satusehat_${periode}`);
-      }
-
-      handleClose();
+      const arr = results?.data?.data || [];
+      setDataRLSatusehat(Array.isArray(arr) ? arr : []);
+      if (show) handleClose();
     } catch (error) {
-      console.log(error);
       setDataRLSatusehat([]);
-      const errMsg =
-        error?.response?.data?.message || "Terjadi kesalahan sistem";
-      toast.error(errMsg, {
-        position: toast.POSITION.TOP_RIGHT,
-        autoClose: 5000,
-      });
-    } finally {
-      setSpinner(false);
+      const detailMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.message ||
+        "Terjadi kesalahan";
+      toast.error(detailMessage);
+      if (show) handleClose();
     }
   };
 
+  const syncDataRLTigaTitikEnamSatusehat = async () => {
+    const rsId = getSelectedRsId();
+    if (!rsId) {
+      toast("rumah sakit harus dipilih", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (!tahun || !bulan) {
+      toast("periode wajib diisi", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (isSyncingSatusehat || isSyncCooldown) {
+      toast(`Sync Satusehat masih dibatasi, tunggu ${syncCooldownMinutes} menit.`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+
+    try {
+      setIsSyncingSatusehat(true);
+
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      const apiKey = process.env.REACT_APP_SATUSEHAT_API_KEY;
+      if (apiKey) {
+        headers["X-API-Key"] = apiKey;
+      }
+
+      await axiosJWT.get("/apisirs6v2/rltigatitikenamsatusehat", {
+        headers,
+        params: {
+          rsId: rsId,
+          periode,
+        },
+      });
+
+      toast.success("Sync Satusehat berhasil.", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+
+      setLastSyncAt(new Date());
+      await getDataRLTigaTitikEnamSatusehat();
+      startSyncCooldown();
+    } catch (error) {
+      console.log(error);
+      const detailMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.message ||
+        "Gagal sync Satusehat";
+      toast.error(detailMessage, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      startSyncCooldown();
+    } finally {
+      setIsSyncingSatusehat(false);
+    }
+  };
+
+  const handleSatusehatFilterClick = () => {
+    const rsId = getSelectedRsId();
+    if (!rsId && user.jenisUserId !== 4) {
+      handleShow();
+      return;
+    }
+    getDataRLTigaTitikEnamSatusehat();
+  };
+
+  const handleSatusehatSyncClick = () => {
+    const rsId = getSelectedRsId();
+    if (!rsId && user.jenisUserId !== 4) {
+      handleShow();
+      return;
+    }
+    syncDataRLTigaTitikEnamSatusehat();
+  };
+
+  async function handleDownloadExcelSatusehat() {
+    setIsDownloading(true);
+    try {
+      const header = [
+        "No",
+        "Jenis Kegiatan",
+        "Nama Kegiatan",
+        "Rujukan RS",
+        "Rujukan Bidan",
+        "Rujukan Puskesmas",
+        "Rujukan Faskes Lain",
+        "Non Medis",
+        "Non Rujukan",
+        "Dirujuk",
+        "Hidup",
+        "Mati",
+      ];
+
+      const body = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
+        (value, index) => [
+          index + 1,
+          value?.jenis_kegiatan ?? "",
+          value?.nama_kegiatan ?? "",
+          value?.rujukan_rs ?? 0,
+          value?.rujukan_bidan ?? 0,
+          value?.rujukan_puskesmas ?? 0,
+          value?.rujukan_faskes_lain ?? 0,
+          value?.non_medis ?? 0,
+          value?.non_rujukan ?? 0,
+          value?.dirujuk ?? 0,
+          value?.hidup ?? 0,
+          value?.mati ?? 0,
+        ]
+      );
+
+      const periode = `${submittedTahunSatusehat || tahun}-${String(submittedBulanSatusehat || bulan).padStart(2, "0")}`;
+
+      downloadExcel({
+        fileName: `RL_3_6_SatuSehat_${periode}`,
+        sheet: "RL 3.6 SatuSehat",
+        tablePayload: { header, body },
+      });
+    } finally {
+      setTimeout(() => setIsDownloading(false), 800);
+    }
+  }
+
   const getValidasi = async () => {
     try {
+      const rsId = getSelectedRsId() || (submittedRumahSakit?.id ? Number(submittedRumahSakit.id) : null) || (user?.satKerId ? Number(user.satKerId) : null);
+      if (!rsId) return;
+
+      const periodeBulan = submittedBulan ?? bulan;
+      const periodeTahun = submittedTahun ?? tahun;
+      if (!periodeBulan || !periodeTahun) return;
+
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         params: {
-          rsId: submittedRumahSakit.id,
-          periode: String(submittedTahun).concat("-").concat(String(submittedBulan).padStart(2, "0")),
+          rsId: rsId,
+          periode: String(periodeTahun).concat("-").concat(String(periodeBulan).padStart(2, "0")),
         },
       };
       const response = await axiosJWT.get(
@@ -1194,12 +1459,13 @@ const RL36 = () => {
       className="container"
       style={{ marginTop: "20px", marginBottom: "70px" }}
     >
+      <ToastContainer />
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>
         </Modal.Header>
 
-        <form onSubmit={activeWadahTab === "satusehat" ? getRLSatusehat : getRL}>
+        <form onSubmit={activeWadahTab === "satusehat" ? getDataRLTigaTitikEnamSatusehat : getRL}>
           <Modal.Body>
             {user.jenisUserId === 1 ? (
               <>
@@ -1936,104 +2202,768 @@ const RL36 = () => {
           </>
           ) : (
             <>
-              <div className={style.toolbar}>
-                <button
-                  type="button"
-                  className={style.btnPrimary}
-                  onClick={handleShow}
+              <div
+                className="border rounded-bottom shadow-sm bg-white"
+                style={{ padding: "20px 24px" }}
+              >
+                <div
+                  style={{
+                    background: "var(--color-background-primary, #fff)",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 10,
+                    padding: "16px 20px",
+                    marginBottom: 14,
+                  }}
                 >
-                  Filter
-                </button>
-                <DownloadTableExcel
-                  filename={namafileSatusehat}
-                  sheet="data RL 36 Satu Sehat"
-                  currentTableRef={tableSatusehatRef.current}
-                >
-                  <button type="button" className={style.btnPrimary}>
-                    Download
-                  </button>
-                </DownloadTableExcel>
-              </div>
-
-              {filterLabelSatusehat.length > 0 ? (
-                <div>
-                  <h5 style={{ fontSize: "14px" }}>
-                    filtered by{" "}
-                    {filterLabelSatusehat
-                      .map((value) => {
-                        return value;
-                      })
-                      .join(", ")}
-                  </h5>
-                </div>
-              ) : (
-                <></>
-              )}
-
-              <div className={style["table-container"]}>
-                <div className="table-responsive">
-                  <table
-                    className={style.table}
-                    ref={tableSatusehatRef}
-                    style={{ width: "180%" }}
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 13,
+                      color: "#1e293b",
+                      margin: "0 0 14px 0",
+                    }}
                   >
-                    <thead className={style.thead}>
-                      <tr className="main-header-row">
-                        <th>No.</th>
-                        <th>Jenis Kegiatan</th>
-                        <th>Nama Kegiatan</th>
-                        <th>Rujukan RS</th>
-                        <th>Rujukan Bidan</th>
-                        <th>Rujukan Puskesmas</th>
-                        <th>Rujukan Faskes Lain</th>
-                        <th>Non Medis</th>
-                        <th>Non Rujukan</th>
-                        <th>Dirujuk</th>
-                        <th>Hidup</th>
-                        <th>Mati</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dataRLSatusehat.map((value, index) => {
-                        const isNewGroup =
-                          index === 0 ||
-                          dataRLSatusehat[index - 1]?.jenis_kegiatan !== value?.jenis_kegiatan;
+                    Periode Data
+                  </div>
 
-                        return (
-                          <React.Fragment key={`${value?.jenis_kegiatan}-${value?.nama_kegiatan}-${index}`}>
-                            {isNewGroup && (
-                              <tr
-                                style={{
-                                  textAlign: "center",
-                                  backgroundColor: "#C4DFAA",
-                                  fontWeight: "bold",
-                                }}
-                              >
-                                <td colSpan={12} style={{ textAlign: "left" }}>
-                                  {value?.jenis_kegiatan}
-                                </td>
-                              </tr>
-                            )}
-                            <tr>
-                              <td style={{ textAlign: "center" }}>{index + 1}</td>
-                              <td style={{ textAlign: "left" }}>{value?.jenis_kegiatan}</td>
-                              <td style={{ textAlign: "left" }}>{value?.nama_kegiatan}</td>
-                              <td style={{ textAlign: "center" }}>{value?.rujukan_rs || 0}</td>
-                              <td style={{ textAlign: "center" }}>{value?.rujukan_bidan || 0}</td>
-                              <td style={{ textAlign: "center" }}>{value?.rujukan_puskesmas || 0}</td>
-                              <td style={{ textAlign: "center" }}>{value?.rujukan_faskes_lain || 0}</td>
-                              <td style={{ textAlign: "center" }}>{value?.non_medis || 0}</td>
-                              <td style={{ textAlign: "center" }}>{value?.non_rujukan || 0}</td>
-                              <td style={{ textAlign: "center" }}>{value?.dirujuk || 0}</td>
-                              <td style={{ textAlign: "center" }}>{value?.hidup || 0}</td>
-                              <td style={{ textAlign: "center" }}>{value?.mati || 0}</td>
-                            </tr>
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "flex-end",
+                      gap: 12,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 180 }}>
+                        <label
+                          style={{
+                            fontSize: 12,
+                            color: "#64748b",
+                            fontWeight: 500,
+                          }}
+                        >
+                          Bulan
+                        </label>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 7,
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 7,
+                            padding: "7px 10px",
+                            background: "#f8fafc",
+                          }}
+                        >
+                          <FaCalendarAlt size={13} color="#94a3b8" />
+                          <select
+                            value={bulan}
+                            onChange={(e) => setBulan(e.target.value)}
+                            style={{
+                              border: "none",
+                              outline: "none",
+                              background: "transparent",
+                              flex: 1,
+                              fontSize: 13,
+                              color: "#0f172a",
+                              fontWeight: 500,
+                              minWidth: 0,
+                            }}
+                          >
+                            {months.map((value) => (
+                              <option key={value.value} value={value.value}>
+                                {value.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 150 }}>
+                        <label
+                          style={{
+                            fontSize: 12,
+                            color: "#64748b",
+                            fontWeight: 500,
+                          }}
+                        >
+                          Tahun
+                        </label>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 7,
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 7,
+                            padding: "7px 10px",
+                            background: "#f8fafc",
+                          }}
+                        >
+                          <FaCalendarAlt size={13} color="#94a3b8" />
+                          <input
+                            type="number"
+                            value={tahun}
+                            onChange={(e) => setTahun(e.target.value)}
+                            style={{
+                              border: "none",
+                              outline: "none",
+                              background: "transparent",
+                              flex: 1,
+                              fontSize: 13,
+                              color: "#0f172a",
+                              fontWeight: 500,
+                              width: "100%",
+                              minWidth: 0,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={handleSatusehatFilterClick}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 7,
+                          background: "#1d4ed8",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 7,
+                          padding: "9px 18px",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          letterSpacing: "0.2px",
+                          cursor: "pointer",
+                          transition: "opacity 0.15s",
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.opacity = "0.9")}
+                        onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+                      >
+                        <FaFilter size={14} />
+                        FILTER
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSatusehatSyncClick}
+                        disabled={!canSync}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 7,
+                          background: "#059669",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 7,
+                          padding: "9px 18px",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          letterSpacing: "0.2px",
+                          cursor: canSync ? "pointer" : "not-allowed",
+                          opacity: canSync ? 1 : 0.55,
+                          transition: "opacity 0.15s",
+                        }}
+                        onMouseOver={(e) => canSync && (e.currentTarget.style.opacity = "0.9")}
+                        onMouseOut={(e) => canSync && (e.currentTarget.style.opacity = "1")}
+                      >
+                        {isSyncingSatusehat ? (
+                          <Spinner
+                            animation="border"
+                            role="status"
+                            size="sm"
+                            style={{ color: "#fff", borderWidth: 2 }}
+                          />
+                        ) : (
+                          <FaSyncAlt size={14} className={isSyncingSatusehat ? "fa-spin" : ""} />
+                        )}
+                        {isSyncingSatusehat
+                          ? "Syncing..."
+                          : !canSync && !isSyncingSatusehat
+                          ? `Tunggu ${cooldownLeft ?? "5.0"} menit lagi`
+                          : "SYNC SATUSEHAT"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadExcelSatusehat}
+                        disabled={isDownloading || !hasFilteredSatusehat}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 7,
+                          background: "#059669",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 7,
+                          padding: "9px 18px",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          letterSpacing: "0.2px",
+                          cursor:
+                            !isDownloading && hasFilteredSatusehat ? "pointer" : "not-allowed",
+                          opacity: !isDownloading && hasFilteredSatusehat ? 1 : 0.55,
+                          transition: "opacity 0.15s",
+                        }}
+                        onMouseOver={(e) =>
+                          !isDownloading && hasFilteredSatusehat && (e.currentTarget.style.opacity = "0.9")
+                        }
+                        onMouseOut={(e) =>
+                          !isDownloading && hasFilteredSatusehat && (e.currentTarget.style.opacity = "1")
+                        }
+                      >
+                        {isDownloading ? (
+                          <Spinner
+                            animation="border"
+                            role="status"
+                            size="sm"
+                            style={{ color: "#fff", borderWidth: 2 }}
+                          />
+                        ) : (
+                          <SiMicrosoftexcel size={15} />
+                        )}
+                        {isDownloading ? "Mengunduh..." : "DOWNLOAD EXCEL"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 14,
+                    marginBottom: 16,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: "1 1 240px",
+                      border: "1.5px solid #3b82f6",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      background: "#fff",
+                      minHeight: 150,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          background: "#dbeafe",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <FaInfoCircle size={14} color="#2563eb" />
+                      </div>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 12,
+                          color: "#1e293b",
+                          letterSpacing: "0.3px",
+                        }}
+                      >
+                        KETERANGAN TOMBOL
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 5,
+                          background: "#1d4ed8",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <FaFilter size={12} color="#fff" />
+                      </div>
+                      <div style={{ fontSize: 12, color: "#334155", lineHeight: "19px" }}>
+                        <strong style={{ color: "#0f172a" }}>FILTER</strong> : Menampilkan data dari
+                        database SIRS Online
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 5,
+                          background: "#059669",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <FaSyncAlt size={12} color="#fff" />
+                      </div>
+                      <div style={{ fontSize: 12, color: "#334155", lineHeight: "19px" }}>
+                        <strong style={{ color: "#0f172a" }}>SYNC SATUSEHAT</strong> : Mengambil data
+                        terbaru dari SATUSEHAT
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 5,
+                          background: "#059669",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <SiMicrosoftexcel size={12} color="#fff" />
+                      </div>
+                      <div style={{ fontSize: 12, color: "#334155", lineHeight: "19px" }}>
+                        <strong style={{ color: "#0f172a" }}>DOWNLOAD EXCEL</strong> : Mengunduh data
+                        hasil filter
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      flex: "1 1 210px",
+                      border: "1.5px solid #e2e8f0",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      background: "#fff",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 14,
+                      }}
+                    >
+                      <FaSyncAlt size={13} color="#059669" />
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 12,
+                          color: "#059669",
+                          letterSpacing: "0.3px",
+                        }}
+                      >
+                        STATUS SINKRONISASI
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                        flex: 1,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "9px 10px",
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 7,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 5,
+                            background: "#f1f5f9",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <FaCalendarAlt size={11} color="#475569" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#94a3b8",
+                              marginBottom: 2,
+                              letterSpacing: "0.3px",
+                            }}
+                          >
+                            TERAKHIR SYNC
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: "#0f172a",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {formatLastSyncAt(lastSyncAt)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "9px 10px",
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 7,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 5,
+                            background: "#f1f5f9",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <FaClock size={11} color="#475569" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#94a3b8",
+                              marginBottom: 2,
+                              letterSpacing: "0.3px",
+                            }}
+                          >
+                            INTERVAL SYNC
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: "#0f172a",
+                            }}
+                          >
+                            {syncCooldownMinutes} Menit
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      flex: "1 1 180px",
+                      border: "1.5px solid #e2e8f0",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      background: "#fff",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 7,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <FaDatabase size={14} color="#3b82f6" />
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 13,
+                          color: "#3b82f6",
+                          letterSpacing: 0.3,
+                        }}
+                      >
+                        SUMBER DATA
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        flex: 1,
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: "#475569",
+                          margin: 0,
+                          flex: 1,
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        Data yang ditampilkan bersumber dari{" "}
+                        <strong>SATUSEHAT</strong> yang sudah tersimpan dalam database{" "}
+                        <strong>SIRS</strong>.
+                      </p>
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        <FaDatabase size={38} color="#bfdbfe" />
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: -3,
+                            right: -6,
+                            background: "#059669",
+                            color: "#fff",
+                            borderRadius: "50%",
+                            width: 18,
+                            height: 18,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            lineHeight: 1,
+                          }}
+                        >
+                          ✓
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {hasFilteredSatusehat && !isSyncingSatusehat && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      background: "#fff",
+                      border: "1px solid #d9dee7",
+                      borderRadius: 8,
+                      padding: "8px 16px",
+                      marginBottom: 12,
+                      fontSize: 12,
+                      color: "#334155",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>
+                      Filtered By {filterLabelSatusehat.join(", ")}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+                      Total {dataRLSatusehat.length} baris
+                    </div>
+                  </div>
+                )}
+
+                {isSyncingSatusehat && (
+                  <div
+                    style={{
+                      border: "1px solid #d9dee7",
+                      borderRadius: 10,
+                      padding: "18px 16px",
+                      marginBottom: 14,
+                      background: "#f8fafc",
+                      textAlign: "center",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <Spinner animation="border" role="status" size="sm" />
+                    <div style={{ fontSize: 12, color: "#475569" }}>
+                      Sedang mengambil data dari SatuSehat, mohon tunggu...
+                    </div>
+                  </div>
+                )}
+
+                {!hasFilteredSatusehat && !isSyncingSatusehat && (
+                  <div
+                    style={{
+                      backgroundColor: "#fff3cd",
+                      border: "1px solid #ffc107",
+                      color: "#856404",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      padding: "12px 16px",
+                      borderRadius: 8,
+                      marginBottom: 14,
+                      textAlign: "center",
+                    }}
+                  >
+                    Silakan pilih filter terlebih dahulu.
+                  </div>
+                )}
+
+                {hasFilteredSatusehat &&
+                  !isSyncingSatusehat &&
+                  dataRLSatusehat.length === 0 && (
+                    <div
+                      style={{
+                        backgroundColor:
+                          lastSyncAt && !isSyncCooldown ? "#d1ecf1" : "#f8d7da",
+                        border:
+                          lastSyncAt && !isSyncCooldown
+                            ? "1px solid #bee5eb"
+                            : "1px solid #f5c6cb",
+                        color:
+                          lastSyncAt && !isSyncCooldown ? "#0c5460" : "#721c24",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        padding: "12px 16px",
+                        borderRadius: 8,
+                        marginBottom: 14,
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, marginBottom: 4 }}>
+                        Filtered By {filterLabelSatusehat.join(", ")}
+                      </div>
+                      <div>
+                        {lastSyncAt && !isSyncCooldown
+                          ? "Data tidak ditemukan di SATUSEHAT untuk periode ini."
+                          : "Belum sinkronisasi dengan SATUSEHAT untuk periode ini."}
+                        {lastSyncAt && (
+                          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
+                            Terakhir sinkronisasi: {formatLastSyncAt(lastSyncAt)}
+                          </div>
+                        )}
+                        {!lastSyncAt && (
+                          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
+                            Terakhir sinkronisasi: -
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {hasFilteredSatusehat && dataRLSatusehat.length > 0 && (
+                  <div className={style["table-container"]}>
+                    <div className="table-responsive">
+                      <table
+                        className={style.table}
+                        ref={tableSatusehatRef}
+                        style={{ width: "180%" }}
+                      >
+                        <thead className={style.thead}>
+                          <tr className="main-header-row">
+                            <th>No.</th>
+                            <th>Jenis Kegiatan</th>
+                            <th>Nama Kegiatan</th>
+                            <th>Rujukan RS</th>
+                            <th>Rujukan Bidan</th>
+                            <th>Rujukan Puskesmas</th>
+                            <th>Rujukan Faskes Lain</th>
+                            <th>Non Medis</th>
+                            <th>Non Rujukan</th>
+                            <th>Dirujuk</th>
+                            <th>Hidup</th>
+                            <th>Mati</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dataRLSatusehat.map((value, index) => {
+                            const isNewGroup =
+                              index === 0 ||
+                              dataRLSatusehat[index - 1]?.jenis_kegiatan !== value?.jenis_kegiatan;
+
+                            return (
+                              <React.Fragment key={`${value?.jenis_kegiatan}-${value?.nama_kegiatan}-${index}`}>
+                                {isNewGroup && (
+                                  <tr
+                                    style={{
+                                      textAlign: "center",
+                                      backgroundColor: "#C4DFAA",
+                                      fontWeight: "bold",
+                                    }}
+                                  >
+                                    <td colSpan={12} style={{ textAlign: "left" }}>
+                                      {value?.jenis_kegiatan}
+                                    </td>
+                                  </tr>
+                                )}
+                                <tr>
+                                  <td style={{ textAlign: "center" }}>{index + 1}</td>
+                                  <td style={{ textAlign: "left" }}>{value?.jenis_kegiatan}</td>
+                                  <td style={{ textAlign: "left" }}>{value?.nama_kegiatan}</td>
+                                  <td style={{ textAlign: "center" }}>{value?.rujukan_rs || 0}</td>
+                                  <td style={{ textAlign: "center" }}>{value?.rujukan_bidan || 0}</td>
+                                  <td style={{ textAlign: "center" }}>{value?.rujukan_puskesmas || 0}</td>
+                                  <td style={{ textAlign: "center" }}>{value?.rujukan_faskes_lain || 0}</td>
+                                  <td style={{ textAlign: "center" }}>{value?.non_medis || 0}</td>
+                                  <td style={{ textAlign: "center" }}>{value?.non_rujukan || 0}</td>
+                                  <td style={{ textAlign: "center" }}>{value?.dirujuk || 0}</td>
+                                  <td style={{ textAlign: "center" }}>{value?.hidup || 0}</td>
+                                  <td style={{ textAlign: "center" }}>{value?.mati || 0}</td>
+                                </tr>
+                              </React.Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

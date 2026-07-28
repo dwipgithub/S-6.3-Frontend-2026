@@ -4,13 +4,23 @@ import jwt_decode from "jwt-decode";
 import { useNavigate, Link } from "react-router-dom";
 import style from "./RL32.module.css";
 import { HiSaveAs } from "react-icons/hi";
+import {
+  FaCalendarAlt,
+  FaClock,
+  FaDatabase,
+  FaFilter,
+  FaInfoCircle,
+  FaSyncAlt,
+} from "react-icons/fa";
+import { SiMicrosoftexcel } from "react-icons/si";
 import { confirmAlert } from "react-confirm-alert";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import Modal from "react-bootstrap/Modal";
+import { Spinner } from "react-bootstrap";
 // import Table from 'react-bootstrap/Table'
-import { DownloadTableExcel } from "react-export-table-to-excel";
+import { downloadExcel, DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
 
@@ -34,15 +44,23 @@ const RL32 = () => {
   const [dataValidasi, setDataValidasi] = useState(null);
   const [activeTab, setActiveTab] = useState("tab1");
   const [activeWadahTab, setActiveWadahTab] = useState("sirs");
-  const [spinner, setSpinner] = useState(false);
   const [dataRL32Satusehat, setDataRL32Satusehat] = useState([]);
   const [namafileSatusehat, setNamaFileSatusehat] = useState("");
   const [filterLabelSatusehat, setFilterLabelSatusehat] = useState([]);
+  const [isSyncingSatusehat, setIsSyncingSatusehat] = useState(false);
+  const [isSyncCooldown, setIsSyncCooldown] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [hasFilteredSatusehat, setHasFilteredSatusehat] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const [isDownloading, setIsDownloading] = useState(false);
   const [namafile, setNamaFile] = useState("");
   const navigate = useNavigate();
   const tableRef = useRef(null);
   const tableSatusehatRef = useRef(null);
+  const syncCooldownTimeoutRef = useRef(null);
   const { CSRFToken } = useCSRFTokenContext();
+  const syncCooldownMinutes = 5;
+  const syncCooldownMs = syncCooldownMinutes * 60 * 1000;
 
   useEffect(() => {
     refreshToken();
@@ -56,11 +74,34 @@ const RL32 = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (syncCooldownTimeoutRef.current) {
+        clearTimeout(syncCooldownTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSyncCooldown || !lastSyncAt) return;
+    const elapsed = (Date.now() - new Date(lastSyncAt).getTime()) / 60000;
+    if (elapsed >= syncCooldownMinutes) return;
+    const remainingMs = (syncCooldownMinutes - elapsed) * 60 * 1000;
+    const t = setTimeout(() => setIsSyncCooldown(false), remainingMs);
+    return () => clearTimeout(t);
+  }, [isSyncCooldown, lastSyncAt, syncCooldownMinutes]);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
   // Load validasi data secara realtime saat bulan/tahun/rumahSakit berubah
   useEffect(() => {
     if (activeTab === "tab2" && rumahSakit && rumahSakit.id && bulan !== 0 && tahun) {
       getValidasi();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bulan, tahun, rumahSakit, activeTab]);
 
   const refreshToken = async () => {
@@ -73,9 +114,16 @@ const RL32 = () => {
       const response = await axios.get("/apisirs6v2/token", customConfig);
       setToken(response.data.accessToken);
       const decoded = jwt_decode(response.data.accessToken);
+      if (decoded.jenisUserId === 2) {
+        getKabKota(decoded.satKerId);
+      } else if (decoded.jenisUserId === 3) {
+        getRumahSakit(decoded.satKerId);
+      }
       if (decoded.jenisUserId === 4) {
-      showRumahSakit(decoded.satKerId);
-      };
+        if (!rumahSakit || !rumahSakit.id) {
+          showRumahSakit(decoded.satKerId, response.data.accessToken);
+        }
+      }
       setExpire(decoded.exp);
       setUser(decoded);
     } catch (error) {
@@ -90,7 +138,12 @@ const RL32 = () => {
     async (config) => {
       const currentDate = new Date();
       if (expire * 1000 < currentDate.getTime()) {
-        const response = await axios.get("/apisirs6v2/token");
+        const customConfig = {
+          headers: {
+            "XSRF-TOKEN": CSRFToken,
+          },
+        };
+        const response = await axios.get("/apisirs6v2/token", customConfig);
         config.headers.Authorization = `Bearer ${response.data.accessToken}`;
         setToken(response.data.accessToken);
         const decoded = jwt_decode(response.data.accessToken);
@@ -234,100 +287,214 @@ const RL32 = () => {
     setKeteranganValidasi(e.target.value);
   };
 
-  const getRL32Satusehat = async (e) => {
-  if (e) e.preventDefault();
-  const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+  const getSelectedRsId = () => {
+    const rsFromState = rumahSakit && rumahSakit.id ? rumahSakit.id : null;
+    if (rsFromState && String(rsFromState) !== "0") return Number(rsFromState);
+    if (user && user.jenisUserId === 4 && user.satKerId) return Number(user.satKerId);
+    return null;
+  };
 
-  const filter = [];
-  if (rumahSakit) filter.push("nama: ".concat(rumahSakit.nama));
-  filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
-  setFilterLabelSatusehat(filter);
+  const minutesSinceSync = lastSyncAt
+    ? (now - new Date(lastSyncAt).getTime()) / 60000
+    : null;
+  const canSync =
+    !isSyncingSatusehat &&
+    (minutesSinceSync === null || minutesSinceSync >= syncCooldownMinutes) &&
+    !isSyncCooldown;
+  const cooldownLeft =
+    minutesSinceSync !== null
+      ? Math.max(0, syncCooldownMinutes - minutesSinceSync).toFixed(1)
+      : null;
 
-  try {
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
+  const formatLastSyncAt = (value) => {
+    if (!value) return "-";
+    try {
+      return new Intl.DateTimeFormat("id-ID", {
+        day: "numeric",
+        month: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(new Date(value)).replace(".", ":").replace(".", ":") + " WIB";
+    } catch (error) {
+      return "-";
+    }
+  };
 
-    const apiKey = process.env.REACT_APP_SATUSEHAT_API_KEY;
+  const startSyncCooldown = () => {
+    setIsSyncCooldown(true);
 
-    if (apiKey) {
-      headers["X-API-Key"] = apiKey;
+    if (syncCooldownTimeoutRef.current) {
+      clearTimeout(syncCooldownTimeoutRef.current);
     }
 
-    const results = await axios.get(
-      "/apisirs6v2/rltigatitikduasatusehat",
-      {
-        headers,
-        params: {
-          periode,
-          rsId: rumahSakit.id,
-        },
+    syncCooldownTimeoutRef.current = setTimeout(() => {
+      setIsSyncCooldown(false);
+    }, syncCooldownMs);
+  };
+
+  const getRL32Satusehat = async (e) => {
+    if (e) e.preventDefault();
+
+    const rsId = getSelectedRsId();
+    if (!rsId) {
+      toast("rumah sakit harus dipilih", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    if (!tahun || !bulan) {
+      toast("periode wajib diisi", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+    let currentRumahSakit = rumahSakit;
+
+    if (!currentRumahSakit || !currentRumahSakit.id || String(currentRumahSakit.id) === "0") {
+      try {
+        const detailRs = await axiosJWT.get("/apisirs6v2/rumahsakit/" + rsId, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        currentRumahSakit = detailRs.data.data || { id: rsId, nama: "Rumah Sakit" };
+        setRumahSakit(currentRumahSakit);
+      } catch (error) {
+        currentRumahSakit = { id: rsId, nama: "Rumah Sakit" };
+        setRumahSakit(currentRumahSakit);
       }
-    );
+    }
 
-    console.log("Response RL 3.2:", results.data);
+    const filter = [];
+    filter.push("Provinsi: ".concat(currentRumahSakit?.provinsi_nama ?? "-"));
+    filter.push("Rumah Sakit: ".concat(currentRumahSakit?.nama ?? "-"));
+    filter.push("Periode: ".concat(periode));
+    setFilterLabelSatusehat(filter);
+    setHasFilteredSatusehat(true);
+    setNamaFileSatusehat(`rl32_satusehat_${rsId}_${periode}-01`);
 
-    const serverMessage =
-      results?.data?.message || "";
+    try {
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
 
-    const items =
-      results?.data?.data?.daftar_jenis_pelayanan || [];
-
-    if (items.length === 0) {
-      setDataRL32Satusehat([]);
-
-      toast.info(
-        serverMessage ||
-          "Data belum tersedia untuk periode ini.",
+      const results = await axiosJWT.get(
+        "/apisirs6v2/getDataRLTigaTitikDuaSatusehatLocal",
         {
-          position: toast.POSITION.TOP_RIGHT,
-          autoClose: 5000,
+          headers,
+          params: {
+            rsId: rsId,
+            bulan_laporan: periode,
+          },
         }
       );
-    } else {
-      setDataRL32Satusehat(items);
 
-      setNamaFileSatusehat(
-        `rl32_satusehat_${periode}-01`
-      );
+      const items = results?.data?.data || [];
+      setDataRL32Satusehat(Array.isArray(items) ? items : []);
+      if (show) handleClose();
+    } catch (error) {
+      setDataRL32Satusehat([]);
+      const errMsg =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "Terjadi kesalahan sistem";
+
+      toast.error(errMsg, {
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 5000,
+      });
+
+      if (show) handleClose();
     }
-  } catch (error) {
-    console.error(
-      "Error RL 3.2 Satusehat:",
-      error
-    );
+  };
 
-    setDataRL32Satusehat([]);
+  const syncDataRLTigaTitikDuaSatusehat = async () => {
+    const rsId = getSelectedRsId();
+    if (!rsId) {
+      toast("rumah sakit harus dipilih", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
 
-    const errMsg =
-      error?.response?.data?.message ||
-      "Terjadi kesalahan sistem";
+    if (!tahun || !bulan) {
+      toast("periode wajib diisi", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
 
-    toast.error(errMsg, {
-      position: toast.POSITION.TOP_RIGHT,
-      autoClose: 5000,
-    });
-  } finally {
-    setSpinner(false);
+    if (isSyncingSatusehat || isSyncCooldown) {
+      toast(`Sync Satusehat masih dibatasi, tunggu ${syncCooldownMinutes} menit.`, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
 
-    setTimeout(() => {
-      if (typeof handleClose === "function") {
-        handleClose();
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+
+    try {
+      setIsSyncingSatusehat(true);
+
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      const apiKey = process.env.REACT_APP_SATUSEHAT_API_KEY;
+      if (apiKey) {
+        headers["X-API-Key"] = apiKey;
       }
-    }, 3000);
-  }
-};
+
+      await axiosJWT.get("/apisirs6v2/rltigatitikduasatusehat", {
+        headers,
+        params: {
+          rsId: rsId,
+          periode,
+        },
+      });
+
+      toast.success("Sync Satusehat berhasil.", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+
+      setLastSyncAt(new Date());
+      await getRL32Satusehat();
+      startSyncCooldown();
+    } catch (error) {
+      const errMsg =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "Gagal sync Satusehat";
+
+      toast.error(errMsg, {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+
+      startSyncCooldown();
+    } finally {
+      setIsSyncingSatusehat(false);
+    }
+  };
 
   const getValidasi = async () => {
     try {
+      const rsId = getSelectedRsId();
+      if (!rsId) return;
+
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         params: {
-          rsId: rumahSakit.id,
+          rsId: rsId,
           periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
         },
       };
@@ -371,11 +538,15 @@ const RL32 = () => {
     } catch (error) {}
   };
 
-  const showRumahSakit = async (id) => {
+  const showRumahSakit = async (id, tokenOverride) => {
     try {
+      if (rumahSakit && String(rumahSakit.id) === String(id)) {
+        return;
+      }
+
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenOverride || token}`,
         },
       });
 
@@ -385,14 +556,30 @@ const RL32 = () => {
 
   const getRL = async (e) => {
     e.preventDefault();
-    if (!rumahSakit) {
+    const rsId = getSelectedRsId();
+    if (!rsId) {
       toast(`rumah sakit harus dipilih`, {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
     }
+
+    let currentRumahSakit = rumahSakit;
+    if (!currentRumahSakit || !currentRumahSakit.id || String(currentRumahSakit.id) === "0") {
+      try {
+        const detailRs = await axiosJWT.get("/apisirs6v2/rumahsakit/" + rsId, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        currentRumahSakit = detailRs.data.data || { id: rsId, nama: "Rumah Sakit" };
+        setRumahSakit(currentRumahSakit);
+      } catch (error) {
+        currentRumahSakit = { id: rsId, nama: "Rumah Sakit" };
+        setRumahSakit(currentRumahSakit);
+      }
+    }
+
     const filter = [];
-    filter.push("nama: ".concat(rumahSakit.nama));
+    filter.push("nama: ".concat(currentRumahSakit?.nama ?? "Rumah Sakit"));
     filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
     setFilterLabel(filter);
     try {
@@ -402,7 +589,7 @@ const RL32 = () => {
           Authorization: `Bearer ${token}`,
         },
         params: {
-          rsId: rumahSakit.id,
+          rsId: rsId,
           periode: String(tahun).concat("-").concat(bulan),
         },
       };
@@ -435,7 +622,7 @@ const RL32 = () => {
             Authorization: `Bearer ${token}`,
           },
           params: {
-            rsId: rumahSakit.id,
+            rsId: rsId,
             periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
           },
         };
@@ -502,7 +689,8 @@ const RL32 = () => {
   const simpanValidasi = async (e) => {
     e.preventDefault();
     
-    if (!rumahSakit || !rumahSakit.id) {
+    const rsId = getSelectedRsId();
+    if (!rsId) {
       toast("Rumah sakit harus dipilih terlebih dahulu", {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -551,7 +739,7 @@ const RL32 = () => {
       } else {
         // Create new validation
         const createPayload = {
-          rsId: rumahSakit.id,
+          rsId: rsId,
           periode: String(tahun).concat("-").concat(String(bulan).padStart(2, "0")),
           jenisPeriode: 1,
           statusValidasiId: parseInt(statusValidasi),
@@ -663,6 +851,88 @@ const RL32 = () => {
 
   const handleWadahTabClick = (tab) => {
     setActiveWadahTab(tab);
+  };
+
+  const handleSatusehatFilterClick = () => {
+    const rsId = getSelectedRsId();
+    if (!rsId && user.jenisUserId !== 4) {
+      handleShow();
+      return;
+    }
+    getRL32Satusehat();
+  };
+
+  const handleSatusehatSyncClick = () => {
+    const rsId = getSelectedRsId();
+    if (!rsId && user.jenisUserId !== 4) {
+      handleShow();
+      return;
+    }
+    syncDataRLTigaTitikDuaSatusehat();
+  };
+
+  const handleDownloadExcelSatusehat = async () => {
+    setIsDownloading(true);
+    try {
+      const header = [
+        "No",
+        "Jenis Pelayanan",
+        "Pasien Awal Bulan",
+        "Pasien Masuk",
+        "Pasien Pindahan",
+        "Pasien Dipindahkan",
+        "Pasien Keluar Hidup",
+        "Pasien Pria Keluar Mati <48 Jam",
+        "Pasien Pria Keluar Mati >=48 Jam",
+        "Pasien Wanita Keluar Mati <48 Jam",
+        "Pasien Wanita Keluar Mati >=48 Jam",
+        "Jumlah Lama Dirawat",
+        "Pasien Akhir Bulan",
+        "Jumlah Hari Perawatan",
+        "Hari VVIP",
+        "Hari VIP",
+        "Hari Kelas 1",
+        "Hari Kelas 2",
+        "Hari Kelas 3",
+        "Hari Kelas Khusus",
+        "TT Awal",
+      ];
+
+      const body = dataRL32Satusehat.map((value, index) => [
+        index + 1,
+        value.nama_jenis_pelayanan || value.jenis_pelayanan || "-",
+        value.pasien_awal_bulan || 0,
+        value.pasien_masuk || 0,
+        value.pasien_pindahan || 0,
+        value.pasien_dipindahkan || 0,
+        value.pasien_keluar_hidup || 0,
+        value.mati_lk_kurang_48_jam || 0,
+        value.mati_lk_lebih_sama_48_jam || 0,
+        value.mati_pr_kurang_48_jam || 0,
+        value.mati_pr_lebih_sama_48_jam || 0,
+        value.jumlah_lama_dirawat || 0,
+        value.pasien_akhir_bulan || 0,
+        value.jumlah_hari_perawatan || 0,
+        value.hari_vvip || 0,
+        value.hari_vip || 0,
+        value.hari_kelas_1 || 0,
+        value.hari_kelas_2 || 0,
+        value.hari_kelas_3 || 0,
+        value.hari_kelas_khusus || 0,
+        value.alokasi_tempat_tidur_awal_bulan || 0,
+      ]);
+
+      downloadExcel({
+        fileName: namafileSatusehat || "rl32_satusehat",
+        sheet: "data RL 32 Satusehat",
+        tablePayload: {
+          header,
+          body,
+        },
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const calculateTotalPasienAwalBulan = (data) => {
@@ -1046,7 +1316,6 @@ const RL32 = () => {
           </Modal.Body>
           <Modal.Footer>
             <div className="mt-3 mb-3">
-              <ToastContainer />
               <button type="submit" className="btn btn-outline-success">
                 <HiSaveAs size={20} /> Terapkan
               </button>
@@ -1054,6 +1323,7 @@ const RL32 = () => {
           </Modal.Footer>
         </form>
       </Modal>
+      <ToastContainer />
 
       <div className="row">
         <div className="col-md-12">
@@ -1408,8 +1678,6 @@ const RL32 = () => {
                               5️⃣ FORM VALIDASI
                           ========================== */
                           <form onSubmit={simpanValidasi}>
-                            <ToastContainer />
-
                             <div className={style.validasiFormGroup}>
                               <label>Status</label>
                               <select
@@ -1459,97 +1727,797 @@ const RL32 = () => {
                 activeWadahTab === "satusehat" ? "show active" : ""
               }`}
             >
-              <div className={style.toolbar}>
-                <button
-                  type="button"
-                  className={style.btnPrimary}
-                  onClick={handleShow}
+              <div
+                className="border rounded-bottom shadow-sm bg-white"
+                style={{ padding: "20px 24px" }}
+              >
+                <div
+                  style={{
+                    background: "var(--color-background-primary, #fff)",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 10,
+                    padding: "16px 20px",
+                    marginBottom: 14,
+                  }}
                 >
-                  Filter
-                </button>
-                <DownloadTableExcel
-                  filename={namafileSatusehat}
-                  sheet="data RL 32 Satusehat"
-                  currentTableRef={tableSatusehatRef.current}
-                >
-                  <button
-                    type="button"
-                    className={style.btnPrimary}
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 13,
+                      color: "#1e293b",
+                      margin: "0 0 14px 0",
+                    }}
                   >
-                    Download
-                  </button>
-                </DownloadTableExcel>
-              </div>
-              <div className={style.filterLabel}>
-                {filterLabelSatusehat.length > 0 ? (
-                  <>
-                    Filter: {filterLabelSatusehat.map((value) => value).join(" · ")}
-                  </>
-                ) : null}
-              </div>
+                    Periode Data
+                  </div>
 
-              <div className={style["table-container"]}>
-                <div className="table-responsive">
-                  <table className={style.table} ref={tableSatusehatRef}>
-                    <thead className={style.thead}>
-                      <tr>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>No.</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jenis Pelayanan</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Awal Bulan</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Masuk</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Pindahan</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Dipindahkan</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Keluar Hidup</th>
-                        <th colSpan="2" style={{ textAlign: "center" }}>Pasien Pria Keluar Mati</th>
-                        <th colSpan="2" style={{ textAlign: "center" }}>Pasien Wanita Keluar Mati</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jumlah Lama Dirawat</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Akhir Bulan</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jumlah Hari Perawatan</th>
-                        <th colSpan="6" style={{ textAlign: "center" }}>Rincian Hari Perawatan</th>
-                        <th rowSpan="2" style={{ verticalAlign: "middle" }}>TT Awal</th>
-                      </tr>
-                      <tr className={style["subheader-row"]}>
-                        <th>{"<48 jam"}</th>
-                        <th>{">=48 jam"}</th>
-                        <th>{"<48 jam"}</th>
-                        <th>{">=48 jam"}</th>
-                        <th>VVIP</th>
-                        <th>VIP</th>
-                        <th>1</th>
-                        <th>2</th>
-                        <th>3</th>
-                        <th>Khusus</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dataRL32Satusehat.map((value, index) => (
-                        <tr key={index}>
-                          <td>{index + 1}</td>
-                          <td>{value.nama_jenis_pelayanan || value.jenis_pelayanan}</td>
-                          <td>{value.pasien_awal_bulan || 0}</td>
-                          <td>{value.pasien_masuk || 0}</td>
-                          <td>{value.pasien_pindahan || 0}</td>
-                          <td>{value.pasien_dipindahkan || 0}</td>
-                          <td>{value.pasien_keluar_hidup || 0}</td>
-                          <td>{value.mati_lk_kurang_48_jam || 0}</td>
-                          <td>{value.mati_lk_lebih_sama_48_jam || 0}</td>
-                          <td>{value.mati_pr_kurang_48_jam || 0}</td>
-                          <td>{value.mati_pr_lebih_sama_48_jam || 0}</td>
-                          <td>{value.jumlah_lama_dirawat || 0}</td>
-                          <td>{value.pasien_akhir_bulan || 0}</td>
-                          <td>{value.jumlah_hari_perawatan || 0}</td>
-                          <td>{value.hari_vvip || 0}</td>
-                          <td>{value.hari_vip || 0}</td>
-                          <td>{value.hari_kelas_1 || 0}</td>
-                          <td>{value.hari_kelas_2 || 0}</td>
-                          <td>{value.hari_kelas_3 || 0}</td>
-                          <td>{value.hari_kelas_khusus || 0}</td>
-                          <td>{value.alokasi_tempat_tidur_awal_bulan || 0}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "flex-end",
+                      gap: 12,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-end",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 5,
+                          minWidth: 180,
+                        }}
+                      >
+                        <label
+                          style={{
+                            fontSize: 12,
+                            color: "#64748b",
+                            fontWeight: 500,
+                          }}
+                        >
+                          Bulan
+                        </label>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 7,
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 7,
+                            padding: "7px 10px",
+                            background: "#f8fafc",
+                          }}
+                        >
+                          <FaCalendarAlt size={13} color="#94a3b8" />
+                          <select
+                            value={bulan}
+                            onChange={(e) => setBulan(e.target.value)}
+                            style={{
+                              border: "none",
+                              outline: "none",
+                              background: "transparent",
+                              flex: 1,
+                              fontSize: 13,
+                              color: "#0f172a",
+                              fontWeight: 500,
+                              minWidth: 0,
+                            }}
+                          >
+                            {daftarBulan.map((value) => (
+                              <option key={value.value} value={value.value}>
+                                {value.key}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 5,
+                          minWidth: 150,
+                        }}
+                      >
+                        <label
+                          style={{
+                            fontSize: 12,
+                            color: "#64748b",
+                            fontWeight: 500,
+                          }}
+                        >
+                          Tahun
+                        </label>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 7,
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 7,
+                            padding: "7px 10px",
+                            background: "#f8fafc",
+                          }}
+                        >
+                          <FaCalendarAlt size={13} color="#94a3b8" />
+                          <input
+                            type="number"
+                            value={tahun}
+                            onChange={(e) => setTahun(e.target.value)}
+                            style={{
+                              border: "none",
+                              outline: "none",
+                              background: "transparent",
+                              flex: 1,
+                              fontSize: 13,
+                              color: "#0f172a",
+                              fontWeight: 500,
+                              width: "100%",
+                              minWidth: 0,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={handleSatusehatFilterClick}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 7,
+                          background: "#1d4ed8",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 7,
+                          padding: "9px 18px",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          letterSpacing: "0.2px",
+                          cursor: "pointer",
+                          transition: "opacity 0.15s",
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.opacity = "0.9")}
+                        onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+                      >
+                        <FaFilter size={14} />
+                        FILTER
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSatusehatSyncClick}
+                        disabled={!canSync}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 7,
+                          background: "#059669",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 7,
+                          padding: "9px 18px",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          letterSpacing: "0.2px",
+                          cursor: canSync ? "pointer" : "not-allowed",
+                          opacity: canSync ? 1 : 0.55,
+                          transition: "opacity 0.15s",
+                        }}
+                        onMouseOver={(e) =>
+                          canSync && (e.currentTarget.style.opacity = "0.9")
+                        }
+                        onMouseOut={(e) =>
+                          canSync && (e.currentTarget.style.opacity = "1")
+                        }
+                      >
+                        {isSyncingSatusehat ? (
+                          <Spinner
+                            animation="border"
+                            role="status"
+                            size="sm"
+                            style={{ color: "#fff", borderWidth: 2 }}
+                          />
+                        ) : (
+                          <FaSyncAlt size={14} className={isSyncingSatusehat ? "fa-spin" : ""} />
+                        )}
+                        {isSyncingSatusehat
+                          ? "Syncing..."
+                          : !canSync && !isSyncingSatusehat
+                          ? `Tunggu ${cooldownLeft ?? "5.0"} menit lagi`
+                          : "SYNC SATUSEHAT"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadExcelSatusehat}
+                        disabled={isDownloading || !hasFilteredSatusehat}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 7,
+                          background: "#059669",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 7,
+                          padding: "9px 18px",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          letterSpacing: "0.2px",
+                          cursor:
+                            !isDownloading && hasFilteredSatusehat ? "pointer" : "not-allowed",
+                          opacity: !isDownloading && hasFilteredSatusehat ? 1 : 0.55,
+                          transition: "opacity 0.15s",
+                        }}
+                        onMouseOver={(e) =>
+                          !isDownloading &&
+                          hasFilteredSatusehat &&
+                          (e.currentTarget.style.opacity = "0.9")
+                        }
+                        onMouseOut={(e) =>
+                          !isDownloading &&
+                          hasFilteredSatusehat &&
+                          (e.currentTarget.style.opacity = "1")
+                        }
+                      >
+                        {isDownloading ? (
+                          <Spinner
+                            animation="border"
+                            role="status"
+                            size="sm"
+                            style={{ color: "#fff", borderWidth: 2 }}
+                          />
+                        ) : (
+                          <SiMicrosoftexcel size={15} />
+                        )}
+                        {isDownloading ? "Mengunduh..." : "DOWNLOAD EXCEL"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 14,
+                    marginBottom: 16,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: "1 1 240px",
+                      border: "1.5px solid #3b82f6",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      background: "#fff",
+                      minHeight: 150,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          background: "#dbeafe",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <FaInfoCircle size={14} color="#2563eb" />
+                      </div>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 12,
+                          color: "#1e293b",
+                          letterSpacing: "0.3px",
+                        }}
+                      >
+                        KETERANGAN TOMBOL
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 5,
+                          background: "#1d4ed8",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <FaFilter size={12} color="#fff" />
+                      </div>
+                      <div style={{ fontSize: 12, color: "#334155", lineHeight: "19px" }}>
+                        <strong style={{ color: "#0f172a" }}>FILTER</strong> : Menampilkan data dari
+                        database SIRS Online
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 5,
+                          background: "#059669",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <FaSyncAlt size={12} color="#fff" />
+                      </div>
+                      <div style={{ fontSize: 12, color: "#334155", lineHeight: "19px" }}>
+                        <strong style={{ color: "#0f172a" }}>SYNC SATUSEHAT</strong> : Mengambil data
+                        terbaru dari SATUSEHAT
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 5,
+                          background: "#059669",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <SiMicrosoftexcel size={12} color="#fff" />
+                      </div>
+                      <div style={{ fontSize: 12, color: "#334155", lineHeight: "19px" }}>
+                        <strong style={{ color: "#0f172a" }}>DOWNLOAD EXCEL</strong> : Mengunduh data
+                        hasil filter
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      flex: "1 1 210px",
+                      border: "1.5px solid #e2e8f0",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      background: "#fff",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 14,
+                      }}
+                    >
+                      <FaSyncAlt size={13} color="#059669" />
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 12,
+                          color: "#059669",
+                          letterSpacing: "0.3px",
+                        }}
+                      >
+                        STATUS SINKRONISASI
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                        flex: 1,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "9px 10px",
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 7,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 5,
+                            background: "#f1f5f9",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <FaCalendarAlt size={11} color="#475569" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#94a3b8",
+                              marginBottom: 2,
+                              letterSpacing: "0.3px",
+                            }}
+                          >
+                            TERAKHIR SYNC
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: "#0f172a",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {formatLastSyncAt(lastSyncAt)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "9px 10px",
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 7,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 5,
+                            background: "#f1f5f9",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <FaClock size={11} color="#475569" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#94a3b8",
+                              marginBottom: 2,
+                              letterSpacing: "0.3px",
+                            }}
+                          >
+                            INTERVAL SYNC
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: "#0f172a",
+                            }}
+                          >
+                            {syncCooldownMinutes} Menit
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      flex: "1 1 180px",
+                      border: "1.5px solid #e2e8f0",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      background: "#fff",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 7,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <FaDatabase size={14} color="#3b82f6" />
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 13,
+                          color: "#3b82f6",
+                          letterSpacing: 0.3,
+                        }}
+                      >
+                        SUMBER DATA
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        flex: 1,
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: "#475569",
+                          margin: 0,
+                          flex: 1,
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        Data yang ditampilkan bersumber dari{" "}
+                        <strong>SATUSEHAT</strong> yang sudah tersimpan dalam database{" "}
+                        <strong>SIRS</strong>.
+                      </p>
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        <FaDatabase size={38} color="#bfdbfe" />
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: -3,
+                            right: -6,
+                            background: "#059669",
+                            color: "#fff",
+                            borderRadius: "50%",
+                            width: 18,
+                            height: 18,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            lineHeight: 1,
+                          }}
+                        >
+                          ✓
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {hasFilteredSatusehat && !isSyncingSatusehat && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      background: "#fff",
+                      border: "1px solid #d9dee7",
+                      borderRadius: 8,
+                      padding: "8px 16px",
+                      marginBottom: 12,
+                      fontSize: 12,
+                      color: "#334155",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>
+                      Filtered By {filterLabelSatusehat.join(", ")}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+                      Total {dataRL32Satusehat.length} baris
+                    </div>
+                  </div>
+                )}
+
+                {isSyncingSatusehat && (
+                  <div
+                    style={{
+                      border: "1px solid #d9dee7",
+                      borderRadius: 10,
+                      padding: "18px 16px",
+                      marginBottom: 14,
+                      background: "#f8fafc",
+                      textAlign: "center",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <Spinner animation="border" role="status" size="sm" />
+                    <div style={{ fontSize: 12, color: "#475569" }}>
+                      Sedang mengambil data dari SatuSehat, mohon tunggu...
+                    </div>
+                  </div>
+                )}
+
+                {!hasFilteredSatusehat && !isSyncingSatusehat && (
+                  <div
+                    style={{
+                      backgroundColor: "#fff3cd",
+                      border: "1px solid #ffc107",
+                      color: "#856404",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      padding: "12px 16px",
+                      borderRadius: 8,
+                      marginBottom: 14,
+                      textAlign: "center",
+                    }}
+                  >
+                    Silakan pilih filter terlebih dahulu.
+                  </div>
+                )}
+
+                {hasFilteredSatusehat &&
+                  !isSyncingSatusehat &&
+                  dataRL32Satusehat.length === 0 && (
+                    <div
+                      style={{
+                        backgroundColor:
+                          lastSyncAt && !isSyncCooldown ? "#d1ecf1" : "#f8d7da",
+                        border:
+                          lastSyncAt && !isSyncCooldown
+                            ? "1px solid #bee5eb"
+                            : "1px solid #f5c6cb",
+                        color:
+                          lastSyncAt && !isSyncCooldown ? "#0c5460" : "#721c24",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        padding: "12px 16px",
+                        borderRadius: 8,
+                        marginBottom: 14,
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, marginBottom: 4 }}>
+                        Filtered By {filterLabelSatusehat.join(", ")}
+                      </div>
+                      <div>
+                        {lastSyncAt && !isSyncCooldown
+                          ? "Data tidak ditemukan di SATUSEHAT untuk periode ini."
+                          : "Belum sinkronisasi dengan SATUSEHAT untuk periode ini."}
+                        {lastSyncAt && (
+                          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
+                            Terakhir sinkronisasi: {formatLastSyncAt(lastSyncAt)}
+                          </div>
+                        )}
+                        {!lastSyncAt && (
+                          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
+                            Terakhir sinkronisasi: -
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {hasFilteredSatusehat && dataRL32Satusehat.length > 0 && (
+                  <div className={style["table-container"]}>
+                    <div className="table-responsive">
+                      <table className={style.table} ref={tableSatusehatRef}>
+                        <thead className={style.thead}>
+                          <tr>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>No.</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jenis Pelayanan</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Awal Bulan</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Masuk</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Pindahan</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Dipindahkan</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Keluar Hidup</th>
+                            <th colSpan="2" style={{ textAlign: "center" }}>Pasien Pria Keluar Mati</th>
+                            <th colSpan="2" style={{ textAlign: "center" }}>Pasien Wanita Keluar Mati</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jumlah Lama Dirawat</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>Pasien Akhir Bulan</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>Jumlah Hari Perawatan</th>
+                            <th colSpan="6" style={{ textAlign: "center" }}>Rincian Hari Perawatan</th>
+                            <th rowSpan="2" style={{ verticalAlign: "middle" }}>TT Awal</th>
+                          </tr>
+                          <tr className={style["subheader-row"]}>
+                            <th>{"<48 jam"}</th>
+                            <th>{">=48 jam"}</th>
+                            <th>{"<48 jam"}</th>
+                            <th>{">=48 jam"}</th>
+                            <th>VVIP</th>
+                            <th>VIP</th>
+                            <th>1</th>
+                            <th>2</th>
+                            <th>3</th>
+                            <th>Khusus</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dataRL32Satusehat.map((value, index) => (
+                            <tr key={`${value.code || value.jenis_pelayanan || "row"}-${index}`}>
+                              <td>{index + 1}</td>
+                              <td>{value.nama_jenis_pelayanan || value.jenis_pelayanan}</td>
+                              <td>{value.pasien_awal_bulan || 0}</td>
+                              <td>{value.pasien_masuk || 0}</td>
+                              <td>{value.pasien_pindahan || 0}</td>
+                              <td>{value.pasien_dipindahkan || 0}</td>
+                              <td>{value.pasien_keluar_hidup || 0}</td>
+                              <td>{value.mati_lk_kurang_48_jam || 0}</td>
+                              <td>{value.mati_lk_lebih_sama_48_jam || 0}</td>
+                              <td>{value.mati_pr_kurang_48_jam || 0}</td>
+                              <td>{value.mati_pr_lebih_sama_48_jam || 0}</td>
+                              <td>{value.jumlah_lama_dirawat || 0}</td>
+                              <td>{value.pasien_akhir_bulan || 0}</td>
+                              <td>{value.jumlah_hari_perawatan || 0}</td>
+                              <td>{value.hari_vvip || 0}</td>
+                              <td>{value.hari_vip || 0}</td>
+                              <td>{value.hari_kelas_1 || 0}</td>
+                              <td>{value.hari_kelas_2 || 0}</td>
+                              <td>{value.hari_kelas_3 || 0}</td>
+                              <td>{value.hari_kelas_khusus || 0}</td>
+                              <td>{value.alokasi_tempat_tidur_awal_bulan || 0}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
