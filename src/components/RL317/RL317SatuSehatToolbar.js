@@ -1,6 +1,7 @@
 import { Spinner } from "react-bootstrap";
 import { HiSaveAs } from "react-icons/hi";
 import { FaSyncAlt, FaCalendarAlt, FaSlidersH } from "react-icons/fa";
+import { SiMicrosoftexcel } from "react-icons/si";
 
 const RL317Toolbar = ({
   // onFilter,
@@ -195,7 +196,7 @@ const RL317Toolbar = ({
                 whiteSpace: "nowrap",
               }}
             >
-              <HiSaveAs size={15} /> DOWNLOAD EXCEL
+              <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
             </button>
           </div>
         </div>

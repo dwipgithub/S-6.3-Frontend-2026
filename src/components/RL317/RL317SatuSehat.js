@@ -34,7 +34,7 @@ const RL317SatuSehat = () => {
   } = useRL317(axiosJWT, token, CSRFToken, user);
 
   const handleDownloadExcel = () => {
-    exportRL317ExcelSatuSehat(dataRL);
+    exportRL317ExcelSatuSehat(dataRL, tahun);
   };
 
   return (
@@ -81,7 +81,7 @@ const RL317SatuSehat = () => {
                 <h5 style={{ fontSize: "14px", margin: 0 }}>
                   Filtered By {filterLabel.join(", ")}
                 </h5>
-                {isFilterApplied && (
+                {/* {isFilterApplied && (
                   <span style={{ fontSize: 12, color: "gray" }}>
                     {sync.status === "success" && (
                       <span style={{ fontSize: 12, color: "gray" }}>
@@ -90,7 +90,7 @@ const RL317SatuSehat = () => {
                       </span>
                     )}
                   </span>
-                )}
+                )} */}
               </div>
             )}
           </div>

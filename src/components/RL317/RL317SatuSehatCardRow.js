@@ -7,6 +7,7 @@ import {
 } from "react-icons/fa";
 import { HiSaveAs } from "react-icons/hi";
 import { formatDate } from "../../utils/rl317.utils";
+import { SiMicrosoftexcel } from "react-icons/si";
 
 const SatuSehatCardRow = ({ sync, manualSyncCooldown }) => {
   return (
@@ -76,7 +77,7 @@ const SatuSehatCardRow = ({ sync, manualSyncCooldown }) => {
             desc: "Mengambil data terbaru dari SATUSEHAT",
           },
           {
-            icon: <HiSaveAs size={12} />,
+            icon: <SiMicrosoftexcel size={12} />,
             bg: "#059669",
             label: "DOWNLOAD EXCEL",
             desc: "Mengunduh data hasil filter",
