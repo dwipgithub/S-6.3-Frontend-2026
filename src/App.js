@@ -23,7 +23,6 @@ import RL33 from "./components/RL33/RL33.js";
 import FormTambahRL33 from "./components/RL33/FormTambahRL33";
 import FormUbahRL33 from "./components/RL33/FormUbahRL33";
 
-import RL34 from "./components/RL34/RL34.js";
 import FormTambahRL34 from "./components/RL34/FormTambahRL34";
 import FormUbahRL34 from "./components/RL34/FormUbahRL34";
 import TabMenu34 from "./components/RL34/RL34danSatuSehat.js";
@@ -141,7 +140,7 @@ function App() {
                         <Route path="/rl33/tambah" element={<FormTambahRL33 />} />
                         <Route path="/rl33/ubah/:id" element={<FormUbahRL33 />} />
 
-                        <Route path="/rl34" element={<RL34 />} />
+                        <Route path="/rl34" element={<TabMenu34 />} />
                         <Route path="/rl34/tambah" element={<FormTambahRL34 />} />
                         <Route path="/rl34/ubah/:id" element={<FormUbahRL34 />} />
                         <Route path="/brandarl34" element={<TabMenu34 />} />
