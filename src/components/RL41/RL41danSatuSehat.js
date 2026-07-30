@@ -2104,13 +2104,26 @@ function TabTwo() {
         setPage(res.data.pagination?.page || 1);
 
         // Data sudah ada dan sync selesai → stop polling
-        if (
-          !newSync.isUpdating &&
-          (newSync.status === "success" || newSync.status === "failed")
-        ) {
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-          setLoadingTable(false);
+        if (!newSync.isUpdating) {
+          if (newSync.status === "success") {
+            // ✅ Sync berhasil - fetch data
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            await fetchData(1, false, currentToken);
+            setLoadingTable(false);
+            toast.success("Data berhasil disinkronkan!");
+          } else if (newSync.status === "failed") {
+            // ❌ Sync gagal - JANGAN fetch, preserve status "failed"
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            setLoadingTable(false);
+            toast.error("Gagal sync data dari SatuSehat");
+          } else if (newSync.status === "never") {
+            // ⚠️ Belum pernah sync - JANGAN fetch
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            setLoadingTable(false);
+          }
         }
 
         // console.log(newSync.status);
@@ -2141,19 +2154,18 @@ function TabTwo() {
     // Fetch pertama kali
     await fetchData(1, false, token, user, tahun, bulan);
 
-    // Jika setelah fetch pertama data masih kosong / masih syncing → mulai polling
-    // Cek sync state terbaru via callback
-    setSync((prevSync) => {
-      if (
-        prevSync.isUpdating ||
-        prevSync.status === "never" ||
-        prevSync.status === "syncing"
-      ) {
-        setLoadingTable(true);
-        startPolling(token, user, tahun, bulan);
-      }
-      return prevSync;
-    });
+    // SYNC OTOMATIS
+    // setSync((prevSync) => {
+    //   if (
+    //     prevSync.isUpdating ||
+    //     prevSync.status === "never" ||
+    //     prevSync.status === "syncing"
+    //   ) {
+    //     setLoadingTable(true);
+    //     startPolling(token, user, tahun, bulan);
+    //   }
+    //   return prevSync;
+    // });
   };
 
   const handleShow = () => setShow(true);
@@ -3146,6 +3158,26 @@ function TabTwo() {
                 Gagal mengambil data dari SatuSehat. Coba filter ulang.
               </strong>
             </div>
+          ) : !loadingTable &&
+            dataRL.length === 0 &&
+            sync.status === "never" ? (
+            <div
+              style={{
+                backgroundColor: "#e8f4fd",
+                border: "1px solid #b6d4fe",
+                color: "#084298",
+                padding: 15,
+                borderRadius: 4,
+                textAlign: "center",
+                fontSize: "14px",
+                lineHeight: "1.5",
+              }}
+            >
+              <strong>
+                Data belum disinkronkan dengan SATUSEHAT untuk periode ini.
+                Silakan lakukan sinkronisasi terlebih dahulu.
+              </strong>
+            </div>
           ) : (
             <div
               className={style["outer-wrapper"]}
@@ -3422,36 +3454,6 @@ function TabTwo() {
                     </tbody>
                   </table>
                 </div>
-
-                {/* Pagination */}
-                {/* {totalPages > 1 && (
-                  <div
-                    style={{
-                      padding: "12px 0",
-                      display: "flex",
-                      justifyContent: "center",
-                      gap: 12,
-                      borderTop: "1px solid #ddd",
-                    }}
-                  >
-                    <button
-                      disabled={page === 1}
-                      onClick={() => fetchData(page - 1)}
-                    >
-                      ◀ Prev
-                    </button>
-                    <span>
-                      Halaman {page} / {totalPages}
-                    </span>
-                    <button
-                      disabled={page === totalPages}
-                      onClick={() => fetchData(page + 1)}
-                    >
-                      Next ▶
-                    </button>
-                  </div>
-                )} */}
-
                 {totalPages > 1 && (
                   <Pagination
                     page={page}

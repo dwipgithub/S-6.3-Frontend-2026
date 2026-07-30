@@ -2866,14 +2866,27 @@ function TabTwo() {
         const newSync = res.data.sync ?? {};
         setSync(newSync);
 
-        if (
-          !newSync.isUpdating &&
-          (newSync.status === "success" || newSync.status === "failed")
-        ) {
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-          await fetchData(1, false, currentToken);
-          setLoadingTable(false);
+        // BARU - FIXED
+        if (!newSync.isUpdating) {
+          if (newSync.status === "success") {
+            // ✅ Sync berhasil - fetch data
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            await fetchData(1, false, currentToken);
+            setLoadingTable(false);
+            toast.success("Data berhasil disinkronkan!");
+          } else if (newSync.status === "failed") {
+            // ❌ Sync gagal - JANGAN fetch, preserve status "failed"
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            setLoadingTable(false);
+            toast.error("Gagal sync data dari SatuSehat");
+          } else if (newSync.status === "never") {
+            // ⚠️ Belum pernah sync - JANGAN fetch
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            setLoadingTable(false);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -2907,17 +2920,17 @@ function TabTwo() {
 
     await fetchData(1, false, token);
 
-    setSync((prevSync) => {
-      if (
-        prevSync.isUpdating ||
-        prevSync.status === "never" ||
-        prevSync.status === "syncing"
-      ) {
-        setLoadingTable(true);
-        startPolling(token);
-      }
-      return prevSync;
-    });
+    // setSync((prevSync) => {
+    //   if (
+    //     prevSync.isUpdating ||
+    //     prevSync.status === "never" ||
+    //     prevSync.status === "syncing"
+    //   ) {
+    //     setLoadingTable(true);
+    //     startPolling(token);
+    //   }
+    //   return prevSync;
+    // });
   };
 
   const formatDate = (dateStr) => {
@@ -2965,6 +2978,7 @@ function TabTwo() {
       console.error(err);
       toast.error("Gagal memulai sync");
       setLoadingTable(false);
+      setIsManualSyncing(false);
     }
   };
 
@@ -3229,31 +3243,6 @@ function TabTwo() {
             ))}
           </tbody>
         </Table>
-
-        {/* {totalPages > 1 && (
-          <div
-            style={{
-              padding: "12px 0",
-              display: "flex",
-              justifyContent: "center",
-              gap: 12,
-              borderTop: "1px solid #ddd",
-            }}
-          >
-            <button disabled={page <= 1} onClick={() => fetchData(page - 1)}>
-              ◀ Prev
-            </button>
-            <span>
-              Halaman {page} / {totalPages}
-            </span>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => fetchData(page + 1)}
-            >
-              Next ▶
-            </button>
-          </div>
-        )} */}
 
         {totalPages > 1 && (
           <Pagination
@@ -4001,6 +3990,26 @@ function TabTwo() {
             >
               <strong>
                 Gagal mengambil data dari SatuSehat. Coba filter ulang.
+              </strong>
+            </div>
+          ) : !loadingTable &&
+            dataRL.length === 0 &&
+            sync.status === "never" ? (
+            <div
+              style={{
+                backgroundColor: "#e8f4fd",
+                border: "1px solid #b6d4fe",
+                color: "#084298",
+                padding: 15,
+                borderRadius: 4,
+                textAlign: "center",
+                fontSize: "14px",
+                lineHeight: "1.5",
+              }}
+            >
+              <strong>
+                Data belum disinkronkan dengan SATUSEHAT untuk periode ini.
+                Silakan lakukan sinkronisasi terlebih dahulu.
               </strong>
             </div>
           ) : (
