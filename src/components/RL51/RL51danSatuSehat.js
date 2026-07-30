@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
@@ -30,6 +30,7 @@ import * as XLSX from "xlsx";
 import { SiMicrosoftexcel } from "react-icons/si";
 import { FaFilter } from "react-icons/fa";
 import Pagination from "../Pagination/Pagination.js";
+import SyncButton from "../SyncButton/SyncButton.js";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -208,6 +209,7 @@ function TabOne() {
   const { CSRFToken } = useCSRFTokenContext();
 
   useEffect(() => {
+    toast.dismiss();
     refreshToken();
     getBulan();
   }, []);
@@ -1109,7 +1111,6 @@ function TabOne() {
           </Modal.Body>
           <Modal.Footer>
             <div className="mt-3 mb-3">
-              <ToastContainer />
               <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
@@ -2477,8 +2478,6 @@ function TabOne() {
                     (user.jenisUserId === 3 ||
                       (user.jenisUserId === 4 && idValidasi)) && (
                       <form onSubmit={simpanValidasi}>
-                        <ToastContainer />
-
                         <div className={style.validasiFormGroup}>
                           <label htmlFor="statusValidasi">Status</label>
                           <select
@@ -2558,15 +2557,19 @@ function TabTwo() {
   const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [loadingTable, setLoadingTable] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
-  const [now, setNow] = useState(Date.now());
   const [isDownloading, setIsDownloading] = useState(false);
   const pollingRef = useRef(null);
-  const MANUAL_SYNC_COOLDOWN = 5; // menit
 
   useEffect(() => {
     refreshToken();
     getBulan();
-    return () => clearInterval(pollingRef.current); // cleanup polling saat unmount
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      isPollingActiveRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -2848,10 +2851,22 @@ function TabTwo() {
     if (!isBackground) setLoadingTable(false);
   };
 
+  // Tambahkan flag ref untuk mencegah race condition / interval ganda
+  const isPollingActiveRef = useRef(false);
+
   const startPolling = (currentToken) => {
-    clearInterval(pollingRef.current);
+    // 1. Clear interval sebelumnya jika ada
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    isPollingActiveRef.current = true;
 
     pollingRef.current = setInterval(async () => {
+      // Mencegah eksekusi jika polling sudah di-stop dari tempat lain
+      if (!isPollingActiveRef.current) return;
+
       try {
         const res = await axiosJWT.get("/apisirs6v2/rllimatitiksatusatusehat", {
           headers: { Authorization: `Bearer ${currentToken}` },
@@ -2866,30 +2881,33 @@ function TabTwo() {
         const newSync = res.data.sync ?? {};
         setSync(newSync);
 
-        // BARU - FIXED
         if (!newSync.isUpdating) {
+          // Stop polling SEBELUM melempar async process lain / toast
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          isPollingActiveRef.current = false;
+
           if (newSync.status === "success") {
-            // ✅ Sync berhasil - fetch data
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
             await fetchData(1, false, currentToken);
             setLoadingTable(false);
-            toast.success("Data berhasil disinkronkan!");
+
+            // Gunakan toastId unik agar TIDAK MENUMPUK/DUPLIKAT
+            toast.success("Data berhasil disinkronkan!", {
+              toastId: "sync-success-toast",
+            });
           } else if (newSync.status === "failed") {
-            // ❌ Sync gagal - JANGAN fetch, preserve status "failed"
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
             setLoadingTable(false);
-            toast.error("Gagal sync data dari SatuSehat");
+
+            toast.error("Gagal sync data dari SatuSehat", {
+              toastId: "sync-failed-toast",
+            });
           } else if (newSync.status === "never") {
-            // ⚠️ Belum pernah sync - JANGAN fetch
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
             setLoadingTable(false);
           }
         }
       } catch (err) {
         console.error(err);
+        // Opsional: Clear jika error network beruntun
       }
     }, 4000);
   };
@@ -2941,20 +2959,49 @@ function TabTwo() {
     );
   };
 
+  const MANUAL_SYNC_COOLDOWN = 5; // menit
+
+  const [now, setNow] = useState(Date.now());
+
+  // Timer update setiap 100ms untuk real-time countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 100); // Update setiap 100ms untuk smoothness
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Ganti Date.now() → now
   const minutesSinceSync = sync.lastSync
     ? (now - new Date(sync.lastSync).getTime()) / 60000
     : null;
 
   const canSync =
-    isFilterApplied &&
     !sync.isUpdating &&
-    !isManualSyncing &&
+    !isManualSyncing && // ← tambah ini
     (minutesSinceSync === null || minutesSinceSync >= MANUAL_SYNC_COOLDOWN);
 
+  // Sisa menit cooldown (untuk info ke user)
   const cooldownLeft =
     minutesSinceSync !== null
-      ? Math.max(0, MANUAL_SYNC_COOLDOWN - minutesSinceSync).toFixed(1)
+      ? Math.max(0, MANUAL_SYNC_COOLDOWN - minutesSinceSync)
       : null;
+
+  // Format display: jika >= 1 menit, tampilkan dalam menit; jika < 1 menit, tampilkan dalam detik
+  const cooldownDisplay = useMemo(() => {
+    if (cooldownLeft === null || cooldownLeft <= 0) return null;
+
+    // Konversi total nilai (menit) ke total detik
+    const totalSeconds = Math.ceil(cooldownLeft * 60);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    // Tambahkan angka 0 di depan jika detik kurang dari 10 (contoh: 04 -> "04")
+    const formattedSeconds = seconds < 10 ? `0${seconds}` : seconds;
+
+    return `${minutes}:${formattedSeconds}`;
+  }, [cooldownLeft]);
 
   const handleManualSync = async () => {
     if (!canSync) return;
@@ -3113,144 +3160,178 @@ function TabTwo() {
 
   const DataTable = ({ data, loadingTable: bgLoading }) => (
     <div
-      className="table-container mt-2 mb-1 pb-2"
-      style={{ position: "relative" }}
+      className={style["outer-wrapper"]}
+      style={{ width: "100%", overflowX: "auto" }}
     >
-      {bgLoading && (
+      <div className={style["inner-content"]}>
         <div
+          className="table-container mt-2 mb-1 pb-2"
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(255,255,255,0.7)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 10,
-            flexDirection: "column",
+            position: "sticky",
+            overflow: "hidden", // 1. Mencegah overlay meluber keluar dari kontainer tabel
+            borderRadius: "8px",
           }}
         >
-          <Spinner animation="border" variant="primary" />
-        </div>
-      )}
-
-      <div style={{ overflowX: "auto" }}>
-        <Table
-          className={style.table}
-          striped
-          bordered
-          responsive
-          style={{
-            filter: bgLoading ? "blur(2px)" : "none",
-            width: "500%",
-            minWidth: 900,
-          }}
-          ref={tableRef}
-        >
-          <thead>
-            <tr>
-              <th
-                rowSpan={3}
-                style={{ verticalAlign: "middle", textAlign: "center" }}
-              >
-                No.
-              </th>
-              <th
-                rowSpan={3}
-                style={{ verticalAlign: "middle", textAlign: "center" }}
-              >
-                ICD 10
-              </th>
-              <th
-                rowSpan={3}
+          {bgLoading && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                backgroundColor: "rgba(255,255,255,0.7)",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                zIndex: 10,
+                pointerEvents: "all",
+              }}
+            >
+              <div
                 style={{
-                  verticalAlign: "middle",
-                  textAlign: "left",
-                  width: "300px",
+                  position: "sticky",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  padding: "16px",
                 }}
               >
-                Diagnosis
-              </th>
-              <th
-                colSpan={masterUmur.length * 3}
-                style={{ textAlign: "center" }}
-              >
-                Kunjungan Kasus Baru per Umur
-              </th>
-              <th colSpan={3} rowSpan={2} style={{ textAlign: "center" }}>
-                Total Kunjungan
-              </th>
-            </tr>
-            <tr>
-              {masterUmur.map((umur) => (
-                <th key={umur.name} colSpan={3} style={{ textAlign: "center" }}>
-                  {umur.name}
-                </th>
-              ))}
-            </tr>
-            <tr>
-              {masterUmur.map((umur) => (
-                <React.Fragment key={`${umur.name}-sub`}>
-                  <th style={{ textAlign: "center" }}>L</th>
-                  <th style={{ textAlign: "center" }}>P</th>
-                  <th style={{ textAlign: "center" }}>Total</th>
-                </React.Fragment>
-              ))}
-              <th style={{ textAlign: "center" }}>Laki-laki</th>
-              <th style={{ textAlign: "center" }}>Perempuan</th>
-              <th style={{ textAlign: "center" }}>Total</th>
-            </tr>
-          </thead>
+                <Spinner
+                  animation="border"
+                  variant="primary"
+                  style={{ willChange: "transform" }}
+                />
+                <p style={{ margin: 0, color: "#555", fontSize: 14 }}>
+                  Sedang mengambil data dari SatuSehat, mohon tunggu...
+                </p>
+              </div>
+            </div>
+          )}
 
-          <tbody>
-            {data.map((item, idx) => (
-              <tr key={item.icd_10} style={{ verticalAlign: "middle" }}>
-                <td style={{ textAlign: "center" }}>
-                  {idx + 1 + (page - 1) * limit}
-                </td>
-                <td style={{ textAlign: "center" }}>{item.icd_10}</td>
-                <td>{item.diagnosis}</td>
-                {masterUmur.map((umur) => {
-                  const umurData = item.umur.find(
-                    (u) => u.age_group === umur.name,
-                  );
-                  return (
-                    <React.Fragment key={`${item.icd_10}-${umur.name}`}>
-                      <td style={{ textAlign: "center" }}>
-                        {umurData?.kunjungan_baru?.male ?? "0"}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        {umurData?.kunjungan_baru?.female ?? "0"}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        {umurData?.kunjungan_baru?.total ?? "0"}
-                      </td>
+          <div style={{ overflowX: "auto" }}>
+            <Table
+              className={style.table}
+              striped
+              bordered
+              responsive
+              style={{
+                filter: bgLoading ? "blur(2px)" : "none",
+                width: "500%",
+                minWidth: 900,
+              }}
+              ref={tableRef}
+            >
+              <thead>
+                <tr>
+                  <th
+                    rowSpan={3}
+                    style={{ verticalAlign: "middle", textAlign: "center" }}
+                  >
+                    No.
+                  </th>
+                  <th
+                    rowSpan={3}
+                    style={{ verticalAlign: "middle", textAlign: "center" }}
+                  >
+                    ICD 10
+                  </th>
+                  <th
+                    rowSpan={3}
+                    style={{
+                      verticalAlign: "middle",
+                      textAlign: "left",
+                      width: "300px",
+                    }}
+                  >
+                    Diagnosis
+                  </th>
+                  <th
+                    colSpan={masterUmur.length * 3}
+                    style={{ textAlign: "center" }}
+                  >
+                    Kunjungan Kasus Baru per Umur
+                  </th>
+                  <th colSpan={3} rowSpan={2} style={{ textAlign: "center" }}>
+                    Total Kunjungan
+                  </th>
+                </tr>
+                <tr>
+                  {masterUmur.map((umur) => (
+                    <th
+                      key={umur.name}
+                      colSpan={3}
+                      style={{ textAlign: "center" }}
+                    >
+                      {umur.name}
+                    </th>
+                  ))}
+                </tr>
+                <tr>
+                  {masterUmur.map((umur) => (
+                    <React.Fragment key={`${umur.name}-sub`}>
+                      <th style={{ textAlign: "center" }}>L</th>
+                      <th style={{ textAlign: "center" }}>P</th>
+                      <th style={{ textAlign: "center" }}>Total</th>
                     </React.Fragment>
-                  );
-                })}
-                <td style={{ textAlign: "center" }}>
-                  {item.total_kunjungan?.male ?? "-"}
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  {item.total_kunjungan?.female ?? "-"}
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  {item.total_kunjungan?.total ?? "-"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+                  ))}
+                  <th style={{ textAlign: "center" }}>Laki-laki</th>
+                  <th style={{ textAlign: "center" }}>Perempuan</th>
+                  <th style={{ textAlign: "center" }}>Total</th>
+                </tr>
+              </thead>
 
-        {totalPages > 1 && (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            onPageChange={(newPage) => fetchData(newPage)}
-          />
-        )}
+              <tbody>
+                {data.map((item, idx) => (
+                  <tr key={item.icd_10} style={{ verticalAlign: "middle" }}>
+                    <td style={{ textAlign: "center" }}>
+                      {idx + 1 + (page - 1) * limit}
+                    </td>
+                    <td style={{ textAlign: "center" }}>{item.icd_10}</td>
+                    <td>{item.diagnosis}</td>
+                    {masterUmur.map((umur) => {
+                      const umurData = item.umur.find(
+                        (u) => u.age_group === umur.name,
+                      );
+                      return (
+                        <React.Fragment key={`${item.icd_10}-${umur.name}`}>
+                          <td style={{ textAlign: "center" }}>
+                            {umurData?.kunjungan_baru?.male ?? "0"}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {umurData?.kunjungan_baru?.female ?? "0"}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {umurData?.kunjungan_baru?.total ?? "0"}
+                          </td>
+                        </React.Fragment>
+                      );
+                    })}
+                    <td style={{ textAlign: "center" }}>
+                      {item.total_kunjungan?.male ?? "-"}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      {item.total_kunjungan?.female ?? "-"}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      {item.total_kunjungan?.total ?? "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+
+            {totalPages > 1 && (
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={(newPage) => fetchData(newPage)}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -3535,116 +3616,79 @@ function TabTwo() {
               <div
                 style={{
                   display: "flex",
-                  alignItems: "flex-start",
+                  alignItems: "center",
                   gap: 10,
                   flexWrap: "wrap",
                 }}
               >
-                <div style={{ textAlign: "center" }}>
-                  <button
-                    onClick={getRLSatusehat}
-                    style={{
-                      background: "#1d4ed8",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 7,
-                      padding: "9px 18px",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    <FaFilter size={14} /> FILTER
-                  </button>
-                </div>
+                <button
+                  onClick={getRLSatusehat}
+                  style={{
+                    background: "#1d4ed8",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 7,
+                    padding: "9px 18px",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    whiteSpace: "nowrap",
+                    height: 42,
+                  }}
+                >
+                  <FaFilter size={14} /> FILTER
+                </button>
 
-                <div style={{ textAlign: "center" }}>
-                  <button
-                    onClick={handleManualSync}
-                    disabled={!canSync || !isFilterApplied}
-                    title={
-                      !isFilterApplied
-                        ? "Terapkan filter terlebih dahulu"
-                        : isManualSyncing || sync.isUpdating
-                          ? "Sedang sinkronisasi..."
-                          : !canSync
-                            ? `Tunggu ${cooldownLeft} menit lagi`
-                            : "Klik untuk sync manual"
-                    }
-                    style={{
-                      background: "#059669",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 7,
-                      padding: "9px 18px",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      whiteSpace: "nowrap",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      cursor:
-                        canSync && isFilterApplied ? "pointer" : "not-allowed",
-                      opacity: canSync && isFilterApplied ? 1 : 0.55,
-                    }}
-                  >
-                    {isManualSyncing || sync.isUpdating ? (
-                      <>
-                        <Spinner animation="border" size="sm" /> Syncing...
-                      </>
-                    ) : (
-                      <>
-                        <FaSyncAlt size={14} /> SYNC SATUSEHAT
-                      </>
-                    )}
-                  </button>
-                </div>
+                <SyncButton
+                  canSync={canSync}
+                  isSyncing={isManualSyncing || sync.isUpdating}
+                  isFilterApplied={isFilterApplied}
+                  cooldownDisplay={cooldownDisplay}
+                  onSync={handleManualSync}
+                />
 
-                <div style={{ textAlign: "center" }}>
-                  <button
-                    onClick={handleDownloadExcel}
-                    disabled={
-                      !isFilterApplied || isDownloading || dataRL.length === 0
-                    }
-                    title={
-                      !isFilterApplied
-                        ? "Terapkan filter terlebih dahulu"
-                        : "Download semua data ke Excel"
-                    }
-                    style={{
-                      background: "#059669",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 7,
-                      padding: "9px 18px",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      cursor:
-                        isFilterApplied && !isDownloading
-                          ? "pointer"
-                          : "not-allowed",
-                      opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {isDownloading ? (
-                      <>
-                        <Spinner animation="border" size="sm" /> Mengunduh...
-                      </>
-                    ) : (
-                      <>
-                        <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={handleDownloadExcel}
+                  disabled={
+                    !isFilterApplied || isDownloading || dataRL.length === 0
+                  }
+                  title={
+                    !isFilterApplied
+                      ? "Terapkan filter terlebih dahulu"
+                      : "Download semua data ke Excel"
+                  }
+                  style={{
+                    background: "#059669",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 7,
+                    padding: "9px 18px",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor:
+                      isFilterApplied && !isDownloading
+                        ? "pointer"
+                        : "not-allowed",
+                    opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {isDownloading ? (
+                    <>
+                      <Spinner animation="border" size="sm" /> Mengunduh...
+                    </>
+                  ) : (
+                    <>
+                      <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
