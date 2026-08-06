@@ -1,4 +1,5 @@
 import { downloadExcel } from "react-export-table-to-excel";
+import { MONTHS } from "../constants/date";
 
 export const calculateTotals = (data = []) => {
   return data.reduce(
@@ -18,10 +19,19 @@ export const calculateTotals = (data = []) => {
 
 export const formatDate = (dateStr) => {
   if (!dateStr) return "-";
-  return (
-    new Date(dateStr).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) +
-    " WIB"
-  );
+
+  const date = new Date(dateStr);
+
+  const day = date.getDate();
+  const month =
+    MONTHS.find((m) => m.value === String(date.getMonth() + 1))?.label ?? "-";
+  const year = date.getFullYear();
+
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+
+  return `${day} ${month} ${year}, ${hour}.${minute}.${second} WIB`;
 };
 
 export const exportRL317ExcelSatuSehat = (data = [], tahun) => {

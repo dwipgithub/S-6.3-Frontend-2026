@@ -12,4 +12,9 @@ export const API = {
   RL318_SYNC_SATUSEHAT: "/apisirs6v2/rltigatitikdelapanbelassatusehat/sync",
   RL318_SUBSCRIBE_SATUSEHAT:
     "/apisirs6v2/rltigatitikdelapanbelassatusehat/subscribe",
+
+  RL310_SATUSEHAT: "/apisirs6v2/rltigatitiksepuluhsatusehat",
+  RL310_SYNC_SATUSEHAT: "/apisirs6v2/rltigatitiksepuluhsatusehat/sync",
+  RL310_SUBSCRIBE_SATUSEHAT:
+    "/apisirs6v2/rltigatitiksepuluhsatusehat/subscribe",
 };
