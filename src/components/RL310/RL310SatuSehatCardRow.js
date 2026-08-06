@@ -5,8 +5,8 @@ import {
   FaSlidersH,
   FaSyncAlt,
 } from "react-icons/fa";
-import { formatDate } from "../../utils/rl317.utils";
 import { SiMicrosoftexcel } from "react-icons/si";
+import { formatDate } from "../../utils/rl310.utils";
 
 const SatuSehatCardRow = ({ sync, manualSyncCooldown }) => {
   return (
