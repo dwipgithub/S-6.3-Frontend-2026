@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import style from "./FormTambahRL34.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { confirmAlert } from "react-confirm-alert";
@@ -30,9 +30,15 @@ const BrandaRL34 = () => {
   const [show, setShow] = useState(false);
   const [user, setUser] = useState({});
   const navigate = useNavigate();
+  const location = useLocation();
   const [spinner, setSpinner] = useState(false);
   const [total, setTotal] = useState(0);
   const { CSRFToken } = useCSRFTokenContext();
+
+  const getCleanPath = (pathname) => pathname.replace(/\/$/, "");
+  const currentPath = getCleanPath(location.pathname);
+  const getTabClass = (path) =>
+    `${style.navLink} ${currentPath === getCleanPath(path) ? style.active : ""}`;
 
   useEffect(() => {
     refreshToken();
@@ -415,32 +421,26 @@ const BrandaRL34 = () => {
         <div className="col-md-12">
           <div style={{ marginBottom: "10px" }}>
             {user.jenisUserId === 4 ? (
-                <>
-              <Link
-                className="btn"
-                to={`/satusehatrl34/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
-              >
-                SATUSEHAT
-              </Link>
-              <Link
-                className="btn"
-                to={`/rl34/`}
-                style={{
-                  marginRight: "5px",
-                  fontSize: "18px",
-                  backgroundColor: "#779D9E",
-                  color: "#FFFFFF",
-                }}
-              >
-                SIRS
-              </Link>
-              </>
+              <ul className={`nav nav-tabs ${style.navTabs}`}>
+                <li className={`nav-item ${style.navItem}`}>
+                  <Link
+                    style={{ color: currentPath === "/satusehatrl34" ? "#00b9ad" : "black" }}
+                    className={getTabClass("/satusehatrl34")}
+                    to="/satusehatrl34"
+                  >
+                    SATUSEHAT
+                  </Link>
+                </li>
+                <li className={`nav-item ${style.navItem}`}>
+                  <Link
+                    style={{ color: currentPath === "/brandarl34" || currentPath === "/rl34" ? "#00b9ad" : "black" }}
+                    className={`${style.navLink} ${currentPath === "/brandarl34" || currentPath === "/rl34" ? style.active : ""}`}
+                    to="/rl34"
+                  >
+                    SIRS
+                  </Link>
+                </li>
+              </ul>
             ) : null}
           </div>
           <div>

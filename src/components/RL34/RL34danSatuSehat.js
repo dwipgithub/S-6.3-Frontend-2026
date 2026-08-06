@@ -111,10 +111,10 @@ export default function TabMenu34() {
             {/* TAB SIRS */}
             <li className="nav-item">
               <button
+                style={{ color: activeTab === "tab1" ? "#00b9ad" : "black" }}
                 className={`nav-link ${activeTab === "tab1" ? "active" : ""}`}
                 onClick={() => setActiveTab("tab1")}
               >
-                <span>📄</span>
                 SIRS
               </button>
             </li>
@@ -123,10 +123,10 @@ export default function TabMenu34() {
             {user.jenisUserId === 4 && statusSatset === 1 && (
               <li className="nav-item">
                 <button
+                  style={{ color: activeTab === "tab2" ? "#00b9ad" : "black" }}
                   className={`nav-link ${activeTab === "tab2" ? "active" : ""}`}
                   onClick={() => setActiveTab("tab2")}
                 >
-                  <span>🌐</span>
                   SATUSEHAT
                 </button>
               </li>
