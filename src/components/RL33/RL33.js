@@ -1178,23 +1178,25 @@ const RL33 = () => {
           </div>
           
           {/* TAB UTAMA (SIRS & SATUSEHAT) */}
-          <ul className={`nav nav-tabs ${style.navTabs}`}>
-            <li className={`nav-item ${style.navItem}`}>
+          <ul className="nav nav-tabs border-bottom mb-0">
+            <li className="nav-item">
               <button
                 type="button"
-                className={`${style.navLink} ${activeWadahTab === "sirs" ? style.active : ""}`}
+                style={{ color: activeWadahTab === "sirs" ? "#00b9ad" : "black" }}
+                className={`nav-link ${activeWadahTab === "sirs" ? "active" : ""}`}
                 onClick={() => handleWadahTabClick("sirs")}
               >
                 SIRS
               </button>
             </li>
-            <li className={`nav-item ${style.navItem}`}>
+            <li className="nav-item">
               <button
                 type="button"
-                className={`${style.navLink} ${activeWadahTab === "satusehat" ? style.active : ""}`}
+                style={{ color: activeWadahTab === "satusehat" ? "#00b9ad" : "black" }}
+                className={`nav-link ${activeWadahTab === "satusehat" ? "active" : ""}`}
                 onClick={() => handleWadahTabClick("satusehat")}
               >
-                Satusehat
+                SATUSEHAT
               </button>
             </li>
           </ul>
@@ -1232,21 +1234,23 @@ const RL33 = () => {
               </div>
 
               <div>
-                <ul className={`nav nav-tabs ${style.navTabs}`}>
-                  <li className={`nav-item ${style.navItem}`}>
+                <ul className="nav nav-tabs border-bottom mb-0">
+                  <li className="nav-item">
                     <button
                       type="button"
-                      className={`${style.navLink} ${activeTab === "tab1" ? style.active : ""}`}
+                      style={{ color: activeTab === "tab1" ? "#00b9ad" : "black" }}
+                      className={`nav-link ${activeTab === "tab1" ? "active" : ""}`}
                       onClick={() => handleTabClick("tab1")}
                     >
                       Data
                     </button>
                   </li>
                   {[1, 2, 3, 4].includes(user.jenisUserId) && (
-                    <li className={`nav-item ${style.navItem}`}>
+                    <li className="nav-item">
                       <button
                         type="button"
-                        className={`${style.navLink} ${activeTab === "tab2" ? style.active : ""}`}
+                        style={{ color: activeTab === "tab2" ? "#00b9ad" : "black" }}
+                        className={`nav-link ${activeTab === "tab2" ? "active" : ""}`}
                         onClick={() => handleTabClick("tab2")}
                       >
                         Validasi
