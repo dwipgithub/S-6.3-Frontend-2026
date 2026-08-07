@@ -53,7 +53,7 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
     keluar_diterima_kembali: 0,
   };
 
-  console.log("Periode:", periode);
+  // console.log("Periode:", periode);
   const body = data.map((item, index) => {
     Object.keys(total).forEach((key) => {
       total[key] += Number(item[key]) || 0;
