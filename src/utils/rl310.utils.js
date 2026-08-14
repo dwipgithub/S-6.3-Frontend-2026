@@ -18,12 +18,38 @@ export const formatDate = (dateStr) => {
   return `${day} ${month} ${year}, ${hour}.${minute}.${second} WIB`;
 };
 
+// Normalisasi periode menjadi YYYY-MM
+const formatPeriode = (periode) => {
+  if (!periode) return "-";
+
+  // Jika sudah YYYY-MM
+  if (/^\d{4}-\d{2}$/.test(periode)) {
+    return periode;
+  }
+
+  // Jika formatnya "Juni-2026"
+  if (periode.includes("-")) {
+    const [namaBulan, tahun] = periode.split("-");
+
+    const bulan = MONTHS.find(
+      (m) => m.label.toLowerCase() === namaBulan.toLowerCase(),
+    );
+
+    if (bulan) {
+      return `${tahun}-${String(bulan.value).padStart(2, "0")}`;
+    }
+  }
+
+  return periode;
+};
+
 export const exportRL310ExcelSatuSehat = (data = [], periode) => {
+  const periodeFormatted = formatPeriode(periode);
+
   const header = [
     "No",
     "Jenis Spesialisasi",
-    "Bulan",
-    "Tahun",
+    "Periode",
     "Diterima Dari - Puskesmas",
     "Diterima Dari - RS Lain",
     "Diterima Dari - Faskes Lain",
@@ -53,22 +79,15 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
     keluar_diterima_kembali: 0,
   };
 
-  // console.log("Periode:", periode);
   const body = data.map((item, index) => {
     Object.keys(total).forEach((key) => {
       total[key] += Number(item[key]) || 0;
     });
 
-    const [tahun, bulan] = periode.split("-");
-
-    const namaBulan =
-      MONTHS.find((m) => m.value === String(Number(bulan)))?.label ?? bulan;
-
     return [
       index + 1,
       item.jenis_spesialisasi?.nama ?? "-",
-      tahun,
-      namaBulan,
+      periodeFormatted,
       Number(item.rm_diterima_puskesmas) || 0,
       Number(item.rm_diterima_rs) || 0,
       Number(item.rm_diterima_faskes_lain) || 0,
@@ -88,7 +107,6 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
     "",
     "TOTAL",
     "",
-    "",
     total.rm_diterima_puskesmas,
     total.rm_diterima_rs,
     total.rm_diterima_faskes_lain,
@@ -104,7 +122,7 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
   ]);
 
   downloadExcel({
-    fileName: `RL310-Rujukan-${periode}`,
+    fileName: `RL310-Rujukan-${periodeFormatted}`,
     sheet: "RL310",
     tablePayload: {
       header,
