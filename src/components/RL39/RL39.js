@@ -1233,32 +1233,100 @@ function TabTwo() {
       let parentIndex = 0;
       let childIndex = 0;
 
-      const rows = allData.map((v) => {
+      const namaBulanSelected = daftarBulan.find((b) => b.value === bulan)?.key || bulan;
+      const namaRS = rumahSakit?.nama || "-";
+
+      // 1. Susun Data Tabel
+      let rowsHTML = "";
+
+      allData.forEach((v) => {
         const rawLabel = v.nama_jenis_kegiatan || v.jenis_kegiatan || v.label || "";
         const { isTotal, text, isParent } = parseLabel(rawLabel);
 
         let noUrut = "";
+        let rsValue = namaRS;
+        let isBoldRow = false;
+
         if (isTotal) {
           noUrut = "99";
+          rsValue = ""; // Nama RS dikosongkan pada baris TOTAL
+          isBoldRow = true;
         } else if (isParent) {
           parentIndex += 1;
           childIndex = 0;
           noUrut = `${parentIndex}`;
+          isBoldRow = true;
         } else {
           childIndex += 1;
           noUrut = `${parentIndex}.${childIndex}`;
         }
 
-        return [noUrut, text, `${tahun}-${bulan}`, v.jumlah];
+        const fontStyle = isBoldRow ? "font-weight: bold;" : "";
+
+        rowsHTML += `
+          <tr style="${fontStyle}">
+            <td style="border: 1px solid #000; text-align: center;">${noUrut}</td>
+            <td style="border: 1px solid #000; text-align: left;">${rsValue}</td>
+            <td style="border: 1px solid #000; text-align: left;">${text}</td>
+            <td style="border: 1px solid #000; text-align: right;">${v.jumlah || 0}</td>
+          </tr>
+        `;
       });
 
-      const headers = ["No", "Jenis Kegiatan", "Periode", "Jumlah"];
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-      ws["!cols"] = [{ wch: 8 }, { wch: 45 }, { wch: 12 }, { wch: 10 }];
+      // 2. Susun Dokumen HTML Lengkap
+      const excelHTML = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta charset="utf-8" />
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>RL 3.9 SATUSEHAT</x:Name>
+                  <x:WorksheetOptions>
+                    <x:DisplayGridlines/>
+                  </x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+        </head>
+        <body>
+          <table>
+            <tr><td colspan="4" style="font-weight: bold;">SIRS ONLINE RL 3.9 - SATUSEHAT</td></tr>
+            <tr></tr>
+            <tr><td colspan="4" style="font-weight: bold;">Periode Data</td></tr>
+            <tr><td colspan="4">Bulan : ${namaBulanSelected}</td></tr>
+            <tr><td colspan="4">Tahun: ${tahun}</td></tr>
+            <tr></tr>
+            <thead>
+              <tr style="font-weight: bold; background-color: #f2f2f2;">
+                <td style="border: 1px solid #000; text-align: center; width: 60px;">No</td>
+                <td style="border: 1px solid #000; text-align: left; width: 220px;">Rumah Sakit</td>
+                <td style="border: 1px solid #000; text-align: left; width: 350px;">Jenis Kegiatan</td>
+                <td style="border: 1px solid #000; text-align: right; width: 100px;">Jumlah</td>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHTML}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `RL3.9 ${tahun}-${bulan}`);
-      XLSX.writeFile(wb, `RL3.9_${tahun}-${bulan}.xlsx`);
+      // 3. Trigger Download
+      const blob = new Blob([excelHTML], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `RL3.9_SATUSEHAT_${rumahSakit?.id || ""}_${tahun}-${bulan}.xls`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
       toast("Download berhasil!", { type: "success", position: toast.POSITION.TOP_RIGHT });
     } catch (err) {
