@@ -31,6 +31,8 @@ import { SiMicrosoftexcel } from "react-icons/si";
 import { FaFilter } from "react-icons/fa";
 import Pagination from "../Pagination/Pagination.js";
 import SyncButton from "../SyncButton/SyncButton.js";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -130,7 +132,7 @@ export default function TabMenu() {
             </li>
 
             {/* TAB SATUSEHAT */}
-            {user.jenisUserId === 4 && statusSatset === 1 && (
+            {statusSatset === 1 && (
               <li className="nav-item">
                 <button
                   style={{ color: activeTab === "tab2" ? "#00b9ad" : "black" }}
@@ -2559,6 +2561,9 @@ function TabTwo() {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const pollingRef = useRef(null);
+  const [selectedRsID, setSelectedRsID] = useState(null);
+  const [loadingRS, setLoadingRS] = useState(false);
+  const [namafile, setNamaFile] = useState("");
 
   useEffect(() => {
     refreshToken();
@@ -3041,10 +3046,6 @@ function TabTwo() {
     setIsDownloading(true);
 
     try {
-      // ── Step 1: Fetch halaman pertama.
-      // NOTE: endpoint /rllimatitiksatusatusehat (getDataRL51WithSyncStatus)
-      // membalas 400 kalau limit terlalu besar (mis. 200), jadi pakai `limit`
-      // yang sama dengan yang dipakai fetchData() biasa — sudah terbukti valid.
       const firstRes = await axiosJWT.get(
         "/apisirs6v2/rllimatitiksatusatusehat",
         {
@@ -3085,7 +3086,13 @@ function TabTwo() {
       const finalData = transformDataWithMasterUmur(groupedData, masterUmur);
 
       // ── Step 4: Susun header (kolom umur dinamis dari masterUmur) ──
-      const headers = ["No", "Kode ICD-10", "Diagnosis Penyakit", "Periode"];
+      const headers = [
+        "No",
+        "Rumah Sakit",
+        "Kode ICD-10",
+        "Diagnosis Penyakit",
+        "Periode",
+      ];
       masterUmur.forEach((umur) => {
         headers.push(`${umur.name} L`, `${umur.name} P`, `${umur.name} Total`);
       });
@@ -3097,7 +3104,13 @@ function TabTwo() {
 
       // ── Step 5: Susun baris data ──
       const rows = finalData.map((item, i) => {
-        const row = [i + 1, item.icd_10, item.diagnosis, `${tahun}-${bulan}`];
+        const row = [
+          i + 1,
+          rumahSakit.nama,
+          item.icd_10,
+          item.diagnosis,
+          `${tahun}-${bulan}`,
+        ];
         masterUmur.forEach((umur) => {
           const umurData = item.umur.find((u) => u.age_group === umur.name);
           row.push(
@@ -3114,15 +3127,48 @@ function TabTwo() {
         return row;
       });
 
+      const bulanName =
+        daftarBulan?.find((b) => b.value == bulan)?.key || `Bulan ${bulan}`;
+
+      const headerInfo = [
+        ["SIRS ONLINE RL 5.1 - SATUSEHAT"], // Row 1: Judul (akan di-merge)
+        [], // Row 2: Kosong (skip)
+        ["Periode Data"], // Row 3: Label
+        [`Bulan:`, `${bulanName}`], // Row 4: Data periode
+        [`Tahun:`, `${tahun}`],
+        [], // Row 5: Kosong (spacer)
+      ];
+
+      const allRows = [...headerInfo, headers, ...rows];
+
       // ── Step 6: Generate & trigger download ──
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      const ws = XLSX.utils.aoa_to_sheet(allRows);
       ws["!cols"] = headers.map((h, i) =>
         i === 2 ? { wch: 35 } : { wch: Math.max(h.length + 2, 8) },
       );
 
+      ws["!rows"] = [
+        { hpt: 25, hidden: false }, // Row 1: Judul (tinggi)
+        { hpt: 8, hidden: false }, // Row 2: Kosong
+        { hpt: 18, hidden: false }, // Row 3: Periode Data
+        { hpt: 18, hidden: false }, // Row 4: Data periode
+        { hpt: 18, hidden: false }, // Row 4: Data periode
+        { hpt: 8, hidden: false }, // Row 5: Kosong
+        { hpt: 30, hidden: false }, // Row 6: Headers tabel (lebih tinggi)
+      ];
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `RL5.1 ${tahun}-${bulan}`);
-      XLSX.writeFile(wb, `RL5.1_${tahun}-${bulan}.xlsx`);
+      // XLSX.writeFile(wb, `RL5.1_${tahun}-${bulan}.xlsx`);
+
+      const currentDate = new Date();
+
+      // Mengambil komponen waktu
+      const jam = String(currentDate.getHours()).padStart(2, "0");
+      const menit = String(currentDate.getMinutes()).padStart(2, "0");
+      const detik = String(currentDate.getSeconds()).padStart(2, "0");
+      const fileName = `RL5.1_${tahun}-${bulan}_${jam}${menit}${detik}.xlsx`;
+      XLSX.writeFile(wb, fileName);
 
       toast("Download berhasil!", {
         type: "success",
