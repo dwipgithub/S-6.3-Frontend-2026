@@ -920,10 +920,11 @@ const RL34 = () => {
           </div>
 
             <div>
-            <ul className="nav nav-tabs mb-3">
+            <ul className="nav nav-tabs border-bottom mb-0">
               <li className="nav-item">
                 <button
                   type="button"
+                  style={{ color: activeTab === "tab1" ? "#00b9ad" : "black" }}
                   className={`nav-link ${activeTab === "tab1" ? "active" : ""}`}
                   onClick={() => handleTabClick("tab1")}
                 >
@@ -933,6 +934,7 @@ const RL34 = () => {
               <li className="nav-item">
                 <button
                   type="button"
+                  style={{ color: activeTab === "tab2" ? "#00b9ad" : "black" }}
                   className={`nav-link ${activeTab === "tab2" ? "active" : ""}`}
                   onClick={() => handleTabClick("tab2")}
                 >
