@@ -1,4 +1,4 @@
-import { downloadExcel } from "react-export-table-to-excel";
+import * as XLSX from "xlsx-js-style";
 import { MONTHS } from "../constants/date";
 
 export const formatDate = (dateStr) => {
@@ -7,8 +7,10 @@ export const formatDate = (dateStr) => {
   const date = new Date(dateStr);
 
   const day = date.getDate();
+
   const month =
     MONTHS.find((m) => m.value === String(date.getMonth() + 1))?.label ?? "-";
+
   const year = date.getFullYear();
 
   const hour = String(date.getHours()).padStart(2, "0");
@@ -32,34 +34,250 @@ export const calculateTotals = (data = []) => {
 };
 
 export const exportRL311ExcelSatuSehat = (data = [], periode) => {
-  const header = ["No", "Jenis Kegiatan", "Periode", "Jumlah"];
+  let totalJumlah = 0;
 
-  const total = {
-    jumlah: 0,
+  // ==========================================
+  // DATA EXCEL
+  // ==========================================
+
+  const excelData = [
+    ["SIRS ONLINE RL 3.11 Gigi dan Mulut - SATUSEHAT"],
+    [],
+    ["Periode Data"],
+    [`Tahun : ${periode}`],
+    [],
+    ["No", "Jenis Kegiatan", "Jumlah"],
+  ];
+
+  // ==========================================
+  // DATA
+  // ==========================================
+
+  data.forEach((item, index) => {
+    const jumlah = Number(item.jumlah) || 0;
+
+    totalJumlah += jumlah;
+
+    const jenisKegiatan =
+      item.rl_tiga_titik_sebelas_jenis_kegiatan?.nama_jenis_kegiatan ?? "-";
+
+    excelData.push([index + 1, jenisKegiatan, jumlah]);
+  });
+
+  // ==========================================
+  // TOTAL
+  // ==========================================
+
+  excelData.push(["", "TOTAL", totalJumlah]);
+
+  // ==========================================
+  // WORKSHEET
+  // ==========================================
+
+  const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+
+  // ==========================================
+  // MERGE JUDUL
+  // A1:C1
+  // ==========================================
+
+  worksheet["!merges"] = [
+    {
+      s: { r: 0, c: 0 },
+      e: { r: 0, c: 2 },
+    },
+  ];
+
+  // ==========================================
+  // LEBAR KOLOM
+  // ==========================================
+
+  worksheet["!cols"] = [
+    { wch: 8 }, // No
+    { wch: 45 }, // Jenis Kegiatan
+    { wch: 15 }, // Jumlah
+  ];
+
+  // ==========================================
+  // BORDER
+  // ==========================================
+
+  const thinBorder = {
+    top: {
+      style: "thin",
+      color: { rgb: "000000" },
+    },
+    bottom: {
+      style: "thin",
+      color: { rgb: "000000" },
+    },
+    left: {
+      style: "thin",
+      color: { rgb: "000000" },
+    },
+    right: {
+      style: "thin",
+      color: { rgb: "000000" },
+    },
   };
 
-  // console.log("Periode:", periode);
-  const body = data.map((item, index) => {
-    Object.keys(total).forEach((key) => {
-      total[key] += Number(item[key]) || 0;
+  // ==========================================
+  // HEADER TABEL
+  // ROW 6
+  // ==========================================
+
+  for (let col = 0; col <= 2; col++) {
+    const cellAddress = XLSX.utils.encode_cell({
+      r: 5,
+      c: col,
     });
 
-    return [
-      index + 1,
-      item.rl_tiga_titik_sebelas_jenis_kegiatan?.nama_jenis_kegiatan ?? "-",
-      periode,
-      Number(item.jumlah) || 0,
-    ];
-  });
+    if (worksheet[cellAddress]) {
+      worksheet[cellAddress].s = {
+        font: {
+          name: "Calibri",
+          sz: 12,
+          bold: true,
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true,
+        },
+        border: thinBorder,
+      };
+    }
+  }
 
-  body.push(["", "", "TOTAL", total.jumlah]);
+  // ==========================================
+  // DATA TABEL
+  // ==========================================
 
-  downloadExcel({
-    fileName: `RL311-Gigi dan Mulut-${periode}`,
-    sheet: "RL311",
-    tablePayload: {
-      header,
-      body,
+  const totalRow = excelData.length - 1;
+
+  for (let row = 6; row < totalRow; row++) {
+    for (let col = 0; col <= 2; col++) {
+      const cellAddress = XLSX.utils.encode_cell({
+        r: row,
+        c: col,
+      });
+
+      if (!worksheet[cellAddress]) {
+        continue;
+      }
+
+      worksheet[cellAddress].s = {
+        font: {
+          name: "Calibri",
+          sz: 12,
+        },
+        alignment: {
+          // No dan Jumlah = tengah
+          // Jenis Kegiatan = kiri
+          horizontal: col === 0 || col === 2 ? "center" : "left",
+          vertical: "center",
+          wrapText: true,
+        },
+        border: thinBorder,
+      };
+    }
+  }
+
+  // ==========================================
+  // TOTAL
+  // ==========================================
+
+  for (let col = 0; col <= 2; col++) {
+    const cellAddress = XLSX.utils.encode_cell({
+      r: totalRow,
+      c: col,
+    });
+
+    if (worksheet[cellAddress]) {
+      worksheet[cellAddress].s = {
+        font: {
+          name: "Calibri",
+          sz: 12,
+          bold: true,
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true,
+        },
+        border: thinBorder,
+      };
+    }
+  }
+
+  // ==========================================
+  // JUDUL
+  // ==========================================
+
+  worksheet["A1"].s = {
+    font: {
+      name: "Calibri",
+      sz: 16,
+      bold: true,
     },
-  });
+    alignment: {
+      horizontal: "left",
+      vertical: "center",
+    },
+  };
+
+  // ==========================================
+  // PERIODE DATA
+  // ==========================================
+
+  worksheet["A3"].s = {
+    font: {
+      name: "Calibri",
+      sz: 12,
+      bold: true,
+    },
+    alignment: {
+      horizontal: "left",
+      vertical: "center",
+    },
+  };
+
+  worksheet["A4"].s = {
+    font: {
+      name: "Calibri",
+      sz: 12,
+      bold: true,
+    },
+    alignment: {
+      horizontal: "left",
+      vertical: "center",
+    },
+  };
+
+  // ==========================================
+  // TINGGI BARIS
+  // ==========================================
+
+  worksheet["!rows"] = [
+    { hpt: 25 }, // Row 1
+    { hpt: 10 }, // Row 2
+    { hpt: 20 }, // Row 3
+    { hpt: 20 }, // Row 4
+    { hpt: 15 }, // Row 5
+    { hpt: 35 }, // Row 6
+  ];
+
+  // ==========================================
+  // WORKBOOK
+  // ==========================================
+
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, "RL311");
+
+  // ==========================================
+  // EXPORT
+  // ==========================================
+
+  XLSX.writeFile(workbook, `RL311-Gigi dan Mulut-${periode}.xlsx`);
 };
