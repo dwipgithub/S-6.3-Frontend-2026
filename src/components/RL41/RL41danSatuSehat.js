@@ -36,6 +36,8 @@ import { SiMicrosoftexcel } from "react-icons/si";
 import { FaFilter } from "react-icons/fa";
 import Pagination from "../Pagination/Pagination.js";
 import SyncButton from "../SyncButton/SyncButton.js";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -133,7 +135,7 @@ export default function TabMenu() {
             </li>
 
             {/* TAB SATUSEHAT */}
-            {user.jenisUserId === 4 && statusSatset === 1 && (
+            {statusSatset === 1 && (
               <li className="nav-item">
                 <button
                   style={{ color: activeTab === "tab2" ? "#00b9ad" : "black" }}
@@ -1884,6 +1886,9 @@ function TabTwo() {
   const { CSRFToken } = useCSRFTokenContext();
   const pollingRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [selectedRsID, setSelectedRsID] = useState(null);
+  const [loadingRS, setLoadingRS] = useState(false);
+  const [namafile, setNamaFile] = useState("");
 
   useEffect(() => {
     refreshToken();
@@ -1974,6 +1979,19 @@ function TabTwo() {
       setUser(decoded);
     } catch (error) {
       if (error.response) navigate("/");
+    }
+  };
+
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
     }
   };
 
@@ -2277,6 +2295,213 @@ function TabTwo() {
     </div>
   );
 
+  // const handleDownloadExcel = async () => {
+  //   if (!isFilterApplied) {
+  //     toast("Terapkan filter terlebih dahulu", {
+  //       type: "error",
+  //       position: toast.POSITION.TOP_RIGHT,
+  //     });
+  //     return;
+  //   }
+
+  //   setIsDownloading(true);
+
+  //   try {
+  //     // ── Step 1: Fetch halaman pertama, pakai limit max (200) ──
+  //     const MAX_LIMIT = 200;
+  //     const firstRes = await axiosJWT.get(
+  //       "/apisirs6v2/rlempattitiksatusatusehat",
+  //       {
+  //         headers: { Authorization: `Bearer ${token}` },
+  //         params: {
+  //           rsId: user.satKerId,
+  //           periode: `${tahun}-${bulan}`,
+  //           page: 1,
+  //           limit: MAX_LIMIT,
+  //         },
+  //       },
+  //     );
+
+  //     const { totalPages: tp } = firstRes.data.pagination;
+  //     let allData = [...(firstRes.data.data ?? [])];
+
+  //     // ── Step 2: Fetch sisa halaman secara paralel ──
+  //     if (tp > 1) {
+  //       const remainingPages = Array.from({ length: tp - 1 }, (_, i) => i + 2);
+  //       const results = await Promise.all(
+  //         remainingPages.map((p) =>
+  //           axiosJWT.get("/apisirs6v2/rlempattitiksatusatusehat", {
+  //             headers: { Authorization: `Bearer ${token}` },
+  //             params: {
+  //               rsId: user.satKerId,
+  //               periode: `${tahun}-${bulan}`,
+  //               page: p,
+  //               limit: MAX_LIMIT,
+  //             },
+  //           }),
+  //         ),
+  //       );
+  //       results.forEach((r) => allData.push(...(r.data.data ?? [])));
+  //     }
+
+  //     // ── Step 3: Susun header ──
+  //     const headers = [
+  //       "No",
+  //       "Kode ICD-10",
+  //       "Diagnosis Penyakit",
+  //       "Periode",
+  //       // 25 kelompok umur × L & P
+  //       "< 1 Jam L",
+  //       "< 1 Jam P",
+  //       "1-23 Jam L",
+  //       "1-23 Jam P",
+  //       "1-7 Hari L",
+  //       "1-7 Hari P",
+  //       "8-28 Hari L",
+  //       "8-28 Hari P",
+  //       "29 Hari-<3 Bln L",
+  //       "29 Hari-<3 Bln P",
+  //       "3-<6 Bln L",
+  //       "3-<6 Bln P",
+  //       "6-11 Bln L",
+  //       "6-11 Bln P",
+  //       "1-4 Th L",
+  //       "1-4 Th P",
+  //       "5-9 Th L",
+  //       "5-9 Th P",
+  //       "10-14 Th L",
+  //       "10-14 Th P",
+  //       "15-19 Th L",
+  //       "15-19 Th P",
+  //       "20-24 Th L",
+  //       "20-24 Th P",
+  //       "25-29 Th L",
+  //       "25-29 Th P",
+  //       "30-34 Th L",
+  //       "30-34 Th P",
+  //       "35-39 Th L",
+  //       "35-39 Th P",
+  //       "40-44 Th L",
+  //       "40-44 Th P",
+  //       "45-49 Th L",
+  //       "45-49 Th P",
+  //       "50-54 Th L",
+  //       "50-54 Th P",
+  //       "55-59 Th L",
+  //       "55-59 Th P",
+  //       "60-64 Th L",
+  //       "60-64 Th P",
+  //       "65-69 Th L",
+  //       "65-69 Th P",
+  //       "70-74 Th L",
+  //       "70-74 Th P",
+  //       "75-79 Th L",
+  //       "75-79 Th P",
+  //       "80-84 Th L",
+  //       "80-84 Th P",
+  //       "≥85 Th L",
+  //       "≥85 Th P",
+  //       // Keluar Hidup/Mati
+  //       "Keluar Hidup/Mati L",
+  //       "Keluar Hidup/Mati P",
+  //       "Keluar Hidup/Mati Total",
+  //       // Keluar Mati
+  //       "Keluar Mati L",
+  //       "Keluar Mati P",
+  //       "Keluar Mati Total",
+  //     ];
+
+  //     // ── Step 4: Susun baris data ──
+  //     const rows = allData.map((v, i) => [
+  //       i + 1,
+  //       v.kode_icd,
+  //       v.diagnosis,
+  //       `${tahun}-${bulan}`,
+  //       v.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_1_23jam_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_1_7hr_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_1_7hr_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_8_28hr_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_8_28hr_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_3_6bln_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_3_6bln_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_6_11bln_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_6_11bln_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_1_4th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_1_4th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_5_9th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_5_9th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_10_14th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_10_14th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_15_19th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_15_19th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_20_24th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_20_24th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_25_29th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_25_29th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_30_34th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_30_34th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_35_39th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_35_39th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_40_44th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_40_44th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_45_49th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_45_49th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_50_54th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_50_54th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_55_59th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_55_59th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_60_64th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_60_64th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_65_69th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_65_69th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_70_74th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_70_74th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_75_79th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_75_79th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_80_84th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_80_84th_p,
+  //       v.jmlh_pas_hidup_mati_umur_gen_lebih85th_l,
+  //       v.jmlh_pas_hidup_mati_umur_gen_lebih85th_p,
+  //       v.keluar_hidup_mati_l,
+  //       v.keluar_hidup_mati_p,
+  //       v.keluar_hidup_mati_total,
+  //       v.keluar_mati_l,
+  //       v.keluar_mati_p,
+  //       v.keluar_mati_total,
+  //     ]);
+
+  //     // ── Step 5: Generate & trigger download ──
+  //     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+  //     // Auto-width kolom (opsional tapi bagus)
+  //     ws["!cols"] = headers.map((h, i) =>
+  //       i === 2 ? { wch: 35 } : { wch: Math.max(h.length + 2, 8) },
+  //     );
+
+  //     const wb = XLSX.utils.book_new();
+  //     XLSX.utils.book_append_sheet(wb, ws, `RL4.1 ${tahun}-${bulan}`);
+  //     XLSX.writeFile(wb, `RL4.1_${tahun}-${bulan}.xlsx`);
+
+  //     toast("Download berhasil!", {
+  //       type: "success",
+  //       position: toast.POSITION.TOP_RIGHT,
+  //     });
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast("Gagal download Excel", {
+  //       type: "error",
+  //       position: toast.POSITION.TOP_RIGHT,
+  //     });
+  //   } finally {
+  //     setIsDownloading(false);
+  //   }
+  // };
+
   const handleDownloadExcel = async () => {
     if (!isFilterApplied) {
       toast("Terapkan filter terlebih dahulu", {
@@ -2326,9 +2551,10 @@ function TabTwo() {
         results.forEach((r) => allData.push(...(r.data.data ?? [])));
       }
 
-      // ── Step 3: Susun header ──
+      // ── Step 3: Susun header tabel utama ──
       const headers = [
         "No",
+        "Rumah Sakit",
         "Kode ICD-10",
         "Diagnosis Penyakit",
         "Periode",
@@ -2396,6 +2622,7 @@ function TabTwo() {
       // ── Step 4: Susun baris data ──
       const rows = allData.map((v, i) => [
         i + 1,
+        rumahSakit.nama,
         v.kode_icd,
         v.diagnosis,
         `${tahun}-${bulan}`,
@@ -2457,17 +2684,67 @@ function TabTwo() {
         v.keluar_mati_total,
       ]);
 
-      // ── Step 5: Generate & trigger download ──
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      // ── Step 5: Buat header info (judul, periode) ──
+      // Format:
+      // [Judul] (merged)
+      // [Kosong]
+      // [Periode Data]
+      // [Bulan, Tahun]
+      // [Kosong]
+      // [Headers tabel]
+      // [Data rows...]
 
-      // Auto-width kolom (opsional tapi bagus)
-      ws["!cols"] = headers.map((h, i) =>
-        i === 2 ? { wch: 35 } : { wch: Math.max(h.length + 2, 8) },
-      );
+      const bulanName =
+        daftarBulan?.find((b) => b.value == bulan)?.key || `Bulan ${bulan}`;
+
+      const headerInfo = [
+        ["SIRS ONLINE RL 4.1 - SATUSEHAT"], // Row 1: Judul (akan di-merge)
+        [], // Row 2: Kosong (skip)
+        ["Periode Data"], // Row 3: Label
+        [`Bulan:`, `${bulanName}`], // Row 4: Data periode
+        [`Tahun:`, `${tahun}`],
+        [], // Row 5: Kosong (spacer)
+      ];
+
+      // ── Step 6: Gabungkan header info + headers tabel + data rows ──
+      const allRows = [...headerInfo, headers, ...rows];
+
+      // ── Step 7: Generate & trigger download ──
+      const ws = XLSX.utils.aoa_to_sheet(allRows);
+
+      // ── Step 8: Set column widths ──
+      ws["!cols"] = [
+        { wch: 6 }, // No
+        { wch: 12 }, // Kode ICD-10
+        { wch: 35 }, // Diagnosis Penyakit (lebih lebar)
+        { wch: 12 }, // Periode
+        ...Array(headers.length - 4).fill({ wch: 12 }), // Kolom data umur
+      ];
+
+      // ── Step 9: Set row heights (opsional, tapi bagus untuk readability) ──
+      ws["!rows"] = [
+        { hpt: 25, hidden: false }, // Row 1: Judul (tinggi)
+        { hpt: 8, hidden: false }, // Row 2: Kosong
+        { hpt: 18, hidden: false }, // Row 3: Periode Data
+        { hpt: 18, hidden: false }, // Row 4: Data periode
+        { hpt: 18, hidden: false }, // Row 4: Data periode
+        { hpt: 8, hidden: false }, // Row 5: Kosong
+        { hpt: 30, hidden: false }, // Row 6: Headers tabel (lebih tinggi)
+      ];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `RL4.1 ${tahun}-${bulan}`);
-      XLSX.writeFile(wb, `RL4.1_${tahun}-${bulan}.xlsx`);
+      // XLSX.writeFile(wb, `RL4.1_${tahun}-${bulan}.xlsx`);
+      const currentDate = new Date();
+
+      // Mengambil komponen waktu
+      const jam = String(currentDate.getHours()).padStart(2, "0");
+      const menit = String(currentDate.getMinutes()).padStart(2, "0");
+      const detik = String(currentDate.getSeconds()).padStart(2, "0");
+
+      // Hasil: RL4.1_2026-08_090411.xlsx
+      const fileName = `RL4.1_${tahun}-${bulan}_${jam}${menit}${detik}.xlsx`;
+      XLSX.writeFile(wb, fileName);
 
       toast("Download berhasil!", {
         type: "success",
@@ -2629,99 +2906,188 @@ function TabTwo() {
                 </div>
               </div>
 
-              {/* ── Tombol-tombol ── */}
+              {/* Kab/Kota */}
+              {/* <div>
+                <label
+                  htmlFor="kabKota"
+                  style={{
+                    fontSize: 12,
+                    color: "#64748b",
+                    display: "block",
+                    marginBottom: 5,
+                    fontWeight: 500,
+                  }}
+                >
+                  Kab/Kota
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 7,
+                    padding: "7px 10px",
+                    background: "#f8fafc",
+                    width: 155,
+                  }}
+                >
+                  <select
+                    id="kabKota"
+                    onChange={(e) => kabKotaChangeHandler(e)}
+                    style={{
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
+                      width: "100%",
+                      fontSize: 13,
+                      color: "#334155",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="">Pilih</option>
+                    {daftarKabKota.map((nilai) => (
+                      <option key={nilai.id} value={nilai.id}>
+                        {nilai.nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div> */}
+
+              {/* Rumah Sakit */}
+              {/* <div>
+                <label
+                  htmlFor="rumahSakit"
+                  style={{
+                    fontSize: 12,
+                    color: "#64748b",
+                    display: "block",
+                    marginBottom: 5,
+                    fontWeight: 500,
+                  }}
+                >
+                  Rumah Sakit
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 7,
+                    padding: "7px 10px",
+                    background: "#f8fafc",
+                    width: 180,
+                  }}
+                >
+                  <select
+                    id="rumahSakit"
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
+                    style={{
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
+                      width: "100%",
+                      fontSize: 13,
+                      color: "#334155",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="">
+                      {loadingRS ? "Loading..." : "Pilih"}
+                    </option>
+                    {daftarRumahSakit.map((nilai) => (
+                      <option key={nilai.id} value={nilai.id}>
+                        {nilai.nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div> */}
+
+              {/* Tombol-tombol */}
               <div
                 style={{
                   display: "flex",
-                  alignItems: "flex-start",
+                  alignItems: "center",
                   gap: 10,
                   flexWrap: "wrap",
                 }}
               >
-                {/* ── Tombol-tombol ── */}
-                <div
+                {/* FILTER */}
+                <button
+                  onClick={getRL}
                   style={{
+                    background: "#1d4ed8",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 7,
+                    padding: "9px 18px",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
                     display: "flex",
-                    alignItems: "center", // Ubah ke 'center' agar semua tombol sejajar di sumbu vertikal
-                    gap: 10,
-                    flexWrap: "wrap",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                    whiteSpace: "nowrap",
+                    height: 42,
                   }}
                 >
-                  {/* FILTER */}
-                  <button
-                    onClick={getRL}
-                    style={{
-                      background: "#1d4ed8",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 7,
-                      padding: "9px 18px",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 7,
-                      whiteSpace: "nowrap",
-                      height: 42, // Samakan tinggi presisi jika diperlukan
-                    }}
-                  >
-                    <FaFilter size={14} /> FILTER
-                  </button>
+                  <FaFilter size={14} /> FILTER
+                </button>
 
-                  {/* SYNC SATUSEHAT */}
-                  <SyncButton
-                    canSync={canSync}
-                    isSyncing={isManualSyncing || sync.isUpdating}
-                    isFilterApplied={isFilterApplied}
-                    cooldownDisplay={cooldownDisplay}
-                    onSync={handleManualSync}
-                  />
+                {/* SYNC SATUSEHAT */}
+                <SyncButton
+                  canSync={canSync}
+                  isSyncing={isManualSyncing || sync.isUpdating}
+                  isFilterApplied={isFilterApplied}
+                  cooldownDisplay={cooldownDisplay}
+                  onSync={handleManualSync}
+                />
 
-                  {/* DOWNLOAD EXCEL */}
-                  <button
-                    onClick={handleDownloadExcel}
-                    disabled={
-                      !isFilterApplied || isDownloading || dataRL.length === 0
-                    }
-                    title={
-                      !isFilterApplied
-                        ? "Terapkan filter terlebih dahulu"
-                        : "Download semua data ke Excel"
-                    }
-                    style={{
-                      background: "#059669",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 7,
-                      padding: "9px 18px",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      cursor:
-                        isFilterApplied && !isDownloading
-                          ? "pointer"
-                          : "not-allowed",
-                      opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 7,
-                      whiteSpace: "nowrap",
-                      height: 42, // Samakan tinggi presisi jika diperlukan
-                    }}
-                  >
-                    {isDownloading ? (
-                      <>
-                        <Spinner animation="border" size="sm" /> Mengunduh...
-                      </>
-                    ) : (
-                      <>
-                        <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
-                      </>
-                    )}
-                  </button>
-                </div>
+                {/* DOWNLOAD EXCEL */}
+                <button
+                  onClick={handleDownloadExcel}
+                  disabled={
+                    !isFilterApplied || isDownloading || dataRL.length === 0
+                  }
+                  title={
+                    !isFilterApplied
+                      ? "Terapkan filter terlebih dahulu"
+                      : "Download semua data ke Excel"
+                  }
+                  style={{
+                    background: "#059669",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 7,
+                    padding: "9px 18px",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor:
+                      isFilterApplied && !isDownloading
+                        ? "pointer"
+                        : "not-allowed",
+                    opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                    whiteSpace: "nowrap",
+                    height: 42,
+                  }}
+                >
+                  {isDownloading ? (
+                    <>
+                      <Spinner animation="border" size="sm" /> Mengunduh...
+                    </>
+                  ) : (
+                    <>
+                      <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
