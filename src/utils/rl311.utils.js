@@ -46,7 +46,7 @@ export const exportRL311ExcelSatuSehat = (data = [], periode) => {
     ["Periode Data"],
     [`Tahun : ${periode}`],
     [],
-    ["No", "Jenis Kegiatan", "Jumlah"],
+    ["No", "Rumah Sakit", "Jenis Kegiatan", "Jumlah"],
   ];
 
   // ==========================================
@@ -58,17 +58,24 @@ export const exportRL311ExcelSatuSehat = (data = [], periode) => {
 
     totalJumlah += jumlah;
 
+    const namaRumahSakit =
+      item.nama_rumah_sakit ??
+      item.rumah_sakit ??
+      item.nama_rs ??
+      item.rs_name ??
+      "-";
+
     const jenisKegiatan =
       item.rl_tiga_titik_sebelas_jenis_kegiatan?.nama_jenis_kegiatan ?? "-";
 
-    excelData.push([index + 1, jenisKegiatan, jumlah]);
+    excelData.push([index + 1, namaRumahSakit, jenisKegiatan, jumlah]);
   });
 
   // ==========================================
   // TOTAL
   // ==========================================
 
-  excelData.push(["", "TOTAL", totalJumlah]);
+  excelData.push(["", "", "TOTAL", totalJumlah]);
 
   // ==========================================
   // WORKSHEET
@@ -78,13 +85,13 @@ export const exportRL311ExcelSatuSehat = (data = [], periode) => {
 
   // ==========================================
   // MERGE JUDUL
-  // A1:C1
+  // A1:D1
   // ==========================================
 
   worksheet["!merges"] = [
     {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: 2 },
+      e: { r: 0, c: 3 },
     },
   ];
 
@@ -94,6 +101,7 @@ export const exportRL311ExcelSatuSehat = (data = [], periode) => {
 
   worksheet["!cols"] = [
     { wch: 8 }, // No
+    { wch: 30 }, // Rumah Sakit
     { wch: 45 }, // Jenis Kegiatan
     { wch: 15 }, // Jumlah
   ];
@@ -126,7 +134,7 @@ export const exportRL311ExcelSatuSehat = (data = [], periode) => {
   // ROW 6
   // ==========================================
 
-  for (let col = 0; col <= 2; col++) {
+  for (let col = 0; col <= 3; col++) {
     const cellAddress = XLSX.utils.encode_cell({
       r: 5,
       c: col,
@@ -156,7 +164,7 @@ export const exportRL311ExcelSatuSehat = (data = [], periode) => {
   const totalRow = excelData.length - 1;
 
   for (let row = 6; row < totalRow; row++) {
-    for (let col = 0; col <= 2; col++) {
+    for (let col = 0; col <= 3; col++) {
       const cellAddress = XLSX.utils.encode_cell({
         r: row,
         c: col,
@@ -173,8 +181,8 @@ export const exportRL311ExcelSatuSehat = (data = [], periode) => {
         },
         alignment: {
           // No dan Jumlah = tengah
-          // Jenis Kegiatan = kiri
-          horizontal: col === 0 || col === 2 ? "center" : "left",
+          // Rumah Sakit dan Jenis Kegiatan = kiri
+          horizontal: col === 0 || col === 3 ? "center" : "left",
           vertical: "center",
           wrapText: true,
         },
@@ -187,7 +195,7 @@ export const exportRL311ExcelSatuSehat = (data = [], periode) => {
   // TOTAL
   // ==========================================
 
-  for (let col = 0; col <= 2; col++) {
+  for (let col = 0; col <= 3; col++) {
     const cellAddress = XLSX.utils.encode_cell({
       r: totalRow,
       c: col,
