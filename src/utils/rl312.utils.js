@@ -20,6 +20,27 @@ export const formatDate = (dateStr) => {
   return `${day} ${month} ${year}, ${hour}.${minute}.${second} WIB`;
 };
 
+export const calculateTotals = (data = []) => {
+  return data.reduce(
+    (acc, item) => {
+      acc.khusus += Number(item.khusus) || 0;
+      acc.besar += Number(item.besar) || 0;
+      acc.sedang += Number(item.sedang) || 0;
+      acc.kecil += Number(item.kecil) || 0;
+      acc.total += Number(item.total) || 0;
+
+      return acc;
+    },
+    {
+      khusus: 0,
+      besar: 0,
+      sedang: 0,
+      kecil: 0,
+      total: 0,
+    },
+  );
+};
+
 // ======================================================
 // NORMALISASI PERIODE MENJADI YYYY-MM
 // ======================================================
@@ -99,28 +120,19 @@ const getPeriodeInfo = (periode) => {
   };
 };
 
-export const exportRL310ExcelSatuSehat = (data = [], periode) => {
+export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   const { periodeFormatted, tahun, bulan } = getPeriodeInfo(periode);
 
   // ======================================================
   // TOTAL
   // ======================================================
 
-  const total = {
-    rm_diterima_puskesmas: 0,
-    rm_diterima_rs: 0,
-    rm_diterima_faskes_lain: 0,
-    rm_diterima_total_rm: 0,
-
-    rm_dikembalikan_puskesmas: 0,
-    rm_dikembalikan_rs: 0,
-    rm_dikembalikan_faskes_lain: 0,
-    rm_dikembalikan_total_rm: 0,
-
-    keluar_pasien_rujukan: 0,
-    keluar_pasien_datang_sendiri: 0,
-    keluar_total_keluar: 0,
-    keluar_diterima_kembali: 0,
+  const sub_total = {
+    khusus: 0,
+    besar: 0,
+    sedang: 0,
+    kecil: 0,
+    total: 0,
   };
 
   // ======================================================
@@ -128,7 +140,7 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
   // ======================================================
 
   const excelData = [
-    ["SIRS ONLINE RL 3.10 Rujukan - SATUSEHAT"],
+    ["SIRS ONLINE RL 3.12 Pembedahan - SATUSEHAT"],
     [],
     ["Periode Data"],
     [`Tahun : ${tahun}`],
@@ -136,55 +148,12 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
     [],
     [
       "No.",
-      "Rumah Sakit",
       "Jenis Spesialisasi",
-      "Rujukan Masuk",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "Dirujuk Keluar",
-      "",
-      "",
-      "",
-    ],
-    [
-      "",
-      "",
-      "",
-      "Diterima Dari",
-      "",
-      "",
-      "",
-      "Dikembalikan Ke",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-    ],
-    [
-      "",
-      "",
-      "",
-      "Puskesmas",
-      "RS Lain",
-      "Faskes Lain",
-      "Total Rujukan Masuk",
-      "Puskesmas",
-      "RS Asal",
-      "Faskes Lain",
-      "Total Rujukan Masuk Dikembalikan",
-      "Pasien Rujukan",
-      "Pasien Datang Sendiri",
-      "Total Dirujuk Keluar",
-      "Diterima Kembali",
+      "Khusus",
+      "Besar",
+      "Sedang",
+      "Kecil",
+      "Total",
     ],
   ];
 
@@ -193,38 +162,21 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
   // ======================================================
 
   data.forEach((item, index) => {
-    Object.keys(total).forEach((key) => {
-      total[key] += Number(item[key]) || 0;
+    Object.keys(sub_total).forEach((key) => {
+      sub_total[key] += Number(item[key]) || 0;
     });
 
-    const namaRumahSakit =
-      item.nama_rumah_sakit ??
-      item.rumah_sakit ??
-      item.nama_rs ??
-      item.rs_name ??
-      "-";
-
-    const jenisSpesialisasi = item.jenis_spesialisasi?.nama ?? "-";
+    const jenisSpesialisasi = item.jenis_spesialisasi?.nama_spesialisasi ?? "-";
 
     excelData.push([
       index + 1,
-      namaRumahSakit,
       jenisSpesialisasi,
 
-      Number(item.rm_diterima_puskesmas) || 0,
-      Number(item.rm_diterima_rs) || 0,
-      Number(item.rm_diterima_faskes_lain) || 0,
-      Number(item.rm_diterima_total_rm) || 0,
-
-      Number(item.rm_dikembalikan_puskesmas) || 0,
-      Number(item.rm_dikembalikan_rs) || 0,
-      Number(item.rm_dikembalikan_faskes_lain) || 0,
-      Number(item.rm_dikembalikan_total_rm) || 0,
-
-      Number(item.keluar_pasien_rujukan) || 0,
-      Number(item.keluar_pasien_datang_sendiri) || 0,
-      Number(item.keluar_total_keluar) || 0,
-      Number(item.keluar_diterima_kembali) || 0,
+      Number(item.khusus) || 0,
+      Number(item.besar) || 0,
+      Number(item.sedang) || 0,
+      Number(item.kecil) || 0,
+      Number(item.total) || 0,
     ]);
   });
 
@@ -234,23 +186,13 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
 
   excelData.push([
     "",
-    "",
     "TOTAL",
 
-    total.rm_diterima_puskesmas,
-    total.rm_diterima_rs,
-    total.rm_diterima_faskes_lain,
-    total.rm_diterima_total_rm,
-
-    total.rm_dikembalikan_puskesmas,
-    total.rm_dikembalikan_rs,
-    total.rm_dikembalikan_faskes_lain,
-    total.rm_dikembalikan_total_rm,
-
-    total.keluar_pasien_rujukan,
-    total.keluar_pasien_datang_sendiri,
-    total.keluar_total_keluar,
-    total.keluar_diterima_kembali,
+    sub_total.khusus,
+    sub_total.besar,
+    sub_total.sedang,
+    sub_total.kecil,
+    sub_total.total,
   ]);
 
   // ======================================================
@@ -261,16 +203,17 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
 
   // ======================================================
   // MERGE JUDUL
-  // A1:O1
+  // A1:N1
   // ======================================================
 
   worksheet["!merges"] = [
     // ==========================================
     // JUDUL
     // ==========================================
+
     {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: 14 },
+      e: { r: 0, c: 13 },
     },
 
     // ==========================================
@@ -283,16 +226,10 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
       e: { r: 8, c: 0 },
     },
 
-    // Rumah Sakit
+    // Jenis Spesialisasi
     {
       s: { r: 6, c: 1 },
       e: { r: 8, c: 1 },
-    },
-
-    // Jenis Spesialisasi
-    {
-      s: { r: 6, c: 2 },
-      e: { r: 8, c: 2 },
     },
 
     // ==========================================
@@ -300,20 +237,20 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
     // ==========================================
 
     {
-      s: { r: 6, c: 3 },
-      e: { r: 6, c: 10 },
+      s: { r: 6, c: 2 },
+      e: { r: 6, c: 9 },
     },
 
     // Diterima Dari
     {
-      s: { r: 7, c: 3 },
-      e: { r: 7, c: 6 },
+      s: { r: 7, c: 2 },
+      e: { r: 7, c: 5 },
     },
 
     // Dikembalikan Ke
     {
-      s: { r: 7, c: 7 },
-      e: { r: 7, c: 10 },
+      s: { r: 7, c: 6 },
+      e: { r: 7, c: 9 },
     },
 
     // ==========================================
@@ -321,8 +258,8 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
     // ==========================================
 
     {
-      s: { r: 6, c: 11 },
-      e: { r: 7, c: 14 },
+      s: { r: 6, c: 10 },
+      e: { r: 7, c: 13 },
     },
   ];
 
@@ -332,7 +269,6 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
 
   worksheet["!cols"] = [
     { wch: 7 }, // No.
-    { wch: 30 }, // Rumah Sakit
     { wch: 28 }, // Jenis Spesialisasi
 
     { wch: 15 }, // Puskesmas
@@ -380,7 +316,7 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
   // ==========================================
 
   for (let row = 6; row <= 8; row++) {
-    for (let col = 0; col <= 14; col++) {
+    for (let col = 0; col <= 13; col++) {
       const cellAddress = XLSX.utils.encode_cell({
         r: row,
         c: col,
@@ -411,7 +347,7 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
   const totalRow = excelData.length - 1;
 
   for (let row = 9; row < totalRow; row++) {
-    for (let col = 0; col <= 14; col++) {
+    for (let col = 0; col <= 13; col++) {
       const cellAddress = XLSX.utils.encode_cell({
         r: row,
         c: col,
@@ -428,8 +364,8 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
         },
         alignment: {
           // No + semua angka di tengah
-          // Rumah Sakit + Jenis Spesialisasi kiri
-          horizontal: col === 0 || col >= 3 ? "center" : "left",
+          // Jenis Spesialisasi kiri
+          horizontal: col === 0 || col >= 2 ? "center" : "left",
           vertical: "center",
           wrapText: true,
         },
@@ -437,6 +373,7 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
       };
     }
   }
+
   // ======================================================
   // TOTAL
   // ======================================================
@@ -542,11 +479,11 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
 
   const workbook = XLSX.utils.book_new();
 
-  XLSX.utils.book_append_sheet(workbook, worksheet, "RL310");
+  XLSX.utils.book_append_sheet(workbook, worksheet, "RL312");
 
   // ======================================================
   // EXPORT
   // ======================================================
 
-  XLSX.writeFile(workbook, `RL310-Rujukan-${periodeFormatted}.xlsx`);
+  XLSX.writeFile(workbook, `RL312-Pembedahan-${periodeFormatted}.xlsx`);
 };

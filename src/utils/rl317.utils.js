@@ -51,6 +51,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
     [],
     [
       "No",
+      "Rumah Sakit",
       "Golongan Obat",
       "Jumlah Item Obat",
       "Jumlah Item Obat yang Tersedia di Rumah Sakit",
@@ -69,19 +70,32 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
     totalItem += jumlahItem;
     totalItemRS += jumlahItemRS;
 
+    const namaRumahSakit =
+      item.nama_rumah_sakit ??
+      item.rumah_sakit ??
+      item.nama_rs ??
+      item.rs_name ??
+      "-";
+
     const namaGolonganObat =
       item.nama_golongan_obat ??
       item.rl_tiga_titik_tujuh_belas_golongan_obat?.nama ??
       "-";
 
-    excelData.push([index + 1, namaGolonganObat, jumlahItem, jumlahItemRS]);
+    excelData.push([
+      index + 1,
+      namaRumahSakit,
+      namaGolonganObat,
+      jumlahItem,
+      jumlahItemRS,
+    ]);
   });
 
   // ==========================================
   // TOTAL
   // ==========================================
 
-  excelData.push(["", "TOTAL", totalItem, totalItemRS]);
+  excelData.push(["", "", "TOTAL", totalItem, totalItemRS]);
 
   // ==========================================
   // WORKSHEET
@@ -91,13 +105,13 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
 
   // ==========================================
   // MERGE JUDUL
-  // A1:D1
+  // A1:E1
   // ==========================================
 
   worksheet["!merges"] = [
     {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: 3 },
+      e: { r: 0, c: 4 },
     },
   ];
 
@@ -107,6 +121,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
 
   worksheet["!cols"] = [
     { wch: 8 }, // No
+    { wch: 30 }, // Rumah Sakit
     { wch: 40 }, // Golongan Obat
     { wch: 20 }, // Jumlah Item Obat
     { wch: 45 }, // Jumlah Item Obat RS
@@ -140,7 +155,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   // ROW 6
   // ==========================================
 
-  for (let col = 0; col <= 3; col++) {
+  for (let col = 0; col <= 4; col++) {
     const cellAddress = XLSX.utils.encode_cell({
       r: 5,
       c: col,
@@ -170,7 +185,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   const totalRow = excelData.length - 1;
 
   for (let row = 6; row < totalRow; row++) {
-    for (let col = 0; col <= 3; col++) {
+    for (let col = 0; col <= 4; col++) {
       const cellAddress = XLSX.utils.encode_cell({
         r: row,
         c: col,
@@ -187,8 +202,8 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
         },
         alignment: {
           // No dan angka berada di tengah
-          // Golongan Obat kiri
-          horizontal: col === 0 || col >= 2 ? "center" : "left",
+          // Rumah Sakit dan Golongan Obat kiri
+          horizontal: col === 0 || col >= 3 ? "center" : "left",
           vertical: "center",
           wrapText: true,
         },
@@ -201,7 +216,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   // TOTAL
   // ==========================================
 
-  for (let col = 0; col <= 3; col++) {
+  for (let col = 0; col <= 4; col++) {
     const cellAddress = XLSX.utils.encode_cell({
       r: totalRow,
       c: col,
