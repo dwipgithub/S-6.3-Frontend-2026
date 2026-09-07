@@ -877,9 +877,6 @@ function TabOne() {
   );
 }
 
-// ==========================================
-// KOMPONEN TAB 2: SATUSEHAT INTEGRATION
-// ==========================================
 function TabTwo() {
   const [tahun, setTahun] = useState(new Date().getFullYear());
   const [bulan, setBulan] = useState("01");
@@ -897,12 +894,14 @@ function TabTwo() {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [countdown, setCountdown] = useState(0); // Timer 5 menit (300 detik)
+  const [now, setNow] = useState(Date.now());
   const limit = 50;
 
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
   const pollingRef = useRef(null);
+
+  const MANUAL_SYNC_COOLDOWN_SEC = 300; // 5 menit
 
   useEffect(() => {
     refreshToken();
@@ -916,16 +915,13 @@ function TabTwo() {
     }
   }, [user.jenisUserId]);
 
-  // Efek Timer Hitung Mundur (5 menit = 300 detik)
+  // Timer real-time per detik untuk memperbarui sisa waktu cooldown
   useEffect(() => {
-    let timer;
-    if (countdown > 0) {
-      timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [countdown]);
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const refreshToken = async () => {
     try {
@@ -1125,49 +1121,39 @@ function TabTwo() {
     return new Date(dateStr).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) + " WIB";
   };
 
-  const MANUAL_SYNC_COOLDOWN = 5;
-  const [now, setNow] = useState(Date.now());
+  // Menghitung sisa detik cooldown berdasarkan lastSync
+  const getRemainingSeconds = () => {
+    if (!sync?.lastSync) return 0;
+    const lastSyncTime = new Date(sync.lastSync).getTime();
+    if (isNaN(lastSyncTime)) return 0;
 
-  useEffect(() => {
-    setNow(Date.now());
-    if (!sync.lastSync || sync.isUpdating) return;
+    const elapsedSeconds = Math.floor((now - lastSyncTime) / 1000);
+    const remaining = MANUAL_SYNC_COOLDOWN_SEC - elapsedSeconds;
+    return remaining > 0 ? remaining : 0;
+  };
 
-    const elapsed = (Date.now() - new Date(sync.lastSync).getTime()) / 60000;
-    if (elapsed >= MANUAL_SYNC_COOLDOWN) return;
+  const remainingSeconds = getRemainingSeconds();
 
-    const remainingMs = (MANUAL_SYNC_COOLDOWN - elapsed) * 60 * 1000;
-    const timeout = setTimeout(() => setNow(Date.now()), remainingMs);
-
-    return () => clearTimeout(timeout);
-  }, [sync.lastSync, sync.isUpdating]);
-
-  const minutesSinceSync = sync.lastSync
-    ? (now - new Date(sync.lastSync).getTime()) / 60000
-    : null;
-
+  // Tombol aktif jika tidak sedang update dan (lastSync belum ada ATAU cooldown >= 5 menit)
   const canSync =
     !sync.isUpdating &&
     !isManualSyncing &&
-    countdown === 0 &&
-    (minutesSinceSync === null || minutesSinceSync >= MANUAL_SYNC_COOLDOWN);
+    remainingSeconds === 0;
 
-  // FUNGSI SINKRONISASI: DENGAN PEMBERSIHAN / PERINTAH HAPUS DATA LAMA SISI BACKEND
   const handleManualSync = async () => {
-    if (!canSync) return;
+    if (!canSync || !isFilterApplied) return;
 
     setIsManualSyncing(true);
     setLoadingTable(true);
-    setDataRL([]); // Bersihkan UI sementara
-    setCountdown(300); // Set hitung mundur 5 menit (300 detik)
+    setDataRL([]);
 
     try {
-      // Mengirimkan instruksi hapus data lama terlebih dahulu melalui opsi overwrite/reset pada payload
       await axiosJWT.post(
         "/apisirs6v2/rltigatitiksembilansatusehat/sync",
         {
           rsId: user.satKerId,
           periode: `${tahun}-${bulan}`,
-          overwrite: true, // Parameter penanda ke backend untuk TRUNCATE / DELETE data lama sebelum sync
+          overwrite: true,
           resetData: true
         },
         { headers: { Authorization: `Bearer ${token}`, "XSRF-TOKEN": CSRFToken } }
@@ -1184,7 +1170,6 @@ function TabTwo() {
         position: toast.POSITION.TOP_RIGHT,
       });
       setLoadingTable(false);
-      setCountdown(0); // Reset timer jika gagal
     }
   };
 
@@ -1192,7 +1177,6 @@ function TabTwo() {
     setIsManualSyncing(false);
   }, [sync]);
 
-  // Format detik ke MM:SS untuk hitung mundur
   const formatCountdown = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -1236,7 +1220,6 @@ function TabTwo() {
       const namaBulanSelected = daftarBulan.find((b) => b.value === bulan)?.key || bulan;
       const namaRS = rumahSakit?.nama || "-";
 
-      // 1. Susun Data Tabel
       let rowsHTML = "";
 
       allData.forEach((v) => {
@@ -1249,7 +1232,7 @@ function TabTwo() {
 
         if (isTotal) {
           noUrut = "99";
-          rsValue = ""; // Nama RS dikosongkan pada baris TOTAL
+          rsValue = "";
           isBoldRow = true;
         } else if (isParent) {
           parentIndex += 1;
@@ -1273,7 +1256,6 @@ function TabTwo() {
         `;
       });
 
-      // 2. Susun Dokumen HTML Lengkap
       const excelHTML = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
         <head>
@@ -1317,7 +1299,6 @@ function TabTwo() {
         </html>
       `;
 
-      // 3. Trigger Download
       const blob = new Blob([excelHTML], { type: "application/vnd.ms-excel;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1429,9 +1410,9 @@ function TabTwo() {
                     <>
                       <Spinner animation="border" size="sm" /> Syncing...
                     </>
-                  ) : countdown > 0 ? (
+                  ) : remainingSeconds > 0 ? (
                     <>
-                      <FaSyncAlt size={14} /> SINKRONISASI ({formatCountdown(countdown)})
+                      <FaSyncAlt size={14} /> SYNC ({formatCountdown(remainingSeconds)})
                     </>
                   ) : (
                     <>
@@ -1479,11 +1460,59 @@ function TabTwo() {
                 <FaInfoCircle size={14} color="#2563eb" />
                 <span style={{ fontWeight: 700, fontSize: 13, color: "#2563eb" }}>KETERANGAN TOMBOL</span>
               </div>
-              <div style={{ fontSize: 12, color: "#475569" }}>
-                <p style={{ margin: "0 0 6px 0" }}><strong>FILTER</strong>: Menampilkan data dari SIRS Online</p>
-                <p style={{ margin: "0 0 6px 0" }}><strong>SYNC SATUSEHAT</strong>: Reset & ambil data terbaru SATUSEHAT</p>
-                <p style={{ margin: 0 }}><strong>DOWNLOAD EXCEL</strong>: Mengunduh data ke file Excel</p>
-              </div>
+              {[
+                {
+                  icon: <FaFilter size={11} />,
+                  bg: "#1d4ed8",
+                  label: "FILTER",
+                  desc: "Menampilkan data dari database SIRS Online",
+                },
+                {
+                  icon: <FaSyncAlt size={11} />,
+                  bg: "#059669",
+                  label: "SYNC SATUSEHAT",
+                  desc: "Mengambil data terbaru dari SATUSEHAT",
+                },
+                {
+                  icon: <SiMicrosoftexcel size={15} />,
+                  bg: "#059669",
+                  label: "DOWNLOAD EXCEL",
+                  desc: "Mengunduh data hasil filter",
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 9,
+                    marginBottom: 9,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: item.bg,
+                      borderRadius: 5,
+                      width: 26,
+                      height: 26,
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+                  <div
+                    style={{ fontSize: 12, color: "#475569", lineHeight: 1.45 }}
+                  >
+                    <strong style={{ fontWeight: 700 }}>{item.label}</strong>
+                    {" : "}
+                    {item.desc}
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div style={{ flex: "1 1 210px", border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "14px 16px", background: "#fff" }}>
@@ -1491,9 +1520,55 @@ function TabTwo() {
                 <FaSyncAlt size={15} color="#059669" />
                 <span style={{ fontWeight: 700, fontSize: 13, color: "#059669" }}>STATUS SINKRONISASI</span>
               </div>
-              <div style={{ fontSize: 12, color: "#475569" }}>
-                <p style={{ margin: "0 0 8px 0" }}>Terakhir Sync: <strong>{sync.lastSync ? formatDate(sync.lastSync) : "-"}</strong></p>
-                <p style={{ margin: 0 }}>Interval Sync: <strong>{MANUAL_SYNC_COOLDOWN} Menit</strong></p>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 11 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "#f1f5f9",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <FaCalendarAlt size={13} color="#64748b" />
+                  </div>
+                  <span style={{ fontSize: 12, color: "#475569" }}>
+                    Terakhir Sync&nbsp;:&nbsp;
+                    <strong>
+                      {sync.lastSync ? formatDate(sync.lastSync) : "-"}
+                    </strong>
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "#f1f5f9",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: 15, lineHeight: 1, color: "#64748b" }}
+                    >
+                      ⏱
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, color: "#475569" }}>
+                    Interval Sync&nbsp;:&nbsp;
+                    <strong>5 Menit</strong>
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1502,9 +1577,51 @@ function TabTwo() {
                 <FaDatabase size={14} color="#3b82f6" />
                 <span style={{ fontWeight: 700, fontSize: 13, color: "#3b82f6" }}>SUMBER DATA</span>
               </div>
-              <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>
-                Data bersumber dari <strong>SATUSEHAT</strong> yang tersimpan pada database <strong>SIRS</strong>.
-              </p>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  flex: 1,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "#475569",
+                    margin: 0,
+                    flex: 1,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Data yang ditampilkan bersumber dari{" "}
+                  <strong>SATUSEHAT</strong> yang sudah tersimpan dalam database{" "}
+                  <strong>SIRS</strong>.
+                </p>
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <FaDatabase size={38} color="#bfdbfe" />
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: -3,
+                      right: -6,
+                      background: "#059669",
+                      color: "#fff",
+                      borderRadius: "50%",
+                      width: 18,
+                      height: 18,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      lineHeight: 1,
+                    }}
+                  >
+                    ✓
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1512,7 +1629,7 @@ function TabTwo() {
             {filterLabel.length > 0 && <h5 style={{ fontSize: "14px" }}>Filtered By {filterLabel.join(", ")}</h5>}
           </div>
 
-          {/* TABEL DATA SINKRONISASI SATUSEHAT DENGAN DESAIN MODERN & ELEGAN */}
+          {/* TABEL DATA SINKRONISASI SATUSEHAT */}
           {!isFilterApplied ? (
             <div style={{ backgroundColor: "#fff3cd", border: "1px solid #ffc107", color: "#856404", padding: 15, borderRadius: 8, textAlign: "center" }}>
               <strong>Silakan pilih filter terlebih dahulu.</strong>
@@ -1522,12 +1639,12 @@ function TabTwo() {
               <Spinner animation="border" variant="primary" />
               <p style={{ marginTop: 12, color: "#64748b", fontWeight: 500 }}>Menyinkronkan & mengambil data dari SATUSEHAT...</p>
             </div>
-          ) : dataRL.length === 0 ? (
+          ) : !sync?.lastSync ? (
             <div
               style={{
-                backgroundColor: "#f0f9ff",
-                border: "1px solid #bae6fd",
-                color: "#0369a1",
+                backgroundColor: "#fff3cd",
+                border: "1px solid #ffc107",
+                color: "#856404",
                 padding: 20,
                 borderRadius: 8,
                 textAlign: "center",
@@ -1536,8 +1653,24 @@ function TabTwo() {
               }}
             >
               <strong>
-                Data belum disinkronkan dengan SATUSEHAT untuk periode ini.
-                Silakan klik tombol "SYNC SATUSEHAT" di atas untuk memperbarui data.
+                Data belum disinkronkan dengan SATUSEHAT untuk periode ini. Silakan lakukan sinkronisasi terlebih dahulu.
+              </strong>
+            </div>
+          ) : dataRL.length === 0 ? (
+            <div
+              style={{
+                backgroundColor: "#fff3cd",
+                border: "1px solid #ffc107",
+                color: "#856404",
+                padding: 20,
+                borderRadius: 8,
+                textAlign: "center",
+                fontSize: "14px",
+                lineHeight: "1.6",
+              }}
+            >
+              <strong>
+                Data tidak ditemukan di SATUSEHAT untuk periode ini.
               </strong>
             </div>
           ) : (
@@ -1551,8 +1684,6 @@ function TabTwo() {
                 marginBottom: "20px",
               }}
             >
-              {/* Header Card Tabel */}
-
               <div style={{ overflowX: "auto" }}>
                 <table className={style["table"]} style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                   <thead className={style["thead"]}>
