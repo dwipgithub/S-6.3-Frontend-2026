@@ -71,6 +71,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
     totalItemRS += jumlahItemRS;
 
     const namaRumahSakit =
+      item.organization_name ??
       item.nama_rumah_sakit ??
       item.rumah_sakit ??
       item.nama_rs ??
@@ -95,7 +96,9 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   // TOTAL
   // ==========================================
 
-  excelData.push(["", "", "TOTAL", totalItem, totalItemRS]);
+  const totalRow = excelData.length;
+
+  excelData.push(["TOTAL", "", "", totalItem, totalItemRS]);
 
   // ==========================================
   // WORKSHEET
@@ -109,9 +112,23 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   // ==========================================
 
   worksheet["!merges"] = [
+    // ==========================================
+    // JUDUL
+    // A1:E1
+    // ==========================================
     {
       s: { r: 0, c: 0 },
       e: { r: 0, c: 4 },
+    },
+
+    // ==========================================
+    // FOOTER TOTAL
+    // No. + Rumah Sakit + Golongan Obat
+    // A:C
+    // ==========================================
+    {
+      s: { r: totalRow, c: 0 },
+      e: { r: totalRow, c: 2 },
     },
   ];
 
@@ -181,8 +198,6 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   // ==========================================
   // DATA TABEL
   // ==========================================
-
-  const totalRow = excelData.length - 1;
 
   for (let row = 6; row < totalRow; row++) {
     for (let col = 0; col <= 4; col++) {

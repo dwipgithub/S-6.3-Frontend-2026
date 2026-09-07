@@ -1,6 +1,10 @@
 import * as XLSX from "xlsx-js-style";
 import { MONTHS } from "../constants/date";
 
+// ======================================================
+// FORMAT DATE
+// ======================================================
+
 export const formatDate = (dateStr) => {
   if (!dateStr) return "-";
 
@@ -19,6 +23,10 @@ export const formatDate = (dateStr) => {
 
   return `${day} ${month} ${year}, ${hour}.${minute}.${second} WIB`;
 };
+
+// ======================================================
+// CALCULATE TOTALS
+// ======================================================
 
 export const calculateTotals = (data = []) => {
   return data.reduce(
@@ -97,7 +105,7 @@ const getPeriodeInfo = (periode) => {
   }
 
   // Format Juni-2026
-  if (periode.includes("-")) {
+  if (periode?.includes("-")) {
     const [namaBulan, tahunValue] = periode.split("-");
 
     tahun = tahunValue;
@@ -120,6 +128,10 @@ const getPeriodeInfo = (periode) => {
   };
 };
 
+// ======================================================
+// EXPORT RL 3.12
+// ======================================================
+
 export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   const { periodeFormatted, tahun, bulan } = getPeriodeInfo(periode);
 
@@ -127,7 +139,7 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   // TOTAL
   // ======================================================
 
-  const sub_total = {
+  const total = {
     khusus: 0,
     besar: 0,
     sedang: 0,
@@ -148,6 +160,7 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
     [],
     [
       "No.",
+      "Rumah Sakit",
       "Jenis Spesialisasi",
       "Khusus",
       "Besar",
@@ -162,14 +175,37 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   // ======================================================
 
   data.forEach((item, index) => {
-    Object.keys(sub_total).forEach((key) => {
-      sub_total[key] += Number(item[key]) || 0;
-    });
+    total.khusus += Number(item.khusus) || 0;
+    total.besar += Number(item.besar) || 0;
+    total.sedang += Number(item.sedang) || 0;
+    total.kecil += Number(item.kecil) || 0;
+    total.total += Number(item.total) || 0;
 
-    const jenisSpesialisasi = item.jenis_spesialisasi?.nama_spesialisasi ?? "-";
+    // ------------------------------------------
+    // RUMAH SAKIT
+    // ------------------------------------------
+
+    const namaRumahSakit =
+      item.organization_name ??
+      item.nama_rumah_sakit ??
+      item.rumah_sakit ??
+      item.nama_rs ??
+      item.rs_name ??
+      "-";
+
+    // ------------------------------------------
+    // JENIS SPESIALISASI
+    // ------------------------------------------
+
+    const jenisSpesialisasi =
+      item.jenis_spesialisasi?.nama_spesialisasi ??
+      item.jenis_spesialisasi?.nama ??
+      item.nama_spesialisasi ??
+      "-";
 
     excelData.push([
       index + 1,
+      namaRumahSakit,
       jenisSpesialisasi,
 
       Number(item.khusus) || 0,
@@ -184,15 +220,17 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   // TOTAL
   // ======================================================
 
-  excelData.push([
-    "",
-    "TOTAL",
+  const totalRow = excelData.length;
 
-    sub_total.khusus,
-    sub_total.besar,
-    sub_total.sedang,
-    sub_total.kecil,
-    sub_total.total,
+  excelData.push([
+    "TOTAL",
+    "",
+    "",
+    total.khusus,
+    total.besar,
+    total.sedang,
+    total.kecil,
+    total.total,
   ]);
 
   // ======================================================
@@ -202,64 +240,28 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   const worksheet = XLSX.utils.aoa_to_sheet(excelData);
 
   // ======================================================
-  // MERGE JUDUL
-  // A1:N1
+  // MERGE
   // ======================================================
 
   worksheet["!merges"] = [
-    // ==========================================
+    // ------------------------------------------
     // JUDUL
-    // ==========================================
+    // A1:H1
+    // ------------------------------------------
 
     {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: 13 },
+      e: { r: 0, c: 7 },
     },
 
-    // ==========================================
-    // HEADER VERTIKAL
-    // ==========================================
-
-    // No.
-    {
-      s: { r: 6, c: 0 },
-      e: { r: 8, c: 0 },
-    },
-
-    // Jenis Spesialisasi
-    {
-      s: { r: 6, c: 1 },
-      e: { r: 8, c: 1 },
-    },
-
-    // ==========================================
-    // RUJUKAN MASUK
-    // ==========================================
+    // ------------------------------------------
+    // TOTAL
+    // A:C
+    // ------------------------------------------
 
     {
-      s: { r: 6, c: 2 },
-      e: { r: 6, c: 9 },
-    },
-
-    // Diterima Dari
-    {
-      s: { r: 7, c: 2 },
-      e: { r: 7, c: 5 },
-    },
-
-    // Dikembalikan Ke
-    {
-      s: { r: 7, c: 6 },
-      e: { r: 7, c: 9 },
-    },
-
-    // ==========================================
-    // DIRUJUK KELUAR
-    // ==========================================
-
-    {
-      s: { r: 6, c: 10 },
-      e: { r: 7, c: 13 },
+      s: { r: totalRow, c: 0 },
+      e: { r: totalRow, c: 2 },
     },
   ];
 
@@ -269,22 +271,13 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
 
   worksheet["!cols"] = [
     { wch: 7 }, // No.
-    { wch: 28 }, // Jenis Spesialisasi
-
-    { wch: 15 }, // Puskesmas
-    { wch: 12 }, // RS Lain
-    { wch: 15 }, // Faskes Lain
-    { wch: 20 }, // Total Rujukan Masuk
-
-    { wch: 15 }, // Puskesmas
-    { wch: 12 }, // RS Asal
-    { wch: 15 }, // Faskes Lain
-    { wch: 25 }, // Total Rujukan Masuk Dikembalikan
-
-    { wch: 20 }, // Pasien Rujukan
-    { wch: 22 }, // Pasien Datang Sendiri
-    { wch: 20 }, // Total Dirujuk Keluar
-    { wch: 18 }, // Diterima Kembali
+    { wch: 30 }, // Rumah Sakit
+    { wch: 32 }, // Jenis Spesialisasi
+    { wch: 15 }, // Khusus
+    { wch: 15 }, // Besar
+    { wch: 15 }, // Sedang
+    { wch: 15 }, // Kecil
+    { wch: 15 }, // Total
   ];
 
   // ======================================================
@@ -310,52 +303,49 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
     },
   };
 
-  // ==========================================
-  // STYLE HEADER BERTINGKAT
-  // ROW 7 - 9
-  // ==========================================
+  // ======================================================
+  // STYLE HEADER
+  // ======================================================
 
-  for (let row = 6; row <= 8; row++) {
-    for (let col = 0; col <= 13; col++) {
-      const cellAddress = XLSX.utils.encode_cell({
-        r: row,
-        c: col,
-      });
+  const headerRow = 6;
 
-      if (worksheet[cellAddress]) {
-        worksheet[cellAddress].s = {
-          font: {
-            name: "Calibri",
-            sz: 12,
-            bold: true,
-          },
-          alignment: {
-            horizontal: "center",
-            vertical: "center",
-            wrapText: true,
-          },
-          border: thinBorder,
-        };
-      }
-    }
+  for (let col = 0; col <= 7; col++) {
+    const cellAddress = XLSX.utils.encode_cell({
+      r: headerRow,
+      c: col,
+    });
+
+    if (!worksheet[cellAddress]) continue;
+
+    worksheet[cellAddress].s = {
+      font: {
+        name: "Calibri",
+        sz: 12,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+        wrapText: true,
+      },
+      border: thinBorder,
+    };
   }
 
   // ======================================================
-  // DATA TABEL
+  // STYLE DATA
   // ======================================================
 
-  const totalRow = excelData.length - 1;
+  const dataStartRow = 7;
 
-  for (let row = 9; row < totalRow; row++) {
-    for (let col = 0; col <= 13; col++) {
+  for (let row = dataStartRow; row < totalRow; row++) {
+    for (let col = 0; col <= 7; col++) {
       const cellAddress = XLSX.utils.encode_cell({
         r: row,
         c: col,
       });
 
-      if (!worksheet[cellAddress]) {
-        continue;
-      }
+      if (!worksheet[cellAddress]) continue;
 
       worksheet[cellAddress].s = {
         font: {
@@ -363,9 +353,10 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
           sz: 12,
         },
         alignment: {
-          // No + semua angka di tengah
-          // Jenis Spesialisasi kiri
-          horizontal: col === 0 || col >= 2 ? "center" : "left",
+          // No + angka = center
+          // Rumah Sakit + Jenis Spesialisasi = left
+          horizontal: col === 0 || col >= 3 ? "center" : "left",
+
           vertical: "center",
           wrapText: true,
         },
@@ -375,30 +366,30 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   }
 
   // ======================================================
-  // TOTAL
+  // STYLE TOTAL
   // ======================================================
 
-  for (let col = 0; col <= 13; col++) {
+  for (let col = 0; col <= 7; col++) {
     const cellAddress = XLSX.utils.encode_cell({
       r: totalRow,
       c: col,
     });
 
-    if (worksheet[cellAddress]) {
-      worksheet[cellAddress].s = {
-        font: {
-          name: "Calibri",
-          sz: 12,
-          bold: true,
-        },
-        alignment: {
-          horizontal: "center",
-          vertical: "center",
-          wrapText: true,
-        },
-        border: thinBorder,
-      };
-    }
+    if (!worksheet[cellAddress]) continue;
+
+    worksheet[cellAddress].s = {
+      font: {
+        name: "Calibri",
+        sz: 12,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+        wrapText: true,
+      },
+      border: thinBorder,
+    };
   }
 
   // ======================================================
@@ -418,7 +409,7 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   };
 
   // ======================================================
-  // PERIODE DATA
+  // PERIODE
   // ======================================================
 
   worksheet["A3"].s = {
@@ -464,13 +455,11 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   worksheet["!rows"] = [
     { hpt: 25 }, // Row 1 - Judul
     { hpt: 10 }, // Row 2
-    { hpt: 20 }, // Row 3
+    { hpt: 20 }, // Row 3 - Periode
     { hpt: 20 }, // Row 4 - Tahun
     { hpt: 20 }, // Row 5 - Bulan
     { hpt: 10 }, // Row 6
-    { hpt: 30 }, // Row 7 - Header level 1
-    { hpt: 30 }, // Row 8 - Header level 2
-    { hpt: 55 }, // Row 9 - Header level 3
+    { hpt: 30 }, // Row 7 - Header
   ];
 
   // ======================================================

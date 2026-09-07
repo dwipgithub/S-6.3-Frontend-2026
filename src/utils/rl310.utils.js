@@ -198,6 +198,7 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
     });
 
     const namaRumahSakit =
+      item.organization_name ??
       item.nama_rumah_sakit ??
       item.rumah_sakit ??
       item.nama_rs ??
@@ -232,10 +233,12 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
   // TOTAL
   // ======================================================
 
+  const totalRow = excelData.length;
+
   excelData.push([
-    "",
-    "",
     "TOTAL",
+    "",
+    "",
 
     total.rm_diterima_puskesmas,
     total.rm_diterima_rs,
@@ -324,6 +327,16 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
       s: { r: 6, c: 11 },
       e: { r: 7, c: 14 },
     },
+
+    // ==========================================
+    // FOOTER TOTAL
+    // No. + Rumah Sakit + Jenis Spesialisasi
+    // ==========================================
+
+    {
+      s: { r: totalRow, c: 0 },
+      e: { r: totalRow, c: 2 },
+    },
   ];
 
   // ======================================================
@@ -408,8 +421,6 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
   // DATA TABEL
   // ======================================================
 
-  const totalRow = excelData.length - 1;
-
   for (let row = 9; row < totalRow; row++) {
     for (let col = 0; col <= 14; col++) {
       const cellAddress = XLSX.utils.encode_cell({
@@ -441,7 +452,7 @@ export const exportRL310ExcelSatuSehat = (data = [], periode) => {
   // TOTAL
   // ======================================================
 
-  for (let col = 0; col <= 13; col++) {
+  for (let col = 0; col <= 14; col++) {
     const cellAddress = XLSX.utils.encode_cell({
       r: totalRow,
       c: col,
