@@ -29,6 +29,7 @@ const RL35 = () => {
   const [bulan, setBulan] = useState(1);
   const [tahun, setTahun] = useState(new Date().getFullYear());
   const [filterLabel, setFilterLabel] = useState([]);
+  const [daftarBulan, setDaftarBulan] = useState([]);
   const [rumahSakit, setRumahSakit] = useState("");
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
@@ -160,6 +161,60 @@ const RL35 = () => {
       return Promise.reject(error);
     }
   );
+
+  const getBulan = async () => {
+    const results = [];
+    results.push({
+      key: "Januari",
+      value: "1",
+    });
+    results.push({
+      key: "Febuari",
+      value: "2",
+    });
+    results.push({
+      key: "Maret",
+      value: "3",
+    });
+    results.push({
+      key: "April",
+      value: "4",
+    });
+    results.push({
+      key: "Mei",
+      value: "5",
+    });
+    results.push({
+      key: "Juni",
+      value: "6",
+    });
+    results.push({
+      key: "Juli",
+      value: "7",
+    });
+    results.push({
+      key: "Agustus",
+      value: "8",
+    });
+    results.push({
+      key: "September",
+      value: "9",
+    });
+    results.push({
+      key: "Oktober",
+      value: "10",
+    });
+    results.push({
+      key: "November",
+      value: "11",
+    });
+    results.push({
+      key: "Desember",
+      value: "12",
+    });
+
+    setDaftarBulan([...results]);
+  };
 
   const getRumahSakit = async (kabKotaId) => {
     try {
@@ -854,42 +909,88 @@ const RL35 = () => {
     });
   }
 
-  async function handleDownloadExcelRLTigaTitikLimaSatusehat() {
-    setIsDownloading(true);
-    try {
-      const header = [
-        "No",
-        "Jenis Kegiatan",
-        "Kunjungan Dalam Kota (L)",
-        "Kunjungan Dalam Kota (P)",
-        "Kunjungan Luar Kota (L)",
-        "Kunjungan Luar Kota (P)",
-        "Total Kunjungan",
-        "Rata-rata / hari",
-      ];
-
-      const body = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
-        (value, index) => [
-          index + 1,
-          value.jenis_kegiatan,
-          value.kunjungan_dalam_kab_kota?.laki_laki ?? value.kunjungan_dalam_kab_kota_laki_laki ?? 0,
-          value.kunjungan_dalam_kab_kota?.perempuan ?? value.kunjungan_dalam_kab_kota_perempuan ?? 0,
-          value.kunjungan_luar_kab_kota?.laki_laki ?? value.kunjungan_luar_kab_kota_laki_laki ?? 0,
-          value.kunjungan_luar_kab_kota?.perempuan ?? value.kunjungan_luar_kab_kota_perempuan ?? 0,
-          value.total_kunjungan ?? 0,
-          value.rata_rata_kunjungan_perhari ?? 0,
-        ]
-      );
-
-      downloadExcel({
-        fileName: "RL_3_5_SatuSehat",
-        sheet: "RL 3.5 SatuSehat",
-        tablePayload: { header, body },
-      });
-    } finally {
-      setTimeout(() => setIsDownloading(false), 800);
-    }
+async function handleDownloadExcelRLTigaTitikLimaSatusehat() {
+  // 1. Validasi filter
+  if (typeof hasFilteredSatusehat !== "undefined" && !hasFilteredSatusehat) {
+    toast("Terapkan filter terlebih dahulu", {
+      type: "error",
+      position: toast.POSITION.TOP_RIGHT,
+    });
+    return;
   }
+
+  setIsDownloading(true);
+
+  try {
+    // 2. Format Nama RS & Metadata
+    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
+    const selectedBulanObj = daftarBulan?.find(
+      (b) => String(b.value) === String(bulan)
+    );
+    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+    const tahunData = tahun || "-";
+
+    const titleAndMetadata = [
+      ["SIRS ONLINE RL 3.5 - SATUSEHAT"],
+      [], // Baris kosong
+      ["Periode Data"],
+      [`Bulan : ${namaBulan}`],
+      [`Tahun : ${tahunData}`],
+      [], // Baris kosong sebelum header tabel
+    ];
+
+    // 3. Header Tabel (Menambahkan kolom "Periode")
+    const tableHeader = [
+      "No",
+      "Rumah Sakit",
+      "Periode",
+      "Jenis Kegiatan",
+      "Kunjungan Dalam Kota (L)",
+      "Kunjungan Dalam Kota (P)",
+      "Kunjungan Luar Kota (L)",
+      "Kunjungan Luar Kota (P)",
+      "Total Kunjungan",
+      "Rata-rata / hari",
+    ];
+
+    // 4. Data Body Tabel (Memasukkan nilai periode/month_year)
+    const tableBody = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
+      (value, index) => [
+        index + 1,
+        value.nama_rumah_sakit || value.rumah_sakit || namaRS,
+        value.month_year || `${tahun}-${bulan}`,
+        value.jenis_kegiatan || "-",
+        value.kunjungan_dalam_kab_kota?.laki_laki ?? value.kunjungan_dalam_kab_kota_laki_laki ?? 0,
+        value.kunjungan_dalam_kab_kota?.perempuan ?? value.kunjungan_dalam_kab_kota_perempuan ?? 0,
+        value.kunjungan_luar_kab_kota?.laki_laki ?? value.kunjungan_luar_kab_kota_laki_laki ?? 0,
+        value.kunjungan_luar_kab_kota?.perempuan ?? value.kunjungan_luar_kab_kota_perempuan ?? 0,
+        value.total_kunjungan ?? 0,
+        value.rata_rata_kunjungan_perhari ?? 0,
+      ]
+    );
+
+    // 5. Gabungkan Semua Baris
+    const fullBody = [
+      ...titleAndMetadata,
+      tableHeader,
+      ...tableBody,
+    ];
+
+    // 6. Execute Export Excel
+    downloadExcel({
+      fileName: `rl35_satusehat_${tahunData}_${bulan}`,
+      sheet: "RL 3.5 SatuSehat",
+      tablePayload: {
+        header: [],
+        body: fullBody,
+      },
+    });
+  } catch (error) {
+    console.error("Gagal mendownload Excel Satusehat RL 3.5:", error);
+  } finally {
+    setTimeout(() => setIsDownloading(false), 800);
+  }
+}
 
   return (
     <div
