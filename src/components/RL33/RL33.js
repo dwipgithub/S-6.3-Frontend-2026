@@ -50,6 +50,7 @@ const RL33 = () => {
   const [KeteranganValidasiDb, setKeteranganValidasiDb] = useState("");
   const [tglValidasi, setTglValidasi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
+  const [namafileSatusehat, setNamaFileSatusehat] = useState("");
   
   const [loadingRS, setLoadingRS] = useState(false);
   const [spinner, setSpinner] = useState(false);
@@ -930,65 +931,102 @@ const RL33 = () => {
     });
   }
 
-  function handleDownloadExcelSatusehat() {
-    if (!hasFilteredSatusehat) {
-      toast("Terapkan filter terlebih dahulu", {
-        type: "error",
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-    setIsDownloading(true);
-    try {
-      const header = [
-        "No",
-        "Periode",
-        "Kategori",
-        "Jenis Pelayanan",
-        "Total Pasien Rujukan",
-        "Total Pasien Non Rujukan",
-        "Tindak Lanjut Dirawat",
-        "Tindak Lanjut Dirujuk",
-        "Tindak Lanjut Pulang",
-        "Mati di IGD (L)",
-        "Mati di IGD (P)",
-        "DOA (L)",
-        "DOA (P)",
-        "Luka-luka (L)",
-        "Luka-luka (P)",
-        "False Emergency",
-      ];
-
-      const body = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
-        (value, index) => [
-          index + 1,
-          value.month_year || `${tahun}-${bulan}`,
-          value.kategori,
-          value.jenis_pelayanan,
-          value.total_pasien_rujukan,
-          value.total_pasien_non_rujukan,
-          value.tindak_lanjut_dirawat,
-          value.tindak_lanjut_dirujuk,
-          value.tindak_lanjut_pulang,
-          value.mati_di_igd_laki_laki,
-          value.mati_di_igd_perempuan,
-          value.doa_laki_laki,
-          value.doa_perempuan,
-          value.luka_luka_laki_laki,
-          value.luka_luka_perempuan,
-          value.false_emergency,
-        ]
-      );
-
-      downloadExcel({
-        fileName: "RL_3_3_SatuSehat",
-        sheet: "RL 3.3 SatuSehat",
-        tablePayload: { header, body },
-      });
-    } finally {
-      setIsDownloading(false);
-    }
+const handleDownloadExcelSatusehat = async () => {
+  // 1. Validasi filter
+  if (!hasFilteredSatusehat) {
+    toast("Terapkan filter terlebih dahulu", {
+      type: "error",
+      position: toast.POSITION.TOP_RIGHT,
+    });
+    return;
   }
+
+  setIsDownloading(true);
+
+  try {
+    // 2. Format Nama RS & Metadata
+    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
+    const selectedBulanObj = daftarBulan?.find(
+      (b) => String(b.value) === String(bulan)
+    );
+    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+    const tahunData = tahun || "-";
+
+    const titleAndMetadata = [
+      ["SIRS ONLINE RL 3.3 - SATUSEHAT"],
+      [], // Baris kosong
+      ["Periode Data"],
+      [`Bulan : ${namaBulan}`],
+      [`Tahun : ${tahunData}`],
+      [], // Baris kosong sebelum header tabel
+    ];
+
+    // 3. Header Tabel (Menambahkan kolom "Rumah Sakit")
+    const tableHeader = [
+      "No",
+      "Rumah Sakit",
+      "Kategori",
+      "Jenis Pelayanan",
+      "Periode",
+      "Total Pasien Rujukan",
+      "Total Pasien Non Rujukan",
+      "Tindak Lanjut Dirawat",
+      "Tindak Lanjut Dirujuk",
+      "Tindak Lanjut Pulang",
+      "Mati di IGD (L)",
+      "Mati di IGD (P)",
+      "DOA (L)",
+      "DOA (P)",
+      "Luka-luka (L)",
+      "Luka-luka (P)",
+      "False Emergency",
+    ];
+
+    // 4. Data Body Tabel (Memasukkan nilai namaRS)
+    const tableBody = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
+      (value, index) => [
+        index + 1,
+        value.nama_rumah_sakit || value.rumah_sakit || namaRS,
+        value.kategori || "-",
+        value.jenis_pelayanan || "-",
+        value.month_year || `${tahun}-${bulan}`,
+        value.total_pasien_rujukan || 0,
+        value.total_pasien_non_rujukan || 0,
+        value.tindak_lanjut_dirawat || 0,
+        value.tindak_lanjut_dirujuk || 0,
+        value.tindak_lanjut_pulang || 0,
+        value.mati_di_igd_laki_laki || 0,
+        value.mati_di_igd_perempuan || 0,
+        value.doa_laki_laki || 0,
+        value.doa_perempuan || 0,
+        value.luka_luka_laki_laki || 0,
+        value.luka_luka_perempuan || 0,
+        value.false_emergency || 0,
+      ]
+    );
+
+    // 5. Gabungkan Semua Baris
+    const fullBody = [
+      ...titleAndMetadata,
+      tableHeader,
+      ...tableBody,
+    ];
+
+    // 6. Execute Export Excel
+    downloadExcel({
+      fileName: `rl33_satusehat_${tahunData}_${bulan}`,
+      sheet: "RL 3.3 SatuSehat",
+      tablePayload: {
+        header: [],
+        body: fullBody,
+      },
+    });
+  } catch (error) {
+    console.error("Gagal mendownload Excel Satusehat:", error);
+  } finally {
+    setIsDownloading(false);
+  }
+};
 
   return (
     <div

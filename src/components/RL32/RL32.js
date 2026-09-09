@@ -569,7 +569,7 @@ const RL32 = () => {
       try {
         const detailRs = await axiosJWT.get("/apisirs6v2/rumahsakit/" + rsId, {
           headers: { Authorization: `Bearer ${token}` },
-        });
+        }); 
         currentRumahSakit = detailRs.data.data || { id: rsId, nama: "Rumah Sakit" };
         setRumahSakit(currentRumahSakit);
       } catch (error) {
@@ -871,70 +871,106 @@ const RL32 = () => {
     syncDataRLTigaTitikDuaSatusehat();
   };
 
-  const handleDownloadExcelSatusehat = async () => {
-    setIsDownloading(true);
-    try {
-      const header = [
-        "No",
-        "Jenis Pelayanan",
-        "Pasien Awal Bulan",
-        "Pasien Masuk",
-        "Pasien Pindahan",
-        "Pasien Dipindahkan",
-        "Pasien Keluar Hidup",
-        "Pasien Pria Keluar Mati <48 Jam",
-        "Pasien Pria Keluar Mati >=48 Jam",
-        "Pasien Wanita Keluar Mati <48 Jam",
-        "Pasien Wanita Keluar Mati >=48 Jam",
-        "Jumlah Lama Dirawat",
-        "Pasien Akhir Bulan",
-        "Jumlah Hari Perawatan",
-        "Hari VVIP",
-        "Hari VIP",
-        "Hari Kelas 1",
-        "Hari Kelas 2",
-        "Hari Kelas 3",
-        "Hari Kelas Khusus",
-        "TT Awal",
-      ];
+    const handleDownloadExcelSatusehat = async () => {
+  setIsDownloading(true);
+  try {
+    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
+    const selectedBulanObj = daftarBulan.find(
+      (b) => String(b.value) === String(bulan)
+    );
+    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+    const tahunData = tahun || "-";
 
-      const body = dataRL32Satusehat.map((value, index) => [
-        index + 1,
-        value.nama_jenis_pelayanan || value.jenis_pelayanan || "-",
-        value.pasien_awal_bulan || 0,
-        value.pasien_masuk || 0,
-        value.pasien_pindahan || 0,
-        value.pasien_dipindahkan || 0,
-        value.pasien_keluar_hidup || 0,
-        value.mati_lk_kurang_48_jam || 0,
-        value.mati_lk_lebih_sama_48_jam || 0,
-        value.mati_pr_kurang_48_jam || 0,
-        value.mati_pr_lebih_sama_48_jam || 0,
-        value.jumlah_lama_dirawat || 0,
-        value.pasien_akhir_bulan || 0,
-        value.jumlah_hari_perawatan || 0,
-        value.hari_vvip || 0,
-        value.hari_vip || 0,
-        value.hari_kelas_1 || 0,
-        value.hari_kelas_2 || 0,
-        value.hari_kelas_3 || 0,
-        value.hari_kelas_khusus || 0,
-        value.alokasi_tempat_tidur_awal_bulan || 0,
-      ]);
+    const titleAndMetadata = [
+      ["SIRS ONLINE RL 3.2 - SATUSEHAT"],
+      [], // Baris kosong
+      ["Periode Data"],
+      [`Bulan : ${namaBulan}`],
+      [`Tahun: ${tahunData}`],
+      [], 
+    ];
 
-      downloadExcel({
-        fileName: namafileSatusehat || "rl32_satusehat",
-        sheet: "data RL 32 Satusehat",
-        tablePayload: {
-          header,
-          body,
-        },
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+    const tableHeader = [
+      "No",
+      "Rumah Sakit", 
+      "Jenis Pelayanan",
+      "Pasien Awal Bulan",
+      "Pasien Masuk",
+      "Pasien Pindahan",
+      "Pasien Dipindahkan",
+      "Pasien Keluar Hidup",
+      "Pasien Pria Keluar Mati <48 Jam",
+      "Pasien Pria Keluar Mati >=48 Jam",
+      "Pasien Wanita Keluar Mati <48 Jam",
+      "Pasien Wanita Keluar Mati >=48 Jam",
+      "Jumlah Lama Dirawat",
+      "Pasien Akhir Bulan",
+      "Jumlah Hari Perawatan",
+      "Hari VVIP",
+      "Hari VIP",
+      "Hari Kelas 1",
+      "Hari Kelas 2",
+      "Hari Kelas 3",
+      "Hari Kelas Khusus",
+      "TT Awal",
+    ];
 
+    const tableBody = dataRL32Satusehat.map((value, index) => [
+      index + 1,
+      value.nama_rumah_sakit || value.rumah_sakit || namaRS,
+      value.nama_jenis_pelayanan || value.jenis_pelayanan || "-",
+      value.pasien_awal_bulan || 0,
+      value.pasien_masuk || 0,
+      value.pasien_pindahan || 0,
+      value.pasien_dipindahkan || 0,
+      value.pasien_keluar_hidup || 0,
+      value.mati_lk_kurang_48_jam || 0,
+      value.mati_lk_lebih_sama_48_jam || 0,
+      value.mati_pr_kurang_48_jam || 0,
+      value.mati_pr_lebih_sama_48_jam || 0,
+      value.jumlah_lama_dirawat || 0,
+      value.pasien_akhir_bulan || 0,
+      value.jumlah_hari_perawatan || 0,
+      value.hari_vvip || 0,
+      value.hari_kelas_1 || 0,
+      value.hari_kelas_2 || 0,
+      value.hari_kelas_3 || 0,
+      value.hari_kelas_khusus || 0,
+      value.alokasi_tempat_tidur_awal_bulan || 0,
+    ]);
+
+    // Gabungkan Semua Baris
+    const fullBody = [
+      ...titleAndMetadata,
+      tableHeader,
+      ...tableBody,
+    ];
+
+    // Execute Export dengan pengaturan border dan lebar kolom
+    downloadExcel({
+      fileName: namafileSatusehat || `rl32_satusehat_${tahunData}_${bulan}`,
+      sheet: "data RL 32 Satusehat",
+      // Konfigurasi lebar kolom (Atur kolom No [index 0] menjadi kecil, misal: 6)
+      cols: [
+        { wch: 6 },  // Kolom "No" (ramping)
+        { wch: 30 }, // Rumah Sakit
+        { wch: 25 }, // Jenis Pelayanan
+        ...Array(19).fill({ wch: 18 }), // Kolom sisa angka/metrik
+      ],
+      // Konfigurasi border dan area header jika fungsi downloadExcel mendukungnya
+      border: true, 
+      startHeaderRow: 7, // Indeks baris dimulainya tabel (setelah metadata)
+      tablePayload: {
+        header: [],
+        body: fullBody,
+      },
+    });
+  } catch (error) {
+    console.error("Gagal mendownload Excel Satusehat:", error);
+  } finally {
+    setIsDownloading(false);
+  }
+};
   const calculateTotalPasienAwalBulan = (data) => {
     return data.reduce((sum, item) => sum + item.pasien_awal_bulan, 0);
   };
@@ -1732,7 +1768,7 @@ const RL32 = () => {
               }`}
             >
               <div
-                className="border rounded-bottom shadow-sm bg-white"
+                className="rounded-bottom bg-white"
                 style={{ padding: "20px 24px" }}
               >
                 <div
@@ -2355,9 +2391,6 @@ const RL32 = () => {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      background: "#fff",
-                      border: "1px solid #d9dee7",
-                      borderRadius: 8,
                       padding: "8px 16px",
                       marginBottom: 12,
                       fontSize: 12,
@@ -2366,11 +2399,8 @@ const RL32 = () => {
                       flexWrap: "wrap",
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>
+                    <div style={{ fontWeight: 600, color: "#5a6c7d;" }}>
                       Filtered By {filterLabelSatusehat.join(", ")}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
-                      Total {dataRL32Satusehat.length} baris
                     </div>
                   </div>
                 )}
@@ -2418,42 +2448,21 @@ const RL32 = () => {
                 {hasFilteredSatusehat &&
                   !isSyncingSatusehat &&
                   dataRL32Satusehat.length === 0 && (
-                    <div
-                      style={{
-                        backgroundColor:
-                          lastSyncAt && !isSyncCooldown ? "#d1ecf1" : "#f8d7da",
-                        border:
-                          lastSyncAt && !isSyncCooldown
-                            ? "1px solid #bee5eb"
-                            : "1px solid #f5c6cb",
-                        color:
-                          lastSyncAt && !isSyncCooldown ? "#0c5460" : "#721c24",
-                        fontSize: 12,
-                        fontWeight: 500,
-                        padding: "12px 16px",
-                        borderRadius: 8,
-                        marginBottom: 14,
-                        textAlign: "center",
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                        Filtered By {filterLabelSatusehat.join(", ")}
-                      </div>
-                      <div>
-                        {lastSyncAt && !isSyncCooldown
-                          ? "Data tidak ditemukan di SATUSEHAT untuk periode ini."
-                          : "Belum sinkronisasi dengan SATUSEHAT untuk periode ini."}
-                        {lastSyncAt && (
-                          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
-                            Terakhir sinkronisasi: {formatLastSyncAt(lastSyncAt)}
-                          </div>
-                        )}
-                        {!lastSyncAt && (
-                          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
-                            Terakhir sinkronisasi: -
-                          </div>
-                        )}
-                      </div>
+                  <div
+                    style={{
+                      backgroundColor: "#d1ecf1",
+                      border: "1px solid #bee5eb",
+                      color: "#0c5460",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      padding: "15px",
+                      borderRadius: 4,
+                      marginBottom: 14,
+                      textAlign: "center",
+                    }}
+                  >
+                      
+                      <strong>Data tidak ditemukan di SATUSEHAT untuk periode ini.</strong>
                     </div>
                   )}
 
