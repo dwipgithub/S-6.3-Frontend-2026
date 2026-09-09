@@ -1,18 +1,13 @@
 import { Spinner } from "react-bootstrap";
-import { HiSaveAs } from "react-icons/hi";
 import { FaSyncAlt, FaCalendarAlt, FaSlidersH } from "react-icons/fa";
+import { SiMicrosoftexcel } from "react-icons/si";
 
 const RL317Toolbar = ({
-  // onFilter,
-  // onSync,
-  // onDownload,
-  // toolbarClass,
-  // buttonClass,
-
   tahun,
   setTahun,
   handleManualSync,
   getRL,
+  handleDownloadExcel,
   canSync,
   isManualSyncing,
   isFilterApplied,
@@ -177,6 +172,8 @@ const RL317Toolbar = ({
           {/* DOWNLOAD EXCEL */}
           <div style={{ textAlign: "center" }}>
             <button
+              onClick={handleDownloadExcel}
+              // disabled={dataRL?.length === 0}
               style={{
                 background: "#059669",
                 color: "#fff",
@@ -192,7 +189,7 @@ const RL317Toolbar = ({
                 whiteSpace: "nowrap",
               }}
             >
-              <HiSaveAs size={15} /> DOWNLOAD EXCEL
+              <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
             </button>
           </div>
         </div>

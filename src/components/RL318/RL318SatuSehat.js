@@ -33,6 +33,10 @@ const RL318SatuSehat = () => {
     MANUAL_SYNC_COOLDOWN,
   } = useRL318(axiosJWT, token, CSRFToken, user);
 
+  const handleDownloadExcel = () => {
+    exportRL318ExcelSatuSehat(dataRL, tahun);
+  };
+
   return (
     <div
       className="container"
@@ -47,6 +51,7 @@ const RL318SatuSehat = () => {
             setTahun={setTahun}
             handleManualSync={handleManualSync}
             getRL={getRL}
+            handleDownloadExcel={handleDownloadExcel}
             canSync={canSync}
             isManualSyncing={isManualSyncing}
             isFilterApplied={isFilterApplied}
@@ -76,7 +81,7 @@ const RL318SatuSehat = () => {
                 <h5 style={{ fontSize: "14px", margin: 0 }}>
                   Filtered By {filterLabel.join(", ")}
                 </h5>
-                {isFilterApplied && (
+                {/* {isFilterApplied && (
                   <span style={{ fontSize: 12, color: "gray" }}>
                     {sync.status === "success" && (
                       <span style={{ fontSize: 12, color: "gray" }}>
@@ -85,7 +90,7 @@ const RL318SatuSehat = () => {
                       </span>
                     )}
                   </span>
-                )}
+                )} */}
               </div>
             )}
           </div>
