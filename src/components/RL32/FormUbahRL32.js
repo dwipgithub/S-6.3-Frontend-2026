@@ -5,6 +5,10 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import style from "./FormUbahRL32.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
+
+if (!toast.POSITION) {
+  toast.POSITION = { TOP_RIGHT: "top-right" };
+}
 import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";

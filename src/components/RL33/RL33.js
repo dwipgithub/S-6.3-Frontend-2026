@@ -21,9 +21,14 @@ import "react-toastify/dist/ReactToastify.css";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal";
-import { downloadExcel } from "react-export-table-to-excel";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
+
+if (!toast.POSITION) {
+  toast.POSITION = { TOP_RIGHT: "top-right" };
+}
 
 const RL33 = () => {
   const [tahun, setTahun] = useState(new Date().getFullYear());
@@ -71,6 +76,61 @@ const RL33 = () => {
   const syncCooldownTimeoutRef = useRef(null);
   const syncCooldownMinutes = 5;
   const syncCooldownMs = syncCooldownMinutes * 60 * 1000;
+
+  const exportRowsToExcel = async ({
+    fileName,
+    sheetName,
+    rows,
+    headerRowStart = 1,
+    headerRowEnd = headerRowStart,
+    columnWidths = [],
+    mergeRanges = [],
+    borderlessRows = [],
+  }) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(sheetName);
+
+    rows.forEach((row) => worksheet.addRow(row));
+    columnWidths.forEach((width, index) => {
+      worksheet.getColumn(index + 1).width = width;
+    });
+    mergeRanges.forEach((range) => worksheet.mergeCells(range));
+
+    worksheet.eachRow({ includeEmpty: true }, (row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FF000000" } },
+          left: { style: "thin", color: { argb: "FF000000" } },
+          bottom: { style: "thin", color: { argb: "FF000000" } },
+          right: { style: "thin", color: { argb: "FF000000" } },
+        };
+        cell.alignment = { vertical: "middle", wrapText: true };
+      });
+    });
+
+    borderlessRows.forEach((rowNumber) => {
+      worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {};
+      });
+    });
+
+    for (let rowNumber = headerRowStart; rowNumber <= headerRowEnd; rowNumber += 1) {
+      worksheet.getRow(rowNumber).font = { bold: true };
+      worksheet.getRow(rowNumber).alignment = {
+        vertical: "middle",
+        horizontal: "center",
+        wrapText: true,
+      };
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(
+      new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `${fileName}.xlsx`
+    );
+  };
 
   useEffect(() => {
     return () => {
@@ -360,11 +420,6 @@ const RL33 = () => {
     }
 
     const periode = `${tahun}-${bulan}`;
-    const filter = [];
-    filter.push("Provinsi: ".concat(rumahSakit?.provinsi_nama ?? "-"));
-    filter.push("Rumah Sakit: ".concat(rumahSakit?.nama ?? "-"));
-    filter.push("Periode: ".concat(periode));
-    setFilterLabelSatusehat(filter);
     setHasFilteredSatusehat(true);
 
     try {
@@ -386,6 +441,15 @@ const RL33 = () => {
 
       const arr = results?.data?.data || [];
       setDataRLSatusehat(Array.isArray(arr) ? arr : []);
+      const namaRumahSakit =
+        arr[0]?.nama_rumah_sakit ||
+        arr[0]?.rumah_sakit ||
+        rumahSakit?.nama ||
+        "-";
+      setFilterLabelSatusehat([
+        `Nama Rumah Sakit: ${namaRumahSakit}`,
+        `Periode: ${periode}`,
+      ]);
       if (show) handleClose();
     } catch (error) {
       setDataRLSatusehat([]);
@@ -924,10 +988,17 @@ const RL33 = () => {
       total.false_emergency,
     ]);
 
-    downloadExcel({
+    exportRowsToExcel({
       fileName: `rl33_${rumahSakit.id || ""}_${tahun}-${bulan}`,
-      sheet: "RL 3.3",
-      tablePayload: { header, body },
+      sheetName: "RL 3.3",
+      rows: [header, ...body],
+      headerRowStart: 1,
+      columnWidths: [
+        6,
+        16,
+        30,
+        ...Array(12).fill(18),
+      ],
     });
   }
 
@@ -967,7 +1038,6 @@ const handleDownloadExcelSatusehat = async () => {
       "Rumah Sakit",
       "Kategori",
       "Jenis Pelayanan",
-      "Periode",
       "Total Pasien Rujukan",
       "Total Pasien Non Rujukan",
       "Tindak Lanjut Dirawat",
@@ -989,7 +1059,6 @@ const handleDownloadExcelSatusehat = async () => {
         value.nama_rumah_sakit || value.rumah_sakit || namaRS,
         value.kategori || "-",
         value.jenis_pelayanan || "-",
-        value.month_year || `${tahun}-${bulan}`,
         value.total_pasien_rujukan || 0,
         value.total_pasien_non_rujukan || 0,
         value.tindak_lanjut_dirawat || 0,
@@ -1012,14 +1081,26 @@ const handleDownloadExcelSatusehat = async () => {
       ...tableBody,
     ];
 
-    // 6. Execute Export Excel
-    downloadExcel({
+    await exportRowsToExcel({
       fileName: `rl33_satusehat_${tahunData}_${bulan}`,
-      sheet: "RL 3.3 SatuSehat",
-      tablePayload: {
-        header: [],
-        body: fullBody,
-      },
+      sheetName: "RL 3.3 SatuSehat",
+      rows: fullBody,
+      headerRowStart: titleAndMetadata.length + 1,
+      borderlessRows: [1, 3, 4, 5],
+      mergeRanges: [
+        "A1:Q1",
+        "A3:Q3",
+        "A4:Q4",
+        "A5:Q5",
+      ],
+      columnWidths: [
+        6,
+        30,
+        18,
+        30,
+        14,
+        ...Array(12).fill(18),
+      ],
     });
   } catch (error) {
     console.error("Gagal mendownload Excel Satusehat:", error);
@@ -1212,7 +1293,7 @@ const handleDownloadExcelSatusehat = async () => {
       <div className="row">
         <div className="col-md-12">
           <div className="d-flex justify-content-between align-items-center">
-            <h4 className={style.pageHeader}>RL. 3.3 - Rawat Darurat</h4>
+            <h4 className={style.pageHeader}>RL 3.3 - Rawat Darurat</h4>
           </div>
           
           {/* TAB UTAMA (SIRS & SATUSEHAT) */}
@@ -1242,7 +1323,8 @@ const handleDownloadExcelSatusehat = async () => {
           <div className="tab-content mt-0">
           {/* TAB SIRS */}
           {activeWadahTab === "sirs" ? (
-            <div className="border rounded-bottom p-4 shadow-sm bg-white">
+            <div className="rounded-bottom bg-white"
+            tyle={{ padding: "20px 24px" }}>
               <div className={style.toolbar}>
                 {user.jenisUserId === 4 ? (
                   <Link
@@ -1505,7 +1587,7 @@ const handleDownloadExcelSatusehat = async () => {
 
             /* TAB SATUSEHAT — Layout & Styling mengikuti RL41 TabTwo */
             <div
-              className="border rounded-bottom shadow-sm bg-white"
+              className="rounded-bottom bg-white"
               style={{ padding: "20px 24px" }}
             >
               {/* ── 1) CONTROL PANEL (PERIODE DATA + TOMBOL) ────────────────── */}
@@ -1910,10 +1992,7 @@ const handleDownloadExcelSatusehat = async () => {
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
-                        padding: "9px 10px",
-                        background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 7,
+                        padding: "4px 0",
                       }}
                     >
                       <div
@@ -1961,10 +2040,7 @@ const handleDownloadExcelSatusehat = async () => {
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
-                        padding: "9px 10px",
-                        background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 7,
+                        padding: "4px 0",
                       }}
                     >
                       <div
@@ -2086,19 +2162,9 @@ const handleDownloadExcelSatusehat = async () => {
                 </div>
               </div>
 
-              {/* ── 3) FILTER LABEL + ALERT / STATUS ────────────────────────── */}
-
-              {/* Filter label — tampilkan JIKA SUDAH DI-FILTER (tidak peduli data ada atau kosong) */}
               {hasFilteredSatusehat && !isSyncingSatusehat && (
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    background: "#fff",
-                    border: "1px solid #d9dee7",
-                    borderRadius: 8,
-                    padding: "8px 16px",
                     marginBottom: 12,
                     fontSize: 12,
                     color: "#334155",
@@ -2107,7 +2173,6 @@ const handleDownloadExcelSatusehat = async () => {
                   <div style={{ fontWeight: 600 }}>
                     Filtered By {filterLabelSatusehat.join(", ")}
                   </div>
-                  
                 </div>
               )}
 
@@ -2159,38 +2224,25 @@ const handleDownloadExcelSatusehat = async () => {
                 dataRLSatusehat.length === 0 && (
                   <div
                     style={{
-                      backgroundColor:
-                        lastSyncAt && !isSyncCooldown ? "#d1ecf1" : "#f8d7da",
-                      border:
-                        lastSyncAt && !isSyncCooldown
-                          ? "1px solid #bee5eb"
-                          : "1px solid #f5c6cb",
-                      color:
-                        lastSyncAt && !isSyncCooldown ? "#0c5460" : "#721c24",
+                      backgroundColor: "#d1ecf1",
+                      border: "1px solid #bee5eb",
+                      color: "#0c5460",
                       fontSize: 12,
                       fontWeight: 500,
-                      padding: "12px 16px",
-                      borderRadius: 8,
+                      padding: "15px",
+                      borderRadius: 4,
                       marginBottom: 14,
                       textAlign: "center",
                     }}
                   >
-                    <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                      Filtered By {filterLabelSatusehat.join(", ")}
-                    </div>
-                    <div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>
                       Data tidak ditemukan di SATUSEHAT untuk periode ini.
-                      {lastSyncAt && (
-                        <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
-                          Terakhir sinkronisasi: {formatLastSyncAt(lastSyncAt)}
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
 
               {/* ── 4) TABEL DATA SATUSEHAT (TIDAK DIUBAH: struktur & endpoint berbeda) */}
-              {hasFilteredSatusehat && (
+              {hasFilteredSatusehat && dataRLSatusehat.length > 0 && (
                 <div className={style["table-container"]}>
                   <div className="table-responsive">
                     <table className={style.table}>
@@ -2214,8 +2266,7 @@ const handleDownloadExcelSatusehat = async () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {dataRLSatusehat.length > 0 ? (
-                          dataRLSatusehat.map((value, index) => (
+                        {dataRLSatusehat.map((value, index) => (
                             <tr
                               key={`${value.kategori || ""}-${value.jenis_pelayanan || ""}-${index}`}
                             >
@@ -2240,17 +2291,7 @@ const handleDownloadExcelSatusehat = async () => {
                               <td>{value.luka_luka_perempuan || 0}</td>
                               <td>{value.false_emergency || 0}</td>
                             </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan={15}
-                              style={{ textAlign: "center", color: "#666" }}
-                            >
-                              Tidak ada data untuk ditampilkan.
-                            </td>
-                          </tr>
-                        )}
+                          ))}
                       </tbody>
                     </table>
                   </div>

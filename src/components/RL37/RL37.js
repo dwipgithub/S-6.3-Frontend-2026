@@ -20,6 +20,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "react-bootstrap/Modal";
 import { Spinner } from "react-bootstrap";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { downloadExcel, DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
@@ -70,6 +72,61 @@ const RL37 = () => {
   const showAksi = user?.jenisUserId === 4;
   const syncCooldownMinutes = 5;
   const syncCooldownMs = syncCooldownMinutes * 60 * 1000;
+
+      const exportRowsToExcel = async ({
+        fileName,
+        sheetName,
+        rows,
+        headerRowStart = 1,
+        headerRowEnd = headerRowStart,
+        columnWidths = [],
+        mergeRanges = [],
+        borderlessRows = [],
+      }) => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet(sheetName);
+    
+        rows.forEach((row) => worksheet.addRow(row));
+        columnWidths.forEach((width, index) => {
+          worksheet.getColumn(index + 1).width = width;
+        });
+        mergeRanges.forEach((range) => worksheet.mergeCells(range));
+    
+        worksheet.eachRow({ includeEmpty: true }, (row) => {
+          row.eachCell({ includeEmpty: true }, (cell) => {
+            cell.border = {
+              top: { style: "thin", color: { argb: "FF000000" } },
+              left: { style: "thin", color: { argb: "FF000000" } },
+              bottom: { style: "thin", color: { argb: "FF000000" } },
+              right: { style: "thin", color: { argb: "FF000000" } },
+            };
+            cell.alignment = { vertical: "middle", wrapText: true };
+          });
+        });
+    
+        borderlessRows.forEach((rowNumber) => {
+          worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
+            cell.border = {};
+          });
+        });
+    
+        for (let rowNumber = headerRowStart; rowNumber <= headerRowEnd; rowNumber += 1) {
+          worksheet.getRow(rowNumber).font = { bold: true };
+          worksheet.getRow(rowNumber).alignment = {
+            vertical: "middle",
+            horizontal: "center",
+            wrapText: true,
+          };
+        }
+    
+        const buffer = await workbook.xlsx.writeBuffer();
+        saveAs(
+          new Blob([buffer], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }),
+          `${fileName}.xlsx`
+        );
+      };
 
   useEffect(() => {
     refreshToken();
@@ -640,7 +697,8 @@ const RL37 = () => {
 
     const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
     const filter = [];
-    filter.push("Provinsi: ".concat(rumahSakit?.provinsi_nama ?? "-"));
+    // 
+    
     filter.push("Rumah Sakit: ".concat(rumahSakit?.nama ?? "-"));
     filter.push("Periode: ".concat(periode));
     setFilterLabelSatusehat(filter);
@@ -693,7 +751,7 @@ const RL37 = () => {
 
     const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
     const filter = [];
-    filter.push("Provinsi: ".concat(rumahSakit?.provinsi_nama ?? "-"));
+    // filter.push("Provinsi: ".concat(rumahSakit?.provinsi_nama ?? "-"));
     filter.push("Rumah Sakit: ".concat(rumahSakit?.nama ?? "-"));
     filter.push("Periode: ".concat(periode));
     setFilterLabelSatusehat(filter);
@@ -2076,144 +2134,132 @@ const RL37 = () => {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    flex: "1 1 210px",
-                    border: "1.5px solid #e2e8f0",
-                    borderRadius: 10,
-                    padding: "14px 16px",
-                    background: "#fff",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 14,
-                    }}
-                  >
-                    <FaSyncAlt size={13} color="#059669" />
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 12,
-                        color: "#059669",
-                      }}
-                    >
-                      STATUS SINKRONISASI
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 10,
-                      flex: 1,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "10px 12px",
-                        background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 7,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: 5,
-                          background: "#f1f5f9",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <FaCalendarAlt size={11} color="#475569" />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            textTransform: "uppercase",
-                            color: "#94a3b8",
-                            marginBottom: 2,
-                          }}
-                        >
-                          TERAKHIR SYNC
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#0f172a",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {formatLastSyncAt(lastSyncAt)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "10px 12px",
-                        background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 7,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: 5,
-                          background: "#f1f5f9",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <FaClock size={11} color="#475569" />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            textTransform: "uppercase",
-                            color: "#94a3b8",
-                            marginBottom: 2,
-                          }}
-                        >
-                          INTERVAL SYNC
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#0f172a",
-                          }}
-                        >
-                          {syncCooldownMinutes} Menit
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                                  <div
+                                                    style={{
+                                                      flex: "1 1 210px",
+                                                      border: "1.5px solid #e2e8f0",
+                                                      borderRadius: 10,
+                                                      padding: "14px 16px",
+                                                      background: "#fff",
+                                                      minHeight: 150,
+                                                    }}
+                                                  >
+                                                    <div
+                                                      style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 10,
+                                                        marginBottom: 12,
+                                                      }}
+                                                    >
+                                                      <FaSyncAlt size={14} color="#059669" />
+                                                      <span
+                                                        style={{
+                                                          fontWeight: 700,
+                                                          fontSize: 12,
+                                                          color: "#059669",
+                                                          letterSpacing: "0.5px",
+                                                        }}
+                                                      >
+                                                        STATUS SINKRONISASI
+                                                      </span>
+                                                    </div>
+                                  
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                                      <div
+                                                        style={{
+                                                          display: "flex",
+                                                          alignItems: "center",
+                                                          gap: 10,
+                                                          padding: "4px 0",
+                                                        }}
+                                                      >
+                                                        <div
+                                                          style={{
+                                                            width: 22,
+                                                            height: 22,
+                                                            borderRadius: 5,
+                                                            background: "#f1f5f9",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            flexShrink: 0,
+                                                          }}
+                                                        >
+                                                          <FaCalendarAlt size={11} color="#475569" />
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                          <div
+                                                            style={{
+                                                              fontSize: 10,
+                                                              color: "#94a3b8",
+                                                              marginBottom: 2,
+                                                              letterSpacing: "0.3px",
+                                                            }}
+                                                          >
+                                                            TERAKHIR SYNC
+                                                          </div>
+                                                          <div
+                                                            style={{
+                                                              fontSize: 12,
+                                                              fontWeight: 700,
+                                                              color: "#0f172a",
+                                                              whiteSpace: "nowrap",
+                                                              overflow: "hidden",
+                                                              textOverflow: "ellipsis",
+                                                            }}
+                                                          >
+                                                            {formatLastSyncAt(lastSyncAt)}
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                  
+                                                      <div
+                                                        style={{
+                                                          display: "flex",
+                                                          alignItems: "center",
+                                                          gap: 10,
+                                                          padding: "4px 0",
+                                                        }}
+                                                      >
+                                                        <div
+                                                          style={{
+                                                            width: 22,
+                                                            height: 22,
+                                                            borderRadius: 5,
+                                                            background: "#f1f5f9",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            flexShrink: 0,
+                                                          }}
+                                                        >
+                                                          <FaClock size={11} color="#475569" />
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                          <div
+                                                            style={{
+                                                              fontSize: 10,
+                                                              color: "#94a3b8",
+                                                              marginBottom: 2,
+                                                              letterSpacing: "0.3px",
+                                                            }}
+                                                          >
+                                                            INTERVAL SYNC
+                                                          </div>
+                                                          <div
+                                                            style={{
+                                                              fontSize: 12,
+                                                              fontWeight: 700,
+                                                              color: "#0f172a",
+                                                            }}
+                                                          >
+                                                            {syncCooldownMinutes} Menit
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  </div>
 
                 <div
                   style={{
@@ -2310,9 +2356,6 @@ const RL37 = () => {
                   }}
                 >
                   <div>Filtered By {filterLabelSatusehat.join(", ")}</div>
-                  <div style={{ fontWeight: 600 }}>
-                    Total {dataRLSatusehat.length} baris
-                  </div>
                 </div>
               )}
 

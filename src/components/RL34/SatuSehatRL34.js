@@ -8,7 +8,8 @@ import "react-confirm-alert/src/react-confirm-alert.css";
 import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
-import { downloadExcel } from "react-export-table-to-excel";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import { getSafeDataRL } from "./rl34Helpers";
 
@@ -27,13 +28,53 @@ const SatuSehatRL34 = () => {
   const [spinner, setSpinner] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
+  const exportRowsToExcel = async ({ fileName, sheetName, rows, columnWidths = [] }) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(sheetName);
+
+    rows.forEach((row) => worksheet.addRow(row));
+    columnWidths.forEach((width, index) => {
+      worksheet.getColumn(index + 1).width = width;
+    });
+
+    worksheet.eachRow({ includeEmpty: true }, (row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FF000000" } },
+          left: { style: "thin", color: { argb: "FF000000" } },
+          bottom: { style: "thin", color: { argb: "FF000000" } },
+          right: { style: "thin", color: { argb: "FF000000" } },
+        };
+        cell.alignment = { vertical: "middle", wrapText: true };
+      });
+    });
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).alignment = {
+      vertical: "middle",
+      horizontal: "center",
+      wrapText: true,
+    };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(
+      new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `${fileName}.xlsx`
+    );
+  };
+
   // Fetch RL 3.4 Satusehat Local sesuai filter
   const getSatusehatRL34 = async (e) => {
     if (e) e.preventDefault();
     setSpinner(true);
     // Set filter label for display
     const filter = [];
-    filter.push("periode: ".concat(String(tahun).concat("-").concat(bulan)));
+    if (rumahSakit?.nama) {
+      filter.push("Nama Rumah Sakit: ".concat(rumahSakit.nama));
+    }
+    filter.push("Periode: ".concat(String(tahun).concat("-").concat(bulan)));
     setFilterLabel(filter);
     try {
       // Ganti ke API Satusehat utama
@@ -230,13 +271,11 @@ const SatuSehatRL34 = () => {
       item.returning_visitors,
       item.total_visitors,
     ]);
-    downloadExcel({
+    exportRowsToExcel({
       fileName: "RL_3_4_SatuSehat",
-      sheet: "react-export-table-to-excel",
-      tablePayload: {
-        header,
-        body,
-      },
+      sheetName: "RL 3.4 SatuSehat",
+      rows: [header, ...body],
+      columnWidths: [8, 16, 24, 18, 18, 14],
     });
   }
 
@@ -353,22 +392,29 @@ const SatuSehatRL34 = () => {
             </button>
             {spinner && <Spinner animation="border" size="sm" className="ms-2" />}
           </div>
-          <div>
-            <h5 style={{ fontSize: "14px" }}>
-              {filterLabel.length > 0 ? (
-                <>
-                  filtered by{" "}
-                  {filterLabel
-                    .map((value) => {
-                      return value;
-                    })
-                    .join(", ")}
-                </>
-              ) : (
-                <></>
-              )}
-            </h5>
-          </div>
+          {filterLabel.length > 0 && (
+            <div style={{ marginBottom: 12, fontSize: 12, color: "#334155" }}>
+              <div style={{ fontWeight: 600 }}>
+                Filtered By {filterLabel.join(", ")}
+              </div>
+            </div>
+          )}
+          {dataRL.length === 0 ? (
+            <div
+              style={{
+                backgroundColor: "#d1ecf1",
+                border: "1px solid #bee5eb",
+                color: "#0c5460",
+                fontSize: 14,
+                fontWeight: 700,
+                padding: "15px",
+                borderRadius: 4,
+                textAlign: "center",
+              }}
+            >
+              Data tidak ditemukan di SATUSEHAT untuk periode ini.
+            </div>
+          ) : (
           <Table className={style.rlTable}>
             <thead>
               <tr>
@@ -380,14 +426,7 @@ const SatuSehatRL34 = () => {
               </tr>
             </thead>
             <tbody>
-              {Array.isArray(dataRL) && dataRL.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: "center" }}>
-                    Tidak ada data
-                  </td>
-                </tr>
-              ) : (
-                (Array.isArray(dataRL) ? dataRL : []).map((item, idx) => (
+              {(Array.isArray(dataRL) ? dataRL : []).map((item, idx) => (
                   <tr key={idx} style={{ textAlign: "center" }}>
                     <td>{idx + 1}</td>
                     <td>{item.month}</td>
@@ -395,10 +434,10 @@ const SatuSehatRL34 = () => {
                     <td>{item.returning_visitors}</td>
                     <td>{item.total_visitors}</td>
                   </tr>
-                ))
-              )}
+                ))}
             </tbody>
           </Table>
+          )}
         </div>
       </div>
     </div>

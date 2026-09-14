@@ -21,6 +21,8 @@ import "react-toastify/dist/ReactToastify.css";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import Modal from "react-bootstrap/Modal";
 import { Spinner } from "react-bootstrap";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { downloadExcel, DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
@@ -70,6 +72,62 @@ const RL36 = () => {
   const syncCooldownTimeoutRef = useRef(null);
   const syncCooldownMinutes = 5;
   const syncCooldownMs = syncCooldownMinutes * 60 * 1000;
+
+    const exportRowsToExcel = async ({
+      fileName,
+      sheetName,
+      rows,
+      headerRowStart = 1,
+      headerRowEnd = headerRowStart,
+      columnWidths = [],
+      mergeRanges = [],
+      borderlessRows = [],
+    }) => {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet(sheetName);
+  
+      rows.forEach((row) => worksheet.addRow(row));
+      columnWidths.forEach((width, index) => {
+        worksheet.getColumn(index + 1).width = width;
+      });
+      mergeRanges.forEach((range) => worksheet.mergeCells(range));
+  
+      worksheet.eachRow({ includeEmpty: true }, (row) => {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = {
+            top: { style: "thin", color: { argb: "FF000000" } },
+            left: { style: "thin", color: { argb: "FF000000" } },
+            bottom: { style: "thin", color: { argb: "FF000000" } },
+            right: { style: "thin", color: { argb: "FF000000" } },
+          };
+          cell.alignment = { vertical: "middle", wrapText: true };
+        });
+      });
+  
+      borderlessRows.forEach((rowNumber) => {
+        worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = {};
+        });
+      });
+  
+      for (let rowNumber = headerRowStart; rowNumber <= headerRowEnd; rowNumber += 1) {
+        worksheet.getRow(rowNumber).font = { bold: true };
+        worksheet.getRow(rowNumber).alignment = {
+          vertical: "middle",
+          horizontal: "center",
+          wrapText: true,
+        };
+      }
+  
+      const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(
+        new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+        `${fileName}.xlsx`
+      );
+    };
+  
 
   // Load validasi data when user opens Validasi tab or when submitted filters change
   useEffect(() => {
@@ -1143,7 +1201,7 @@ const RL36 = () => {
     const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
     const bulanLaporan = `${periode}`;
     const filter = [];
-    filter.push("Provinsi: ".concat(rumahSakit?.provinsi_nama ?? "-"));
+    // filter.push("Provinsi: ".concat(rumahSakit?.provinsi_nama ?? "-"));
     filter.push("Rumah Sakit: ".concat(rumahSakit?.nama ?? "-"));
     filter.push("Periode: ".concat(periode));
     setFilterLabelSatusehat(filter);
@@ -1275,7 +1333,23 @@ const RL36 = () => {
   async function handleDownloadExcelSatusehat() {
     setIsDownloading(true);
     try {
-      const header = [
+      const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
+    const selectedBulanObj = daftarBulan?.find(
+      (b) => String(b.value) === String(bulan)
+    );
+    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+    const tahunData = tahun || "-";
+
+    const titleAndMetadata = [
+      ["SIRS ONLINE RL 3.6 - SATUSEHAT"],
+      [], // Baris kosong
+      ["Periode Data"],
+      [`Bulan : ${bulan}`],
+      [`Tahun : ${tahun}`],
+      [], // Baris kosong sebelum header tabel
+    ];
+
+      const tableHeader = [
         "No",
         "Jenis Kegiatan",
         "Nama Kegiatan",
@@ -1290,7 +1364,7 @@ const RL36 = () => {
         "Mati",
       ];
 
-      const body = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
+      const tableBody = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
         (value, index) => [
           index + 1,
           value?.jenis_kegiatan ?? "",
@@ -1306,14 +1380,33 @@ const RL36 = () => {
           value?.mati ?? 0,
         ]
       );
+      const fullBody = [
+      ...titleAndMetadata,
+      tableHeader,
+      ...tableBody,
+    ];
 
-      const periode = `${submittedTahunSatusehat || tahun}-${String(submittedBulanSatusehat || bulan).padStart(2, "0")}`;
-
-      downloadExcel({
-        fileName: `RL_3_6_SatuSehat_${periode}`,
-        sheet: "RL 3.6 SatuSehat",
-        tablePayload: { header, body },
-      });
+    await exportRowsToExcel({
+      fileName: `rl36_satusehat_${tahunData}_${bulan}`,
+      sheetName: "RL 3.6 SatuSehat",
+      rows: fullBody,
+      headerRowStart: titleAndMetadata.length + 1,
+      borderlessRows: [1, 3, 4, 5],
+      mergeRanges: [
+        "A1:Q1",
+        "A3:Q3",
+        "A4:Q4",
+        "A5:Q5",
+      ],
+      columnWidths: [
+        6,
+        30,
+        18,
+        30,
+        14,
+        ...Array(12).fill(18),
+      ],
+    });
     } finally {
       setTimeout(() => setIsDownloading(false), 800);
     }
@@ -2589,144 +2682,131 @@ const RL36 = () => {
                   </div>
 
                   <div
-                    style={{
-                      flex: "1 1 210px",
-                      border: "1.5px solid #e2e8f0",
-                      borderRadius: 10,
-                      padding: "14px 16px",
-                      background: "#fff",
-                      display: "flex",
-                      flexDirection: "column",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 14,
-                      }}
-                    >
-                      <FaSyncAlt size={13} color="#059669" />
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          fontSize: 12,
-                          color: "#059669",
-                          letterSpacing: "0.3px",
-                        }}
-                      >
-                        STATUS SINKRONISASI
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 10,
-                        flex: 1,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "9px 10px",
-                          background: "#f8fafc",
-                          border: "1px solid #e2e8f0",
-                          borderRadius: 7,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 5,
-                            background: "#f1f5f9",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <FaCalendarAlt size={11} color="#475569" />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              color: "#94a3b8",
-                              marginBottom: 2,
-                              letterSpacing: "0.3px",
-                            }}
-                          >
-                            TERAKHIR SYNC
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 700,
-                              color: "#0f172a",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {formatLastSyncAt(lastSyncAt)}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "9px 10px",
-                          background: "#f8fafc",
-                          border: "1px solid #e2e8f0",
-                          borderRadius: 7,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 5,
-                            background: "#f1f5f9",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <FaClock size={11} color="#475569" />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              color: "#94a3b8",
-                              marginBottom: 2,
-                              letterSpacing: "0.3px",
-                            }}
-                          >
-                            INTERVAL SYNC
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 700,
-                              color: "#0f172a",
-                            }}
-                          >
-                            {syncCooldownMinutes} Menit
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                                    style={{
+                                      flex: "1 1 210px",
+                                      border: "1.5px solid #e2e8f0",
+                                      borderRadius: 10,
+                                      padding: "14px 16px",
+                                      background: "#fff",
+                                      minHeight: 150,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 10,
+                                        marginBottom: 12,
+                                      }}
+                                    >
+                                      <FaSyncAlt size={14} color="#059669" />
+                                      <span
+                                        style={{
+                                          fontWeight: 700,
+                                          fontSize: 12,
+                                          color: "#059669",
+                                          letterSpacing: "0.5px",
+                                        }}
+                                      >
+                                        STATUS SINKRONISASI
+                                      </span>
+                                    </div>
+                  
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 10,
+                                          padding: "4px 0",
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            width: 22,
+                                            height: 22,
+                                            borderRadius: 5,
+                                            background: "#f1f5f9",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            flexShrink: 0,
+                                          }}
+                                        >
+                                          <FaCalendarAlt size={11} color="#475569" />
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div
+                                            style={{
+                                              fontSize: 10,
+                                              color: "#94a3b8",
+                                              marginBottom: 2,
+                                              letterSpacing: "0.3px",
+                                            }}
+                                          >
+                                            TERAKHIR SYNC
+                                          </div>
+                                          <div
+                                            style={{
+                                              fontSize: 12,
+                                              fontWeight: 700,
+                                              color: "#0f172a",
+                                              whiteSpace: "nowrap",
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
+                                            }}
+                                          >
+                                            {formatLastSyncAt(lastSyncAt)}
+                                          </div>
+                                        </div>
+                                      </div>
+                  
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 10,
+                                          padding: "4px 0",
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            width: 22,
+                                            height: 22,
+                                            borderRadius: 5,
+                                            background: "#f1f5f9",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            flexShrink: 0,
+                                          }}
+                                        >
+                                          <FaClock size={11} color="#475569" />
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div
+                                            style={{
+                                              fontSize: 10,
+                                              color: "#94a3b8",
+                                              marginBottom: 2,
+                                              letterSpacing: "0.3px",
+                                            }}
+                                          >
+                                            INTERVAL SYNC
+                                          </div>
+                                          <div
+                                            style={{
+                                              fontSize: 12,
+                                              fontWeight: 700,
+                                              color: "#0f172a",
+                                            }}
+                                          >
+                                            {syncCooldownMinutes} Menit
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
 
                   <div
                     style={{
@@ -2809,24 +2889,14 @@ const RL36 = () => {
 
                 {hasFilteredSatusehat && !isSyncingSatusehat && (
                   <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      background: "#fff",
-                      border: "1px solid #d9dee7",
-                      borderRadius: 8,
-                      padding: "8px 16px",
-                      marginBottom: 12,
-                      fontSize: 12,
-                      color: "#334155",
-                    }}
-                  >
+                                    style={{
+                                      marginBottom: 12,
+                                      fontSize: 12,
+                                      color: "#334155",
+                                    }}
+                                  >
                     <div style={{ fontWeight: 600 }}>
                       Filtered By {filterLabelSatusehat.join(", ")}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
-                      Total {dataRLSatusehat.length} baris
                     </div>
                   </div>
                 )}
@@ -2875,42 +2945,22 @@ const RL36 = () => {
                   !isSyncingSatusehat &&
                   dataRLSatusehat.length === 0 && (
                     <div
-                      style={{
-                        backgroundColor:
-                          lastSyncAt && !isSyncCooldown ? "#d1ecf1" : "#f8d7da",
-                        border:
-                          lastSyncAt && !isSyncCooldown
-                            ? "1px solid #bee5eb"
-                            : "1px solid #f5c6cb",
-                        color:
-                          lastSyncAt && !isSyncCooldown ? "#0c5460" : "#721c24",
-                        fontSize: 12,
-                        fontWeight: 500,
-                        padding: "12px 16px",
-                        borderRadius: 8,
-                        marginBottom: 14,
-                        textAlign: "center",
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                        Filtered By {filterLabelSatusehat.join(", ")}
-                      </div>
-                      <div>
-                        {lastSyncAt && !isSyncCooldown
-                          ? "Data tidak ditemukan di SATUSEHAT untuk periode ini."
-                          : "Belum sinkronisasi dengan SATUSEHAT untuk periode ini."}
-                        {lastSyncAt && (
-                          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
-                            Terakhir sinkronisasi: {formatLastSyncAt(lastSyncAt)}
-                          </div>
-                        )}
-                        {!lastSyncAt && (
-                          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
-                            Terakhir sinkronisasi: -
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                                        style={{
+                                          backgroundColor: "#d1ecf1",
+                                          border: "1px solid #bee5eb",
+                                          color: "#0c5460",
+                                          fontSize: 12,
+                                          fontWeight: 500,
+                                          padding: "15px",
+                                          borderRadius: 4,
+                                          marginBottom: 14,
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        <div style={{ fontSize: 14, fontWeight: 700 }}>
+                                          Data tidak ditemukan di SATUSEHAT untuk periode ini.
+                                        </div>
+                                      </div>
                   )}
 
                 {hasFilteredSatusehat && dataRLSatusehat.length > 0 && (
