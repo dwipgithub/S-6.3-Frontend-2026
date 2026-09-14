@@ -20,10 +20,80 @@ import "react-confirm-alert/src/react-confirm-alert.css";
 import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
-import { downloadExcel } from "react-export-table-to-excel";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import { getStatusSatset } from "../../api/status_satset.js";
 import { getJenisPengunjungName, getSafeDataRL } from "./rl34Helpers";
+
+if (!toast.POSITION) {
+  toast.POSITION = { TOP_RIGHT: "top-right" };
+}
+
+const exportRowsToExcel = async ({ 
+    fileName,
+    sheetName,
+    rows,
+    headerRowStart = 1,
+    headerRowEnd = headerRowStart,
+    columnWidths = [],
+    mergeRanges = [],
+    borderlessRows = [],
+  }) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName);
+
+  // 1. Masukkan baris data
+  rows.forEach((row) => worksheet.addRow(row));
+
+  // 2. Atur lebar kolom
+  columnWidths.forEach((width, index) => {
+    worksheet.getColumn(index + 1).width = width;
+  });
+
+  // 3. Terapkan default border & alignment untuk seluruh sel
+  worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+    // Cek apakah baris ini termasuk borderlessRows
+    const isBorderless = borderlessRows.includes(rowNumber);
+
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      if (!isBorderless) {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FF000000" } },
+          left: { style: "thin", color: { argb: "FF000000" } },
+          bottom: { style: "thin", color: { argb: "FF000000" } },
+          right: { style: "thin", color: { argb: "FF000000" } },
+        };
+      }
+      cell.alignment = { vertical: "middle", wrapText: true };
+    });
+  });
+
+  // 4. Eksekusi MERGE RANGES (Ini yang tadinya kurang!)
+  mergeRanges.forEach((range) => {
+    worksheet.mergeCells(range);
+  });
+
+  // 5. Styling khusus untuk header tabel (sesuai headerRowStart sampai headerRowEnd)
+  for (let i = headerRowStart; i <= headerRowEnd; i++) {
+    const headerRow = worksheet.getRow(i);
+    headerRow.font = { bold: true };
+    headerRow.alignment = {
+      vertical: "middle",
+      horizontal: "center",
+      wrapText: true,
+    };
+  }
+
+  // 6. Generate dan simpan file Excel
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveAs(
+    new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }),
+    `${fileName}.xlsx`
+  );
+};
 
 export default function TabMenu34() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -101,10 +171,9 @@ export default function TabMenu34() {
     >
       <div className="row">
         <div className="col-md-12">
-          <h4 className="text-secondary">
-            <span>🏥</span>
-            RL 3.4 - Pengunjung
-          </h4>
+          <div className="d-flex justify-content-between align-items-center">
+                      <h4 className={style.pageHeader}>RL 3.4 - Pengunjung</h4>
+                    </div>
 
           {/* TAB HEADER */}
           <ul className="nav nav-tabs border-bottom mb-0">
@@ -143,7 +212,7 @@ export default function TabMenu34() {
             activeTab === "tab1" ? "show active" : ""
           }`}
         >
-          <div className="border rounded-bottom p-4 shadow-sm bg-white">
+          <div className="rounded-bottom bg-white">
             <TabOne />
           </div>
         </div>
@@ -154,7 +223,7 @@ export default function TabMenu34() {
             activeTab === "tab2" ? "show active" : ""
           }`}
         >
-          <div className="border rounded-bottom p-4 shadow-sm bg-white">
+          <div className="rounded-bottom bg-white">
             <TabTwo />
           </div>
         </div>
@@ -698,7 +767,15 @@ const handleShow = () => {
   };
 
   function handleDownloadExcel() {
-    const header = ["No", "Jenis Kunjungan", "Jumlah"];
+    const titleAndMetadata = [
+      ["SIRS ONLINE RL 3.4 - SATUSEHAT"],
+      [], // Baris kosong
+      ["Periode Data"],
+      [`Bulan : ${bulan}`],
+      [`Tahun : ${tahun}`],
+      [], // Baris kosong sebelum header tabel
+    ];
+    const header = ["No","Jenis Kunjungan", "Jumlah"];
     const safeData = getSafeDataRL(dataRL);
   
     // hitung total jumlah
@@ -722,13 +799,11 @@ const handleShow = () => {
       totalJumlah  // total jumlah
     ]);
   
-    downloadExcel({
+    exportRowsToExcel({
       fileName: "RL_Pengunjung",
-      sheet: "RL",
-      tablePayload: {
-        header,
-        body: body,
-      },
+      sheetName: "RL 3.4",
+      rows: [...titleAndMetadata,header, ...body],
+      columnWidths: [8, 30, 14],
     });
   }
 
@@ -1502,7 +1577,7 @@ function TabTwo() {
 
     const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
     const filter = [];
-    filter.push("Provinsi: ".concat(currentRumahSakit?.provinsi_nama ?? "-"));
+    // filter.push("Provinsi: ".concat(currentRumahSakit?.provinsi_nama ?? "-"));
     filter.push("Rumah Sakit: ".concat(currentRumahSakit?.nama ?? "-"));
     filter.push("Periode: ".concat(periode));
     setFilterLabel(filter);
@@ -1612,37 +1687,76 @@ function TabTwo() {
     syncSatusehatRL34();
   };
 
-  const handleDownloadExcel = async () => {
-    setIsDownloading(true);
-    try {
-      const header = [
-        "No.",
-        "Bulan",
-        "Pengunjung Baru",
-        "Pengunjung Lama",
-        "Total",
-      ];
+const handleDownloadExcel = async () => {
+  setIsDownloading(true);
 
-      const body = dataRL.map((item, idx) => [
-        idx + 1,
-        item.month || "-",
-        item.new_visitors || 0,
-        item.returning_visitors || 0,
-        item.total_visitors || 0,
-      ]);
+  try {
+    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
+    const titleAndMetadata = [
+      ["SIRS ONLINE RL 3.4 - SATUSEHAT"],
+      [],
+      ["Periode Data"],
+      [`Bulan : ${bulan}`],
+      [`Tahun : ${tahun}`],
+      [],
+    ];
 
-      downloadExcel({
-        fileName: `RL_3_4_SatuSehat_${tahun}-${bulan}`,
-        sheet: "react-export-table-to-excel",
-        tablePayload: {
-          header,
-          body,
-        },
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+    const header = [
+      "No.",
+      "Rumah Sakit",
+      "Pengunjung Baru",
+      "Pengunjung Lama",
+      "Total",
+    ];
+
+    const body = dataRL.map((item, idx) => [
+      idx + 1,
+      item.namaRS,
+      item.new_visitors ?? 0,
+      item.returning_visitors ?? 0,
+      item.total_visitors ?? 0,
+    ]);
+
+    const fullBody = [
+      ...titleAndMetadata,
+      header,
+      ...body,
+    ];
+
+    await exportRowsToExcel({
+      fileName: `RL_3_4_SatuSehat_${tahun}-${bulan}`,
+      sheetName: "RL 3.4 SatuSehat",
+      rows: fullBody,
+
+      // Header tabel berada pada baris ke-7
+      headerRowStart: titleAndMetadata.length + 1,
+      // Merge title dan metadata dari kolom A sampai D
+      mergeRanges: [
+        "A1:D1", // Judul utama di baris 1
+        "A3:D3", // "Periode Data" di baris 3
+        `A4:D4`, // Bulan di baris 4
+        `A5:D5`, // Tahun di baris 5
+      ],
+      
+      borderlessRows: [1, 2, 3, 4, 5, 6],
+
+      columnWidths: [
+        8,
+        18,
+        18,
+        18,
+      ],
+    });
+  } catch (error) {
+    console.error(
+      "Gagal mendownload Excel RL 3.4 Satusehat:",
+      error
+    );
+  } finally {
+    setIsDownloading(false);
+  }
+};
+
 
   return (
     <div className="container">
@@ -1650,7 +1764,7 @@ function TabTwo() {
       <div className="row">
         <div className="col-md-12">
           <div
-            className="border rounded-bottom shadow-sm bg-white"
+            className="rounded-bottom bg-white"
             style={{ padding: "20px 24px" }}
           >
             <div
@@ -2043,10 +2157,7 @@ function TabTwo() {
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
-                      padding: "9px 10px",
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 7,
+                      padding: "4px 0",
                     }}
                   >
                     <div
@@ -2094,10 +2205,7 @@ function TabTwo() {
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
-                      padding: "9px 10px",
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 7,
+                      padding: "4px 0",
                     }}
                   >
                     <div
@@ -2221,25 +2329,13 @@ function TabTwo() {
             {hasFilteredSatusehat && !isSyncingSatusehat && (
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  background: "#fff",
-                  border: "1px solid #d9dee7",
-                  borderRadius: 8,
-                  padding: "8px 16px",
                   marginBottom: 12,
                   fontSize: 12,
                   color: "#334155",
-                  gap: 8,
-                  flexWrap: "wrap",
                 }}
               >
                 <div style={{ fontWeight: 600 }}>
                   Filtered By {filterLabel.join(", ")}
-                </div>
-                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
-                  Total {dataRL.length} baris
                 </div>
               </div>
             )}
@@ -2250,7 +2346,7 @@ function TabTwo() {
                   border: "1px solid #d9dee7",
                   borderRadius: 10,
                   padding: "18px 16px",
-                  marginBottom: 14,
+                  marginBottom: 12,
                   background: "#f8fafc",
                   textAlign: "center",
                   display: "flex",
@@ -2289,39 +2385,18 @@ function TabTwo() {
               dataRL.length === 0 && (
                 <div
                   style={{
-                    backgroundColor:
-                      lastSyncAt && !isSyncCooldown ? "#d1ecf1" : "#f8d7da",
-                    border:
-                      lastSyncAt && !isSyncCooldown
-                        ? "1px solid #bee5eb"
-                        : "1px solid #f5c6cb",
-                    color:
-                      lastSyncAt && !isSyncCooldown ? "#0c5460" : "#721c24",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    padding: "12px 16px",
-                    borderRadius: 8,
+                    backgroundColor: "#d1ecf1",
+                    border: "1px solid #bee5eb",
+                    color: "#0c5460",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    padding: "15px",
+                    borderRadius: 4,
                     marginBottom: 14,
                     textAlign: "center",
                   }}
                 >
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                    Filtered By {filterLabel.join(", ")}
-                  </div>
-                  <div>
-                    {lastSyncAt && !isSyncCooldown
-                      ? "Data tidak ditemukan di SATUSEHAT untuk periode ini."
-                      : "Belum sinkronisasi dengan SATUSEHAT untuk periode ini."}
-                    {lastSyncAt ? (
-                      <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
-                        Terakhir sinkronisasi: {formatLastSyncAt(lastSyncAt)}
-                      </div>
-                    ) : (
-                      <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
-                        Terakhir sinkronisasi: -
-                      </div>
-                    )}
-                  </div>
+                  Data tidak ditemukan di SATUSEHAT untuk periode ini.
                 </div>
               )}
 
@@ -2330,7 +2405,6 @@ function TabTwo() {
                 <thead>
                   <tr>
                     <th>No.</th>
-                    <th>Bulan</th>
                     <th>Pengunjung Baru</th>
                     <th>Pengunjung Lama</th>
                     <th>Total</th>
@@ -2340,7 +2414,6 @@ function TabTwo() {
                   {dataRL.map((item, idx) => (
                     <tr key={`${item.month || "month"}-${idx}`} style={{ textAlign: "center" }}>
                       <td>{idx + 1}</td>
-                      <td>{item.month || "-"}</td>
                       <td>{item.new_visitors || 0}</td>
                       <td>{item.returning_visitors || 0}</td>
                       <td>{item.total_visitors || 0}</td>

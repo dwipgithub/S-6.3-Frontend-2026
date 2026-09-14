@@ -20,12 +20,17 @@ import "react-confirm-alert/src/react-confirm-alert.css";
 import Modal from "react-bootstrap/Modal";
 import { Spinner } from "react-bootstrap";
 // import Table from 'react-bootstrap/Table'
-import { downloadExcel, DownloadTableExcel } from "react-export-table-to-excel";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
 
+if (!toast.POSITION) {
+  toast.POSITION = { TOP_RIGHT: "top-right" };
+}
+
 const RL32 = () => {
-  const [bulan, setBulan] = useState(0);
+  const [bulan, setBulan] = useState(1);
   const [tahun, setTahun] = useState("");
   const [filterLabel, setFilterLabel] = useState([]);
   const [daftarBulan, setDaftarBulan] = useState([]);
@@ -257,7 +262,7 @@ const RL32 = () => {
   };
 
   const bulanChangeHandler = async (e) => {
-    setBulan(e.target.value);
+    setBulan(Number(e.target.value));
   };
 
   const tahunChangeHandler = (event) => {
@@ -292,6 +297,72 @@ const RL32 = () => {
     if (rsFromState && String(rsFromState) !== "0") return Number(rsFromState);
     if (user && user.jenisUserId === 4 && user.satKerId) return Number(user.satKerId);
     return null;
+  };
+
+  const getSelectedPeriode = () => {
+    const selectedYear = String(tahun ?? "").trim();
+    const selectedMonth = Number(bulan);
+
+    if (!/^\d{4}$/.test(selectedYear) || selectedMonth < 1 || selectedMonth > 12) {
+      return null;
+    }
+
+    return `${selectedYear}-${String(selectedMonth).padStart(2, "0")}`;
+  };
+
+  const exportRowsToExcel = async ({
+    fileName,
+    sheetName,
+    rows,
+    headerRowStart = 1,
+    headerRowEnd = headerRowStart,
+    columnWidths = [],
+    mergeRanges = [],
+    borderlessRows = [],
+  }) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(sheetName);
+
+    rows.forEach((row) => worksheet.addRow(row));
+    columnWidths.forEach((width, index) => {
+      worksheet.getColumn(index + 1).width = width;
+    });
+    mergeRanges.forEach((range) => worksheet.mergeCells(range));
+
+    worksheet.eachRow({ includeEmpty: true }, (row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FF000000" } },
+          left: { style: "thin", color: { argb: "FF000000" } },
+          bottom: { style: "thin", color: { argb: "FF000000" } },
+          right: { style: "thin", color: { argb: "FF000000" } },
+        };
+        cell.alignment = { vertical: "middle", wrapText: true };
+      });
+    });
+
+    borderlessRows.forEach((rowNumber) => {
+      worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {};
+      });
+    });
+
+    for (let rowNumber = headerRowStart; rowNumber <= headerRowEnd; rowNumber += 1) {
+      worksheet.getRow(rowNumber).font = { bold: true };
+      worksheet.getRow(rowNumber).alignment = {
+        vertical: "middle",
+        horizontal: "center",
+        wrapText: true,
+      };
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(
+      new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `${fileName}.xlsx`
+    );
   };
 
   const minutesSinceSync = lastSyncAt
@@ -345,14 +416,13 @@ const RL32 = () => {
       return;
     }
 
-    if (!tahun || !bulan) {
+    const periode = getSelectedPeriode();
+    if (!periode) {
       toast("periode wajib diisi", {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
     }
-
-    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
     let currentRumahSakit = rumahSakit;
 
     if (!currentRumahSakit || !currentRumahSakit.id || String(currentRumahSakit.id) === "0") {
@@ -368,11 +438,6 @@ const RL32 = () => {
       }
     }
 
-    const filter = [];
-    filter.push("Provinsi: ".concat(currentRumahSakit?.provinsi_nama ?? "-"));
-    filter.push("Rumah Sakit: ".concat(currentRumahSakit?.nama ?? "-"));
-    filter.push("Periode: ".concat(periode));
-    setFilterLabelSatusehat(filter);
     setHasFilteredSatusehat(true);
     setNamaFileSatusehat(`rl32_satusehat_${rsId}_${periode}-01`);
 
@@ -395,6 +460,15 @@ const RL32 = () => {
 
       const items = results?.data?.data || [];
       setDataRL32Satusehat(Array.isArray(items) ? items : []);
+      const namaRumahSakit =
+        items[0]?.nama_rumah_sakit ||
+        items[0]?.rumah_sakit ||
+        currentRumahSakit?.nama ||
+        "-";
+      setFilterLabelSatusehat([
+        `Rumah Sakit: ${namaRumahSakit}`,
+        `Periode: ${periode}`,
+      ]);
       if (show) handleClose();
     } catch (error) {
       setDataRL32Satusehat([]);
@@ -422,7 +496,8 @@ const RL32 = () => {
       return;
     }
 
-    if (!tahun || !bulan) {
+    const periode = getSelectedPeriode();
+    if (!periode) {
       toast("periode wajib diisi", {
         position: toast.POSITION.TOP_RIGHT,
       });
@@ -435,8 +510,6 @@ const RL32 = () => {
       });
       return;
     }
-
-    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
 
     try {
       setIsSyncingSatusehat(true);
@@ -871,7 +944,32 @@ const RL32 = () => {
     syncDataRLTigaTitikDuaSatusehat();
   };
 
-    const handleDownloadExcelSatusehat = async () => {
+  const handleDownloadExcel = async () => {
+    if (!tableRef.current) return;
+
+    const rows = Array.from(tableRef.current.querySelectorAll("tr")).map((row) =>
+      Array.from(row.querySelectorAll("th, td")).map((cell) =>
+        cell.textContent.trim()
+      )
+    );
+
+    if (rows.length > 1) {
+      const rowSpanColumns = isAksi ? 8 : 7;
+      rows[1] = [...Array(rowSpanColumns).fill(""), ...rows[1]];
+    }
+
+    await exportRowsToExcel({
+      fileName: namafile || "rl32",
+      sheetName: "data RL 32",
+      rows,
+      headerRowStart: 1,
+      headerRowEnd: 2,
+      columnWidths: Array(22).fill(20),
+      mergeRanges: ["A1:A2"],
+    });
+  };
+
+  const handleDownloadExcelSatusehat = async () => {
   setIsDownloading(true);
   try {
     const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
@@ -891,28 +989,54 @@ const RL32 = () => {
     ];
 
     const tableHeader = [
-      "No",
-      "Rumah Sakit", 
-      "Jenis Pelayanan",
-      "Pasien Awal Bulan",
-      "Pasien Masuk",
-      "Pasien Pindahan",
-      "Pasien Dipindahkan",
-      "Pasien Keluar Hidup",
-      "Pasien Pria Keluar Mati <48 Jam",
-      "Pasien Pria Keluar Mati >=48 Jam",
-      "Pasien Wanita Keluar Mati <48 Jam",
-      "Pasien Wanita Keluar Mati >=48 Jam",
-      "Jumlah Lama Dirawat",
-      "Pasien Akhir Bulan",
-      "Jumlah Hari Perawatan",
-      "Hari VVIP",
-      "Hari VIP",
-      "Hari Kelas 1",
-      "Hari Kelas 2",
-      "Hari Kelas 3",
-      "Hari Kelas Khusus",
-      "TT Awal",
+      [
+        "No",
+        "Rumah Sakit",
+        "Jenis Pelayanan",
+        "Pasien Awal Bulan",
+        "Pasien Masuk",
+        "Pasien Pindahan",
+        "Pasien Dipindahkan",
+        "Pasien Keluar Hidup",
+        "Pasien Pria Keluar Mati",
+        "",
+        "Pasien Wanita Keluar Mati",
+        "",
+        "Jumlah Lama Dirawat",
+        "Pasien Akhir Bulan",
+        "Jumlah Hari Perawatan",
+        "Rincian Hari Perawatan",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "TT Awal",
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "<48 jam",
+        ">=48 jam",
+        "<48 jam",
+        ">=48 jam",
+        "",
+        "",
+        "",
+        "VVIP",
+        "VIP",
+        "1",
+        "2",
+        "3",
+        "Khusus",
+        "",
+      ],
     ];
 
     const tableBody = dataRL32Satusehat.map((value, index) => [
@@ -932,6 +1056,7 @@ const RL32 = () => {
       value.pasien_akhir_bulan || 0,
       value.jumlah_hari_perawatan || 0,
       value.hari_vvip || 0,
+      value.hari_vip || 0,
       value.hari_kelas_1 || 0,
       value.hari_kelas_2 || 0,
       value.hari_kelas_3 || 0,
@@ -939,31 +1064,46 @@ const RL32 = () => {
       value.alokasi_tempat_tidur_awal_bulan || 0,
     ]);
 
-    // Gabungkan Semua Baris
     const fullBody = [
       ...titleAndMetadata,
-      tableHeader,
+      ...tableHeader,
       ...tableBody,
     ];
 
-    // Execute Export dengan pengaturan border dan lebar kolom
-    downloadExcel({
+    await exportRowsToExcel({
       fileName: namafileSatusehat || `rl32_satusehat_${tahunData}_${bulan}`,
-      sheet: "data RL 32 Satusehat",
-      // Konfigurasi lebar kolom (Atur kolom No [index 0] menjadi kecil, misal: 6)
-      cols: [
-        { wch: 6 },  // Kolom "No" (ramping)
-        { wch: 30 }, // Rumah Sakit
-        { wch: 25 }, // Jenis Pelayanan
-        ...Array(19).fill({ wch: 18 }), // Kolom sisa angka/metrik
+      sheetName: "data RL 32 Satusehat",
+      rows: fullBody,
+      headerRowStart: titleAndMetadata.length + 1,
+      headerRowEnd: titleAndMetadata.length + tableHeader.length,
+      borderlessRows: [1, 3, 4, 5],
+      mergeRanges: [
+        "A1:V1",
+        "A3:V3",
+        "A4:V4",
+        "A5:V5",
+        "A7:A8",
+        "B7:B8",
+        "C7:C8",
+        "D7:D8",
+        "E7:E8",
+        "F7:F8",
+        "G7:G8",
+        "H7:H8",
+        "I7:J7",
+        "K7:L7",
+        "M7:M8",
+        "N7:N8",
+        "O7:O8",
+        "P7:U7",
+        "V7:V8",
       ],
-      // Konfigurasi border dan area header jika fungsi downloadExcel mendukungnya
-      border: true, 
-      startHeaderRow: 7, // Indeks baris dimulainya tabel (setelah metadata)
-      tablePayload: {
-        header: [],
-        body: fullBody,
-      },
+      columnWidths: [
+        6,
+        30,
+        25,
+        ...Array(19).fill(18),
+      ],
     });
   } catch (error) {
     console.error("Gagal mendownload Excel Satusehat:", error);
@@ -1413,22 +1553,28 @@ const RL32 = () => {
                 >
                   Filter
                 </button>
-                <DownloadTableExcel
-                  filename={namafile}
-                  sheet="data RL 32"
-                  currentTableRef={tableRef.current}
+                <button
+                  type="button"
+                  className={style.btnPrimary}
+                  onClick={handleDownloadExcel}
                 >
-                  <button type="button" className={style.btnPrimary}>
-                    Download
-                  </button>
-                </DownloadTableExcel>
+                  Download
+                </button>
               </div>
               <div className={style.filterLabel}>
-                {filterLabel.length > 0 ? (
-                  <>
-                    Filter: {filterLabel.map((value) => value).join(" · ")}
-                  </>
-                ) : null}
+                {filterLabel.length > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <h5 style={{ fontSize: "14px", margin: 0 }}>
+                      Filtered By {filterLabel.join(", ")}
+                    </h5>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1839,7 +1985,7 @@ const RL32 = () => {
                           <FaCalendarAlt size={13} color="#94a3b8" />
                           <select
                             value={bulan}
-                            onChange={(e) => setBulan(e.target.value)}
+                            onChange={(e) => setBulan(Number(e.target.value))}
                             style={{
                               border: "none",
                               outline: "none",
@@ -2210,10 +2356,7 @@ const RL32 = () => {
                           display: "flex",
                           alignItems: "center",
                           gap: 10,
-                          padding: "9px 10px",
-                          background: "#f8fafc",
-                          border: "1px solid #e2e8f0",
-                          borderRadius: 7,
+                          padding: "4px 0",
                         }}
                       >
                         <div
@@ -2261,10 +2404,7 @@ const RL32 = () => {
                           display: "flex",
                           alignItems: "center",
                           gap: 10,
-                          padding: "9px 10px",
-                          background: "#f8fafc",
-                          border: "1px solid #e2e8f0",
-                          borderRadius: 7,
+                          padding: "4px 0",
                         }}
                       >
                         <div
@@ -2393,7 +2533,7 @@ const RL32 = () => {
                       alignItems: "center",
                       padding: "8px 16px",
                       marginBottom: 12,
-                      fontSize: 12,
+                      fontSize: 14,
                       color: "#334155",
                       gap: 8,
                       flexWrap: "wrap",
@@ -2449,21 +2589,22 @@ const RL32 = () => {
                   !isSyncingSatusehat &&
                   dataRL32Satusehat.length === 0 && (
                   <div
-                    style={{
-                      backgroundColor: "#d1ecf1",
-                      border: "1px solid #bee5eb",
-                      color: "#0c5460",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      padding: "15px",
-                      borderRadius: 4,
-                      marginBottom: 14,
-                      textAlign: "center",
-                    }}
-                  >
-                      
-                      <strong>Data tidak ditemukan di SATUSEHAT untuk periode ini.</strong>
-                    </div>
+                                      style={{
+                                        backgroundColor: "#d1ecf1",
+                                        border: "1px solid #bee5eb",
+                                        color: "#0c5460",
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        padding: "15px",
+                                        borderRadius: 4,
+                                        marginBottom: 14,
+                                        textAlign: "center",
+                                      }}
+                                    >
+                                      <div style={{ fontSize: 14, fontWeight: 700 }}>
+                                        Data tidak ditemukan di SATUSEHAT untuk periode ini.
+                                      </div>
+                                    </div>
                   )}
 
                 {hasFilteredSatusehat && dataRL32Satusehat.length > 0 && (
