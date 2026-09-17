@@ -179,36 +179,70 @@ export const useRL310 = (axiosJWT, token, CSRFToken, currentUser) => {
 
   const MANUAL_SYNC_COOLDOWN = 5; // menit
 
+  const MANUAL_SYNC_COOLDOWN_SECONDS = MANUAL_SYNC_COOLDOWN * 60;
+
   const [now, setNow] = useState(Date.now());
 
+  /**
+   * Update waktu setiap detik selama cooldown.
+   */
   useEffect(() => {
-    setNow(Date.now()); // ← tambah ini
+    if (!sync.lastSync || sync.isUpdating) {
+      setNow(Date.now());
+      return;
+    }
 
-    if (!sync.lastSync || sync.isUpdating) return;
+    const updateNow = () => {
+      setNow(Date.now());
+    };
 
-    const elapsed = (Date.now() - new Date(sync.lastSync).getTime()) / 60000;
-    if (elapsed >= MANUAL_SYNC_COOLDOWN) return;
+    updateNow();
 
-    const remainingMs = (MANUAL_SYNC_COOLDOWN - elapsed) * 60 * 1000;
-    const timeout = setTimeout(() => setNow(Date.now()), remainingMs);
+    const interval = setInterval(updateNow, 1000);
 
-    return () => clearTimeout(timeout);
+    return () => clearInterval(interval);
   }, [sync.lastSync, sync.isUpdating]);
 
-  // Ganti Date.now() → now
-  const minutesSinceSync = sync.lastSync
-    ? (now - new Date(sync.lastSync).getTime()) / 60000
-    : null;
+  /**
+   * Waktu terakhir sinkronisasi.
+   */
+  const lastSyncTime = sync.lastSync ? new Date(sync.lastSync).getTime() : null;
 
+  /**
+   * Hitung sisa cooldown dalam detik.
+   */
+  const cooldownRemainingSeconds =
+    lastSyncTime !== null
+      ? Math.max(
+          0,
+          Math.ceil(
+            (lastSyncTime + MANUAL_SYNC_COOLDOWN_SECONDS * 1000 - now) / 1000,
+          ),
+        )
+      : 0;
+
+  /**
+   * Tombol SYNC hanya aktif jika:
+   * - tidak sedang update dari backend
+   * - tidak sedang manual sync
+   * - cooldown sudah selesai
+   */
   const canSync =
-    !sync.isUpdating &&
-    !isManualSyncing && // ← tambah ini
-    (minutesSinceSync === null || minutesSinceSync >= MANUAL_SYNC_COOLDOWN);
+    !sync.isUpdating && !isManualSyncing && cooldownRemainingSeconds <= 0;
 
-  // Sisa menit cooldown (untuk info ke user)
+  /**
+   * Format countdown:
+   * 4:59
+   * 4:58
+   * 4:57
+   * ...
+   * 0:01
+   */
   const cooldownLeft =
-    minutesSinceSync !== null
-      ? Math.max(0, MANUAL_SYNC_COOLDOWN - minutesSinceSync).toFixed(1)
+    cooldownRemainingSeconds > 0
+      ? `${Math.floor(cooldownRemainingSeconds / 60)}:${String(
+          cooldownRemainingSeconds % 60,
+        ).padStart(2, "0")}`
       : null;
 
   const handleManualSync = useCallback(async () => {
