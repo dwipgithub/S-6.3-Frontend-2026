@@ -65,7 +65,7 @@ const RL311Toolbar = ({
                   : isManualSyncing || sync.isUpdating
                     ? "Sedang sinkronisasi..."
                     : !canSync
-                      ? `Tunggu ${cooldownLeft} menit lagi`
+                      ? `Tunggu ${cooldownLeft} lagi`
                       : "Klik untuk sync manual"
               }
               className={`${style.satusehatActionButton} ${style.satusehatSyncButton}`}
@@ -76,15 +76,24 @@ const RL311Toolbar = ({
                     : "not-allowed",
                 opacity:
                   canSync && !isManualSyncing && isFilterApplied ? 1 : 0.55,
+                minWidth: 148,
+                justifyContent: "center",
               }}
             >
               {isManualSyncing || sync.isUpdating ? (
                 <>
-                  <Spinner animation="border" size="sm" /> Syncing...
+                  <Spinner animation="border" size="sm" />
+                  SYNCING...
+                </>
+              ) : !canSync && cooldownLeft ? (
+                <>
+                  <FaSyncAlt size={14} />
+                  SYNC {cooldownLeft}
                 </>
               ) : (
                 <>
-                  <FaSyncAlt size={14} /> SYNC SATUSEHAT
+                  <FaSyncAlt size={14} />
+                  SYNC SATUSEHAT
                 </>
               )}
             </button>
