@@ -1329,27 +1329,35 @@ const RL36 = () => {
     }
     syncDataRLTigaTitikEnamSatusehat();
   };
+async function handleDownloadExcelSatusehat() {
+  setIsDownloading(true);
 
-  async function handleDownloadExcelSatusehat() {
-    setIsDownloading(true);
-    try {
-      const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
+  try {
+    // 1. Format Metadata
+    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
     const selectedBulanObj = daftarBulan?.find(
       (b) => String(b.value) === String(bulan)
     );
     const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
     const tahunData = tahun || "-";
 
+    // 2. Buat Workbook & Worksheet ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("RL 3.6 SatuSehat");
+
+    // 3. Baris Judul & Metadata
     const titleAndMetadata = [
       ["SIRS ONLINE RL 3.6 - SATUSEHAT"],
-      [], // Baris kosong
+      [], 
       ["Periode Data"],
-      [`Bulan : ${bulan}`],
-      [`Tahun : ${tahun}`],
-      [], // Baris kosong sebelum header tabel
+      [`Bulan : ${namaBulan}`],
+      [`Tahun : ${tahunData}`],
+      [], 
     ];
 
-      const tableHeader = [
+    // 4. Header Tabel
+    const tableHeader = [
+      [
         "No",
         "Jenis Kegiatan",
         "Nama Kegiatan",
@@ -1362,55 +1370,225 @@ const RL36 = () => {
         "Dirujuk",
         "Hidup",
         "Mati",
-      ];
-
-      const tableBody = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
-        (value, index) => [
-          index + 1,
-          value?.jenis_kegiatan ?? "",
-          value?.nama_kegiatan ?? "",
-          value?.rujukan_rs ?? 0,
-          value?.rujukan_bidan ?? 0,
-          value?.rujukan_puskesmas ?? 0,
-          value?.rujukan_faskes_lain ?? 0,
-          value?.non_medis ?? 0,
-          value?.non_rujukan ?? 0,
-          value?.dirujuk ?? 0,
-          value?.hidup ?? 0,
-          value?.mati ?? 0,
-        ]
-      );
-      const fullBody = [
-      ...titleAndMetadata,
-      tableHeader,
-      ...tableBody,
+      ],
     ];
 
-    await exportRowsToExcel({
-      fileName: `rl36_satusehat_${tahunData}_${bulan}`,
-      sheetName: "RL 3.6 SatuSehat",
-      rows: fullBody,
-      headerRowStart: titleAndMetadata.length + 1,
-      borderlessRows: [1, 3, 4, 5],
-      mergeRanges: [
-        "A1:Q1",
-        "A3:Q3",
-        "A4:Q4",
-        "A5:Q5",
-      ],
-      columnWidths: [
-        6,
-        30,
-        18,
-        30,
-        14,
-        ...Array(12).fill(18),
-      ],
+    // 5. Data Body Tabel & Hitung Total
+    const listData = Array.isArray(dataRLSatusehat) ? dataRLSatusehat : [];
+
+    const totals = listData.reduce(
+      (acc, val) => {
+        acc.rujukan_rs += Number(val?.rujukan_rs || 0);
+        acc.rujukan_bidan += Number(val?.rujukan_bidan || 0);
+        acc.rujukan_puskesmas += Number(val?.rujukan_puskesmas || 0);
+        acc.rujukan_faskes_lain += Number(val?.rujukan_faskes_lain || 0);
+        acc.non_medis += Number(val?.non_medis || 0);
+        acc.non_rujukan += Number(val?.non_rujukan || 0);
+        acc.dirujuk += Number(val?.dirujuk || 0);
+        acc.hidup += Number(val?.hidup || 0);
+        acc.mati += Number(val?.mati || 0);
+        return acc;
+      },
+      {
+        rujukan_rs: 0,
+        rujukan_bidan: 0,
+        rujukan_puskesmas: 0,
+        rujukan_faskes_lain: 0,
+        non_medis: 0,
+        non_rujukan: 0,
+        dirujuk: 0,
+        hidup: 0,
+        mati: 0,
+      }
+    );
+
+    const tableBody = listData.map((value, index) => [
+      index + 1,
+      value?.jenis_kegiatan ?? "-",
+      value?.nama_kegiatan ?? "-",
+      Number(value?.rujukan_rs || 0),
+      Number(value?.rujukan_bidan || 0),
+      Number(value?.rujukan_puskesmas || 0),
+      Number(value?.rujukan_faskes_lain || 0),
+      Number(value?.non_medis || 0),
+      Number(value?.non_rujukan || 0),
+      Number(value?.dirujuk || 0),
+      Number(value?.hidup || 0),
+      Number(value?.mati || 0),
+    ]);
+
+    // Baris TOTAL (Label di indeks 0 agar tidak terhapus saat merge A-C)
+    const totalRow = [
+      "TOTAL",
+      "",
+      "",
+      totals.rujukan_rs,
+      totals.rujukan_bidan,
+      totals.rujukan_puskesmas,
+      totals.rujukan_faskes_lain,
+      totals.non_medis,
+      totals.non_rujukan,
+      totals.dirujuk,
+      totals.hidup,
+      totals.mati,
+    ];
+
+    // 6. Masukkan semua baris ke worksheet
+    const fullRows = [
+      ...titleAndMetadata,
+      ...tableHeader,
+      ...tableBody,
+      totalRow,
+    ];
+    fullRows.forEach((row) => worksheet.addRow(row));
+
+    // 7. Penggabungan Sel (Merge Cells)
+    const totalRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length + 1;
+    const mergeRanges = [
+      "A1:L1",
+      "A3:L3",
+      "A4:L4",
+      "A5:L5",
+      `A${totalRowIndex}:C${totalRowIndex}`, // Merge A-C untuk label TOTAL
+    ];
+    mergeRanges.forEach((range) => worksheet.mergeCells(range));
+
+    // 8. Pengaturan Lebar Kolom (A - L)
+    worksheet.columns = [
+      { width: 8 },  // A (No)
+      { width: 25 }, // B (Jenis Kegiatan)
+      { width: 30 }, // C (Nama Kegiatan)
+      { width: 18 }, // D (Rujukan RS)
+      { width: 18 }, // E (Rujukan Bidan)
+      { width: 20 }, // F (Rujukan Puskesmas)
+      { width: 22 }, // G (Rujukan Faskes Lain)
+      { width: 16 }, // H (Non Medis)
+      { width: 18 }, // I (Non Rujukan)
+      { width: 16 }, // J (Dirujuk)
+      { width: 14 }, // K (Hidup)
+      { width: 14 }, // L (Mati)
+    ];
+
+    // 9. Formatting: Alignment Tengah & Border
+    const headerStartRow = titleAndMetadata.length + 1;
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber >= headerStartRow && rowNumber <= totalRowIndex) {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          // Rata tengah vertikal & horizontal
+          cell.alignment = {
+            vertical: "middle",
+            horizontal: "center",
+            wrapText: true,
+          };
+
+          // Border tipis untuk seluruh sel tabel
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+        });
+      }
     });
-    } finally {
-      setTimeout(() => setIsDownloading(false), 800);
-    }
+
+    // Bold untuk Header dan Baris Total
+    worksheet.getRow(headerStartRow).font = { bold: true };
+    worksheet.getRow(totalRowIndex).font = { bold: true };
+
+    // 10. Generate File Excel dan Download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const fileName = `rl36_satusehat_${tahunData}_${bulan}.xlsx`;
+    saveAs(new Blob([buffer]), fileName);
+
+  } catch (error) {
+    console.error("Gagal mendownload Excel Satusehat RL 3.6:", error);
+  } finally {
+    setTimeout(() => setIsDownloading(false), 800);
   }
+}
+  // async function handleDownloadExcelSatusehat() {
+  //   setIsDownloading(true);
+  //   try {
+  //     const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
+  //   const selectedBulanObj = daftarBulan?.find(
+  //     (b) => String(b.value) === String(bulan)
+  //   );
+  //   const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+  //   const tahunData = tahun || "-";
+
+  //   const titleAndMetadata = [
+  //     ["SIRS ONLINE RL 3.6 - SATUSEHAT"],
+  //     [], // Baris kosong
+  //     ["Periode Data"],
+  //     [`Bulan : ${bulan}`],
+  //     [`Tahun : ${tahun}`],
+  //     [], // Baris kosong sebelum header tabel
+  //   ];
+
+  //     const tableHeader = [
+  //       "No",
+  //       "Jenis Kegiatan",
+  //       "Nama Kegiatan",
+  //       "Rujukan RS",
+  //       "Rujukan Bidan",
+  //       "Rujukan Puskesmas",
+  //       "Rujukan Faskes Lain",
+  //       "Non Medis",
+  //       "Non Rujukan",
+  //       "Dirujuk",
+  //       "Hidup",
+  //       "Mati",
+  //     ];
+
+  //     const tableBody = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
+  //       (value, index) => [
+  //         index + 1,
+  //         value?.jenis_kegiatan ?? "",
+  //         value?.nama_kegiatan ?? "",
+  //         value?.rujukan_rs ?? 0,
+  //         value?.rujukan_bidan ?? 0,
+  //         value?.rujukan_puskesmas ?? 0,
+  //         value?.rujukan_faskes_lain ?? 0,
+  //         value?.non_medis ?? 0,
+  //         value?.non_rujukan ?? 0,
+  //         value?.dirujuk ?? 0,
+  //         value?.hidup ?? 0,
+  //         value?.mati ?? 0,
+  //       ]
+  //     );
+  //     const fullBody = [
+  //     ...titleAndMetadata,
+  //     tableHeader,
+  //     ...tableBody,
+  //   ];
+
+  //   await exportRowsToExcel({
+  //     fileName: `rl36_satusehat_${tahunData}_${bulan}`,
+  //     sheetName: "RL 3.6 SatuSehat",
+  //     rows: fullBody,
+  //     headerRowStart: titleAndMetadata.length + 1,
+  //     borderlessRows: [1, 3, 4, 5],
+  //     mergeRanges: [
+  //       "A1:Q1",
+  //       "A3:Q3",
+  //       "A4:Q4",
+  //       "A5:Q5",
+  //     ],
+  //     columnWidths: [
+  //       6,
+  //       30,
+  //       18,
+  //       30,
+  //       14,
+  //       ...Array(12).fill(18),
+  //     ],
+  //   });
+  //   } finally {
+  //     setTimeout(() => setIsDownloading(false), 800);
+  //   }
+  // }
 
   const getValidasi = async () => {
     try {
