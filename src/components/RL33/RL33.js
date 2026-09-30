@@ -1052,54 +1052,116 @@ const handleDownloadExcelSatusehat = async () => {
       "False Emergency",
     ];
 
+    const safeDataList = Array.isArray(dataRLSatusehat) ? dataRLSatusehat : [];
+
     // 4. Data Body Tabel (Memasukkan nilai namaRS)
-    const tableBody = (Array.isArray(dataRLSatusehat) ? dataRLSatusehat : []).map(
-      (value, index) => [
-        index + 1,
-        value.nama_rumah_sakit || value.rumah_sakit || namaRS,
-        value.kategori || "-",
-        value.jenis_pelayanan || "-",
-        value.total_pasien_rujukan || 0,
-        value.total_pasien_non_rujukan || 0,
-        value.tindak_lanjut_dirawat || 0,
-        value.tindak_lanjut_dirujuk || 0,
-        value.tindak_lanjut_pulang || 0,
-        value.mati_di_igd_laki_laki || 0,
-        value.mati_di_igd_perempuan || 0,
-        value.doa_laki_laki || 0,
-        value.doa_perempuan || 0,
-        value.luka_luka_laki_laki || 0,
-        value.luka_luka_perempuan || 0,
-        value.false_emergency || 0,
-      ]
+    const tableBody = safeDataList.map((value, index) => [
+      index + 1,
+      value.nama_rumah_sakit || value.rumah_sakit || namaRS,
+      value.kategori || "-",
+      value.jenis_pelayanan || "-",
+      Number(value.total_pasien_rujukan || 0),
+      Number(value.total_pasien_non_rujukan || 0),
+      Number(value.tindak_lanjut_dirawat || 0),
+      Number(value.tindak_lanjut_dirujuk || 0),
+      Number(value.tindak_lanjut_pulang || 0),
+      Number(value.mati_di_igd_laki_laki || 0),
+      Number(value.mati_di_igd_perempuan || 0),
+      Number(value.doa_laki_laki || 0),
+      Number(value.doa_perempuan || 0),
+      Number(value.luka_luka_laki_laki || 0),
+      Number(value.luka_luka_perempuan || 0),
+      Number(value.false_emergency || 0),
+    ]);
+
+    // 5. Hitung Total Angka
+    const totals = safeDataList.reduce(
+      (acc, val) => {
+        acc.total_pasien_rujukan += Number(val.total_pasien_rujukan || 0);
+        acc.total_pasien_non_rujukan += Number(val.total_pasien_non_rujukan || 0);
+        acc.tindak_lanjut_dirawat += Number(val.tindak_lanjut_dirawat || 0);
+        acc.tindak_lanjut_dirujuk += Number(val.tindak_lanjut_dirujuk || 0);
+        acc.tindak_lanjut_pulang += Number(val.tindak_lanjut_pulang || 0);
+        acc.mati_di_igd_laki_laki += Number(val.mati_di_igd_laki_laki || 0);
+        acc.mati_di_igd_perempuan += Number(val.mati_di_igd_perempuan || 0);
+        acc.doa_laki_laki += Number(val.doa_laki_laki || 0);
+        acc.doa_perempuan += Number(val.doa_perempuan || 0);
+        acc.luka_luka_laki_laki += Number(val.luka_luka_laki_laki || 0);
+        acc.luka_luka_perempuan += Number(val.luka_luka_perempuan || 0);
+        acc.false_emergency += Number(val.false_emergency || 0);
+        return acc;
+      },
+      {
+        total_pasien_rujukan: 0,
+        total_pasien_non_rujukan: 0,
+        tindak_lanjut_dirawat: 0,
+        tindak_lanjut_dirujuk: 0,
+        tindak_lanjut_pulang: 0,
+        mati_di_igd_laki_laki: 0,
+        mati_di_igd_perempuan: 0,
+        doa_laki_laki: 0,
+        doa_perempuan: 0,
+        luka_luka_laki_laki: 0,
+        luka_luka_perempuan: 0,
+        false_emergency: 0,
+      }
     );
 
-    // 5. Gabungkan Semua Baris
+    // 6. Buat Baris Total
+    const totalRow = [
+      "",
+      "TOTAL",
+      "", // Di-merge dengan kolom B & C
+      "",
+      totals.total_pasien_rujukan,
+      totals.total_pasien_non_rujukan,
+      totals.tindak_lanjut_dirawat,
+      totals.tindak_lanjut_dirujuk,
+      totals.tindak_lanjut_pulang,
+      totals.mati_di_igd_laki_laki,
+      totals.mati_di_igd_perempuan,
+      totals.doa_laki_laki,
+      totals.doa_perempuan,
+      totals.luka_luka_laki_laki,
+      totals.luka_luka_perempuan,
+      totals.false_emergency,
+    ];
+
+    // Hitung posisi nomor baris Total secara dinamis
+    const headerRowIndex = titleAndMetadata.length + 1; // Baris ke-7
+    const totalRowIndex = headerRowIndex + tableBody.length + 1;
+
+    // 7. Gabungkan Semua Baris
     const fullBody = [
       ...titleAndMetadata,
       tableHeader,
       ...tableBody,
+      totalRow,
+    ];
+
+    // Merge ranges bawaan + merge baris total (B:D)
+    const mergeRanges = [
+      "A1:P1",
+      "A3:P3",
+      "A4:P4",
+      "A5:P5",
+      `B${totalRowIndex}:D${totalRowIndex}`, // Merge Rumah Sakit, Kategori, & Jenis Pelayanan pada baris Total
     ];
 
     await exportRowsToExcel({
       fileName: `rl33_satusehat_${tahunData}_${bulan}`,
       sheetName: "RL 3.3 SatuSehat",
       rows: fullBody,
-      headerRowStart: titleAndMetadata.length + 1,
+      headerRowStart: headerRowIndex,
       borderlessRows: [1, 3, 4, 5],
-      mergeRanges: [
-        "A1:Q1",
-        "A3:Q3",
-        "A4:Q4",
-        "A5:Q5",
-      ],
+      mergeRanges: mergeRanges,
       columnWidths: [
         6,
         30,
         18,
         30,
         14,
-        ...Array(12).fill(18),
+        ...Array(11).fill(18),
       ],
     });
   } catch (error) {
