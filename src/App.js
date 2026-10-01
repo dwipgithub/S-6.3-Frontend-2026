@@ -108,130 +108,135 @@ import Absensi from "./components/Absensi/absensi.js";
 
 import PageNotFound from "./components/MaintenancePage/MaintenancePage.js";
 
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 function App() {
-    return (
-        <CSRFTokenProvider>
-            <BrowserRouter basename="/v3">
-                <Routes>
+  return (
+    <CSRFTokenProvider>
+      <BrowserRouter basename="/v3">
+        <Routes>
+          {/* Redirect root ke login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-                    {/* Redirect root ke login */}
-                    <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/verif" element={<SSO_Verif />} />
 
-                    {/* Public routes */}
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/verif" element={<SSO_Verif />} />
+          {/* Layout routes */}
+          <Route element={<Layout />}>
+            <Route path="/beranda" element={null} />
 
-                    {/* Layout routes */}
-                    <Route element={<Layout />}>
-                        <Route path="/beranda" element={null} />
+            {/* USER */}
+            <Route path="/user/tambahuser" element={<FormTambahUser />} />
+            <Route path="/user/ubahpassword" element={<FormUbahPassword />} />
 
-                        {/* USER */}
-                        <Route path="/user/tambahuser" element={<FormTambahUser />} />
-                        <Route path="/user/ubahpassword" element={<FormUbahPassword />} />
+            {/* RL 3.x */}
+            <Route path="/rl31" element={<RL31 />} />
 
-                        {/* RL 3.x */}
-                        <Route path="/rl31" element={<RL31 />} />
+            <Route path="/rl32" element={<RL32 />} />
+            <Route path="/rl32/tambah" element={<FormTambahRL32 />} />
+            <Route path="/rl32/ubah/:id" element={<FormUbahRL32 />} />
 
-                        <Route path="/rl32" element={<RL32 />} />
-                        <Route path="/rl32/tambah" element={<FormTambahRL32 />} />
-                        <Route path="/rl32/ubah/:id" element={<FormUbahRL32 />} />
+            <Route path="/rl33" element={<RL33 />} />
+            <Route path="/rl33/tambah" element={<FormTambahRL33 />} />
+            <Route path="/rl33/ubah/:id" element={<FormUbahRL33 />} />
 
-                        <Route path="/rl33" element={<RL33 />} />
-                        <Route path="/rl33/tambah" element={<FormTambahRL33 />} />
-                        <Route path="/rl33/ubah/:id" element={<FormUbahRL33 />} />
+            <Route path="/rl34" element={<TabMenu34 />} />
+            <Route path="/rl34/tambah" element={<FormTambahRL34 />} />
+            <Route path="/rl34/ubah/:id" element={<FormUbahRL34 />} />
+            <Route path="/brandarl34" element={<TabMenu34 />} />
+            <Route path="/satusehatrl34" element={<SatuSehatRL34 />} />
 
-                        <Route path="/rl34" element={<TabMenu34 />} />
-                        <Route path="/rl34/tambah" element={<FormTambahRL34 />} />
-                        <Route path="/rl34/ubah/:id" element={<FormUbahRL34 />} />
-                        <Route path="/brandarl34" element={<TabMenu34 />} />
-                        <Route path="/satusehatrl34" element={<SatuSehatRL34 />} />
+            <Route path="/rl35" element={<RL35 />} />
+            <Route path="/rl35/tambah" element={<FormTambahRL35 />} />
+            <Route path="/rl35/ubah/:id" element={<FormUbahRL35 />} />
 
-                        <Route path="/rl35" element={<RL35 />} />
-                        <Route path="/rl35/tambah" element={<FormTambahRL35 />} />
-                        <Route path="/rl35/ubah/:id" element={<FormUbahRL35 />} />
+            <Route path="/rl36" element={<RL36 />} />
+            <Route path="/rl36/tambah" element={<FormTambahRL36 />} />
+            <Route path="/rl36/ubah/:id" element={<FormUbahRL36 />} />
 
-                        <Route path="/rl36" element={<RL36 />} />
-                        <Route path="/rl36/tambah" element={<FormTambahRL36 />} />
-                        <Route path="/rl36/ubah/:id" element={<FormUbahRL36 />} />
+            <Route path="/rl37" element={<RL37 />} />
+            <Route path="/rl37/tambah" element={<FormTambahRL37 />} />
+            <Route path="/rl37/ubah/:id" element={<FormUbahRL37 />} />
 
-                        <Route path="/rl37" element={<RL37 />} />
-                        <Route path="/rl37/tambah" element={<FormTambahRL37 />} />
-                        <Route path="/rl37/ubah/:id" element={<FormUbahRL37 />} />
+            <Route path="/rl38" element={<RL38 />} />
+            <Route path="/rl38/tambah" element={<FormTambahRL38 />} />
+            <Route path="/rl38/ubah/:id" element={<FormEditRL38 />} />
 
-                        <Route path="/rl38" element={<RL38 />} />
-                        <Route path="/rl38/tambah" element={<FormTambahRL38 />} />
-                        <Route path="/rl38/ubah/:id" element={<FormEditRL38 />} />
+            <Route path="/rl39" element={<RL39 />} />
+            <Route path="/rl39/tambah" element={<FormTambahRL39 />} />
+            <Route path="/rl39/ubah/:id" element={<FormUbahRL39 />} />
 
-                        <Route path="/rl39" element={<RL39 />} />
-                        <Route path="/rl39/tambah" element={<FormTambahRL39 />} />
-                        <Route path="/rl39/ubah/:id" element={<FormUbahRL39 />} />
+            <Route path="/rl310" element={<RL310 />} />
+            <Route path="/rl310/tambah" element={<FormTambahRL310 />} />
+            <Route path="/rl310/ubah/:id" element={<FormEditRL310 />} />
 
-                        <Route path="/rl310" element={<RL310 />} />
-                        <Route path="/rl310/tambah" element={<FormTambahRL310 />} />
-                        <Route path="/rl310/ubah/:id" element={<FormEditRL310 />} />
+            <Route path="/rl311" element={<RL311 />} />
+            <Route path="/rl311/tambah" element={<FormTambahRL311 />} />
+            <Route path="/rl311/edit/:id" element={<FormEditRL311 />} />
 
-                        <Route path="/rl311" element={<RL311 />} />
-                        <Route path="/rl311/tambah" element={<FormTambahRL311 />} />
-                        <Route path="/rl311/edit/:id" element={<FormEditRL311 />} />
+            <Route path="/rl312" element={<RL312 />} />
+            <Route path="/rl312/tambah" element={<FormTambahRL312 />} />
+            <Route path="/rl312/edit/:id" element={<FormEditRL312 />} />
 
-                        <Route path="/rl312" element={<RL312 />} />
-                        <Route path="/rl312/tambah" element={<FormTambahRL312 />} />
-                        <Route path="/rl312/edit/:id" element={<FormEditRL312 />} />
+            <Route path="/rl313" element={<RL313 />} />
+            <Route path="/rl313/tambah" element={<FormTambahRL313 />} />
+            <Route path="/rl313/edit/:id" element={<FormEditRL313 />} />
 
-                        <Route path="/rl313" element={<RL313 />} />
-                        <Route path="/rl313/tambah" element={<FormTambahRL313 />} />
-                        <Route path="/rl313/edit/:id" element={<FormEditRL313 />} />
+            <Route path="/rl314" element={<RL314 />} />
+            <Route path="/rl314/tambah" element={<FormTambahRL314 />} />
+            <Route path="/rl314/ubah/:id" element={<FormUbahRL314 />} />
 
-                        <Route path="/rl314" element={<RL314 />} />
-                        <Route path="/rl314/tambah" element={<FormTambahRL314 />} />
-                        <Route path="/rl314/ubah/:id" element={<FormUbahRL314 />} />
+            <Route path="/rl315" element={<RL315 />} />
+            <Route path="/rl315/tambah" element={<FormTambahRL315 />} />
+            <Route path="/rl315/ubah/:id" element={<FormUbahRL315 />} />
 
-                        <Route path="/rl315" element={<RL315 />} />
-                        <Route path="/rl315/tambah" element={<FormTambahRL315 />} />
-                        <Route path="/rl315/ubah/:id" element={<FormUbahRL315 />} />
+            <Route path="/rl316" element={<RL316 />} />
+            <Route path="/rl316/tambah" element={<FormTambahRL316 />} />
+            <Route path="/rl316/ubah/:id" element={<FormUbahRL316 />} />
 
-                        <Route path="/rl316" element={<RL316 />} />
-                        <Route path="/rl316/tambah" element={<FormTambahRL316 />} />
-                        <Route path="/rl316/ubah/:id" element={<FormUbahRL316 />} />
+            <Route path="/rl317" element={<RL317 />} />
+            <Route path="/rl317/tambah" element={<FormTambahRL317 />} />
+            <Route path="/rl317/ubah/:id" element={<FormUbahRL317 />} />
 
-                        <Route path="/rl317" element={<RL317 />} />
-                        <Route path="/rl317/tambah" element={<FormTambahRL317 />} />
-                        <Route path="/rl317/ubah/:id" element={<FormUbahRL317 />} />
+            <Route path="/rl318" element={<RL318 />} />
+            <Route path="/rl318/tambah" element={<FormTambahRL318 />} />
+            <Route path="/rl318/ubah/:id" element={<FormUbahRL318 />} />
 
-                        <Route path="/rl318" element={<RL318 />} />
-                        <Route path="/rl318/tambah" element={<FormTambahRL318 />} />
-                        <Route path="/rl318/ubah/:id" element={<FormUbahRL318 />} />
+            <Route path="/rl319" element={<RL319 />} />
+            <Route path="/rl319/tambah" element={<FormTambahRL319 />} />
+            <Route path="/rl319/ubah/:id" element={<FormUbahRL319 />} />
 
-                        <Route path="/rl319" element={<RL319 />} />
-                        <Route path="/rl319/tambah" element={<FormTambahRL319 />} />
-                        <Route path="/rl319/ubah/:id" element={<FormUbahRL319 />} />
+            <Route path="/rl41" element={<RL41 />} />
+            <Route path="/rl41/tambah" element={<FormTambahRL41 />} />
+            <Route path="/rl41/ubah/:id" element={<FormUbahRL41 />} />
 
-                        <Route path="/rl41" element={<RL41 />} />
-                        <Route path="/rl41/tambah" element={<FormTambahRL41 />} />
-                        <Route path="/rl41/ubah/:id" element={<FormUbahRL41 />} />
+            <Route path="/rl42" element={<RL42 />} />
+            <Route path="/rl43" element={<RL43 />} />
 
-                        <Route path="/rl42" element={<RL42 />} />
-                        <Route path="/rl43" element={<RL43 />} />
+            <Route path="/MENURL51" element={<RL51danSatuSehat />} />
+            <Route
+              path="/RL51SATUSEHAT"
+              element={<Navigate to="/MENURL51" replace />}
+            />
+            <Route path="/RL51" element={<Navigate to="/MENURL51" replace />} />
+            <Route path="/rl51/tambah" element={<FormTambahRL51 />} />
+            <Route path="/rl51/edit/:id" element={<FormEditRL51 />} />
 
-                        <Route path="/MENURL51" element={<RL51danSatuSehat />} />
-                        <Route path="/RL51SATUSEHAT" element={<Navigate to="/MENURL51" replace />} />
-                        <Route path="/RL51" element={<Navigate to="/MENURL51" replace />} />
-                        <Route path="/rl51/tambah" element={<FormTambahRL51 />} />
-                        <Route path="/rl51/edit/:id" element={<FormEditRL51 />} />
+            <Route path="/rl52" element={<RL52 />} />
+            <Route path="/rl53" element={<RL53 />} />
 
-                        <Route path="/rl52" element={<RL52 />} />
-                        <Route path="/rl53" element={<RL53 />} />
+            <Route path="/absensi" element={<Absensi />} />
+          </Route>
 
-                        <Route path="/absensi" element={<Absensi />} />
-                    </Route>
-
-                    {/* 404 */}
-                    <Route path="*" element={<PageNotFound />} />
-
-                </Routes>
-            </BrowserRouter>
-        </CSRFTokenProvider>
-    );
+          {/* 404 */}
+          <Route path="*" element={<PageNotFound />} />
+        </Routes>
+        <ToastContainer />
+      </BrowserRouter>
+    </CSRFTokenProvider>
+  );
 }
 
 export default App;

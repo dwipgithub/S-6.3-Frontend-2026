@@ -207,6 +207,8 @@ function TabOne() {
   const [spinner, setSpinner] = useState(false);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [selectedRsID, setSelectedRsID] = useState(null);
+  const [selectedProvId, setSelectedProvId] = useState(null);
+  const [selectedKabId, setselectedKabId] = useState(null);
 
   const { CSRFToken } = useCSRFTokenContext();
 
@@ -341,11 +343,13 @@ function TabOne() {
 
   const provinsiChangeHandler = (e) => {
     const provinsiId = e.target.value;
+    setSelectedProvId(provinsiId);
     getKabKota(provinsiId);
   };
 
   const kabKotaChangeHandler = (e) => {
     const kabKotaId = e.target.value;
+    setselectedKabId(kabKotaId);
     getRumahSakit(kabKotaId);
   };
 
@@ -381,13 +385,32 @@ function TabOne() {
       } else {
         params.kabKotaId = id;
       }
+      if (id === 99999 || id === "9999") {
+        setLoadingRS(false);
+        setDaftarRumahSakit([
+          { id: "999999", nama: "ALL" }, // Sesuaikan key 'id' dan 'nama' dengan struktur data API Anda
+        ]);
+        return;
+      }
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
         params: params,
       });
-      setDaftarRumahSakit(response.data.data);
+
+      const daftarKabKota = [
+        {
+          id: "999999",
+          nama: "ALL Rumah Sakit",
+          alamat: "",
+          kab_kota_nama: "",
+          provinsi_nama: "",
+        }, // Sesuaikan key 'id' dan 'nama' dengan struktur API Anda
+        ...response.data.data,
+      ];
+
+      setDaftarRumahSakit(daftarKabKota);
     } catch (error) {}
     setLoadingRS(false);
   };
@@ -496,17 +519,83 @@ function TabOne() {
     setSpinner(false);
   };
 
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const downloadAllExcel = async (params) => {
+    setSpinner(true);
+    try {
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rllimatitiksatudownload",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+          responseType: "blob",
+        },
+      );
+
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+      const fileName = `rl51_${params.provId || "all"}_${params.kabId || "all"}_${params.periode}_${timestamp}.xlsx`;
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast("File berhasil diunduh", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    } catch (error) {
+      console.log(error);
+      toast("Gagal mengunduh file", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    }
+    setSpinner(false);
+  };
+
   const getRL = async (e) => {
     e.preventDefault();
 
-    if (user.jenisUserId == 3) {
+    if (
+      user.jenisUserId == 3 ||
+      user.jenisUserId == 2 ||
+      user.jenisUserId == 1
+    ) {
       if (!selectedRsID) {
         toast(`rumah sakit harus dipilih`, {
           position: toast.POSITION.TOP_RIGHT,
         });
-        setSpinner(false);
         return;
       }
+    }
+
+    const periode = `${tahun}-${bulan}`;
+    const rsIsAll = selectedRsID === "999999";
+
+    handleClose();
+
+    if (rsIsAll) {
+      // salah satu level di atasnya (provinsi/kabkota/rs) pasti ALL,
+      // karena daftar RS cuma berisi "ALL" saat itu terjadi
+      const params = { periode };
+
+      // provId hanya dikirim kalau provinsi dipilih spesifik (bukan ALL/99)
+      if (selectedProvId && selectedProvId !== 99 && selectedProvId !== "99") {
+        params.provId = selectedProvId;
+      }
+      // kabId hanya dikirim kalau kabkota dipilih spesifik (bukan ALL/9999)
+      if (selectedKabId && selectedKabId !== "9999") {
+        params.kabId = selectedKabId;
+      }
+
+      await downloadAllExcel(params);
+      return;
     }
 
     const filter = [];
@@ -576,11 +665,14 @@ function TabOne() {
         setShow(true);
         break;
       case 2:
+        setSelectedProvId(satKerId); // provinsi user sudah tetap, set manual
         getKabKota(satKerId);
         setBulan("01");
         setShow(true);
         break;
       case 3:
+        // setSelectedProvId(user.provinsiId); // kalau ada di token
+        setselectedKabId(satKerId); // kabkota user sudah tetap, set manual
         getRumahSakit(satKerId);
         setBulan("01");
         setShow(true);
@@ -616,6 +708,10 @@ function TabOne() {
 
   const getKabKota = async (provinsiId) => {
     try {
+      if (provinsiId === "99" || provinsiId === 99) {
+        setDaftarKabKota([{ id: "9999", nama: "ALL" }]);
+        return;
+      }
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
@@ -627,9 +723,18 @@ function TabOne() {
       };
       const results = await axiosJWT.get("/apisirs6v2/kabkota", customConfig);
 
-      const daftarKabKota = results.data.data.map((value) => {
+      // const daftarKabKota = results.data.data.map((value) => {
+      //   return value;
+      // });
+
+      const dataApi = results.data.data.map((value) => {
         return value;
       });
+
+      const daftarKabKota = [
+        { id: "9999", nama: "Select ALL Kabkota" }, // Sesuaikan key 'id' dan 'nama' dengan struktur API Anda
+        ...dataApi,
+      ];
 
       setDaftarKabKota(daftarKabKota);
     } catch (error) {
@@ -708,6 +813,20 @@ function TabOne() {
   };
 
   const handleDownloadExcel = async () => {
+    if (
+      user.jenisUserId == 3 ||
+      user.jenisUserId == 2 ||
+      user.jenisUserId == 1
+    ) {
+      if (!selectedRsID) {
+        toast.warn("Rumah sakit harus dipilih", {
+          position: "top-right", // Gunakan string langsung, bukan toast.POSITION
+          autoClose: 3000,
+        });
+        return;
+      }
+    }
+
     try {
       setSpinner(true);
 
@@ -919,6 +1038,13 @@ function TabOne() {
                     <option key={0} value={0}>
                       Pilih
                     </option>
+                    {user.jenisUserId === 1 || user.jenisUserId === 99 ? (
+                      <option key={99} value={99}>
+                        Pilih Semua Provinsi
+                      </option>
+                    ) : (
+                      <></>
+                    )}
                     {daftarProvinsi.map((nilai) => {
                       return (
                         <option key={nilai.id} value={nilai.id}>
