@@ -515,6 +515,7 @@ const RL33 = () => {
 
       await axiosJWT.get("/apisirs6v2/rltigatitiktigasatusehat", {
         headers,
+        timeout: 90000,
         params: {
           rsId: rsId,
           periode,

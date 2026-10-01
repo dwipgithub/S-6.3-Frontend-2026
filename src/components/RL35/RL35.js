@@ -547,8 +547,9 @@ const RL35 = () => {
         headers["X-API-Key"] = apiKey;
       }
 
-      await axiosJWT.get("/apisirs6v2/rltigatitiklimaSatusehat", {
+      await axiosJWT.get("/apisirs6v2/rltigatitiklimasatusehat", {
         headers,
+        timeout: 90000,
         params: {
           rsId: rsId,
           periode,
