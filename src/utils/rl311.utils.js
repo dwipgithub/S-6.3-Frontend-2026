@@ -1,21 +1,6 @@
 import * as XLSX from "xlsx-js-style";
 import { MONTHS } from "../constants/date";
 
-export const calculateTotals = (data = []) => {
-  return data.reduce(
-    (acc, item) => {
-      acc.jumlahItemObat += Number(item.jumlah_item_obat) || 0;
-      acc.jumlahItemObatRs += Number(item.jumlah_item_obat_rs) || 0;
-
-      return acc;
-    },
-    {
-      jumlahItemObat: 0,
-      jumlahItemObatRs: 0,
-    },
-  );
-};
-
 export const formatDate = (dateStr) => {
   if (!dateStr) return "-";
 
@@ -35,27 +20,33 @@ export const formatDate = (dateStr) => {
   return `${day} ${month} ${year}, ${hour}.${minute}.${second} WIB`;
 };
 
-export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
-  let totalItem = 0;
-  let totalItemRS = 0;
+export const calculateTotals = (data = []) => {
+  return data.reduce(
+    (acc, item) => {
+      acc.jumlah += Number(item.jumlah) || 0;
+
+      return acc;
+    },
+    {
+      jumlah: 0,
+    },
+  );
+};
+
+export const exportRL311ExcelSatuSehat = (data = [], periode) => {
+  let totalJumlah = 0;
 
   // ==========================================
   // DATA EXCEL
   // ==========================================
 
   const excelData = [
-    ["SIRS ONLINE RL 3.17 Farmasi Pengadaan Obat - SATUSEHAT"],
+    ["SIRS ONLINE RL 3.11 Gigi dan Mulut - SATUSEHAT"],
     [],
     ["Periode Data"],
-    [`Tahun : ${tahun}`],
+    [`Tahun : ${periode}`],
     [],
-    [
-      "No",
-      "Rumah Sakit",
-      "Golongan Obat",
-      "Jumlah Item Obat",
-      "Jumlah Item Obat yang Tersedia di Rumah Sakit",
-    ],
+    ["No", "Rumah Sakit", "Jenis Kegiatan", "Jumlah"],
   ];
 
   // ==========================================
@@ -63,12 +54,9 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   // ==========================================
 
   data.forEach((item, index) => {
-    const jumlahItem = Number(item.jumlah_item_obat) || 0;
+    const jumlah = Number(item.jumlah) || 0;
 
-    const jumlahItemRS = Number(item.jumlah_item_obat_rs) || 0;
-
-    totalItem += jumlahItem;
-    totalItemRS += jumlahItemRS;
+    totalJumlah += jumlah;
 
     const namaRumahSakit =
       item.organization_name ??
@@ -78,18 +66,10 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
       item.rs_name ??
       "-";
 
-    const namaGolonganObat =
-      item.nama_golongan_obat ??
-      item.rl_tiga_titik_tujuh_belas_golongan_obat?.nama ??
-      "-";
+    const jenisKegiatan =
+      item.rl_tiga_titik_sebelas_jenis_kegiatan?.nama_jenis_kegiatan ?? "-";
 
-    excelData.push([
-      index + 1,
-      namaRumahSakit,
-      namaGolonganObat,
-      jumlahItem,
-      jumlahItemRS,
-    ]);
+    excelData.push([index + 1, namaRumahSakit, jenisKegiatan, jumlah]);
   });
 
   // ==========================================
@@ -98,7 +78,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
 
   const totalRow = excelData.length;
 
-  excelData.push(["TOTAL", "", "", totalItem, totalItemRS]);
+  excelData.push(["TOTAL", "", "", totalJumlah]);
 
   // ==========================================
   // WORKSHEET
@@ -108,22 +88,22 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
 
   // ==========================================
   // MERGE JUDUL
-  // A1:E1
+  // A1:D1
   // ==========================================
 
   worksheet["!merges"] = [
     // ==========================================
     // JUDUL
-    // A1:E1
+    // A1:D1
     // ==========================================
     {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: 4 },
+      e: { r: 0, c: 3 },
     },
 
     // ==========================================
     // FOOTER TOTAL
-    // No. + Rumah Sakit + Golongan Obat
+    // No. + Rumah Sakit + Jenis Kegiatan
     // A:C
     // ==========================================
     {
@@ -139,9 +119,8 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   worksheet["!cols"] = [
     { wch: 8 }, // No
     { wch: 30 }, // Rumah Sakit
-    { wch: 40 }, // Golongan Obat
-    { wch: 20 }, // Jumlah Item Obat
-    { wch: 45 }, // Jumlah Item Obat RS
+    { wch: 45 }, // Jenis Kegiatan
+    { wch: 15 }, // Jumlah
   ];
 
   // ==========================================
@@ -172,7 +151,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   // ROW 6
   // ==========================================
 
-  for (let col = 0; col <= 4; col++) {
+  for (let col = 0; col <= 3; col++) {
     const cellAddress = XLSX.utils.encode_cell({
       r: 5,
       c: col,
@@ -200,7 +179,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   // ==========================================
 
   for (let row = 6; row < totalRow; row++) {
-    for (let col = 0; col <= 4; col++) {
+    for (let col = 0; col <= 3; col++) {
       const cellAddress = XLSX.utils.encode_cell({
         r: row,
         c: col,
@@ -216,9 +195,9 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
           sz: 12,
         },
         alignment: {
-          // No dan angka berada di tengah
-          // Rumah Sakit dan Golongan Obat kiri
-          horizontal: col === 0 || col >= 3 ? "center" : "left",
+          // No dan Jumlah = tengah
+          // Rumah Sakit dan Jenis Kegiatan = kiri
+          horizontal: col === 0 || col === 3 ? "center" : "left",
           vertical: "center",
           wrapText: true,
         },
@@ -231,7 +210,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
   // TOTAL
   // ==========================================
 
-  for (let col = 0; col <= 4; col++) {
+  for (let col = 0; col <= 3; col++) {
     const cellAddress = XLSX.utils.encode_cell({
       r: totalRow,
       c: col,
@@ -308,7 +287,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
     { hpt: 20 }, // Row 3
     { hpt: 20 }, // Row 4
     { hpt: 15 }, // Row 5
-    { hpt: 45 }, // Row 6
+    { hpt: 35 }, // Row 6
   ];
 
   // ==========================================
@@ -317,11 +296,11 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
 
   const workbook = XLSX.utils.book_new();
 
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Farmasi Pengadaan Obat");
+  XLSX.utils.book_append_sheet(workbook, worksheet, "RL311");
 
   // ==========================================
   // EXPORT
   // ==========================================
 
-  XLSX.writeFile(workbook, `RL317-Farmasi Pengadaan Obat-${tahun}.xlsx`);
+  XLSX.writeFile(workbook, `RL311-Gigi dan Mulut-${periode}.xlsx`);
 };

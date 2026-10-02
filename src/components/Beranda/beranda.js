@@ -1,5 +1,3 @@
-const Beranda = () => {
+const Beranda = () => {};
 
-}
-
-export default Beranda
+export default Beranda;

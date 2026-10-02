@@ -1,18 +1,16 @@
-import React from "react";
-
-import style from "./RL317.module.css";
-
-import RL317Table from "./RL317SatuSehatTable";
-import RL317Toolbar from "./RL317SatuSehatToolbar";
-
-import { exportRL317ExcelSatuSehat, formatDate } from "../../utils/rl317.utils";
-
-import { useRL317, useRL317Bootstrap } from "../../hooks/useRL317";
 import { ToastContainer } from "react-toastify";
-import SatuSehatCardRow from "./RL317SatuSehatCardRow";
 
-const RL317SatuSehat = () => {
-  const { axiosJWT, user, token, CSRFToken } = useRL317Bootstrap();
+import style from "./RL311.module.css";
+
+import RL311Toolbar from "./RL311SatuSehatToolbar";
+import SatuSehatCardRow from "./RL311SatuSehatCardRow";
+import RL311SatuSehatTable from "./RL311SatuSehatTable";
+
+import { useRL311, useRL311Bootstrap } from "../../hooks/useRL311";
+import { exportRL311ExcelSatuSehat } from "../../utils/rl311.utils";
+
+const RL311SatuSehat = () => {
+  const { axiosJWT, user, token, CSRFToken } = useRL311Bootstrap();
 
   const {
     dataRL,
@@ -31,10 +29,10 @@ const RL317SatuSehat = () => {
     fetchData,
     handleManualSync,
     MANUAL_SYNC_COOLDOWN,
-  } = useRL317(axiosJWT, token, CSRFToken, user);
+  } = useRL311(axiosJWT, token, CSRFToken, user);
 
   const handleDownloadExcel = () => {
-    exportRL317ExcelSatuSehat(dataRL, tahun);
+    exportRL311ExcelSatuSehat(dataRL, tahun);
   };
 
   return (
@@ -46,7 +44,8 @@ const RL317SatuSehat = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <RL317Toolbar
+          <RL311Toolbar
+            dataRL={dataRL}
             tahun={tahun}
             setTahun={setTahun}
             handleManualSync={handleManualSync}
@@ -79,7 +78,7 @@ const RL317SatuSehat = () => {
                 }}
               >
                 <h5 style={{ fontSize: "14px", margin: 0 }}>
-                  Filtered By {filterLabel.join(", ")}
+                  Filtered By {filterLabel}
                 </h5>
               </div>
             )}
@@ -87,7 +86,7 @@ const RL317SatuSehat = () => {
         </div>
 
         {/* Main Content */}
-        <RL317Table
+        <RL311SatuSehatTable
           isFilterApplied={isFilterApplied}
           loadingTable={loadingTable}
           dataRL={dataRL}
@@ -101,4 +100,4 @@ const RL317SatuSehat = () => {
   );
 };
 
-export default RL317SatuSehat;
+export default RL311SatuSehat;

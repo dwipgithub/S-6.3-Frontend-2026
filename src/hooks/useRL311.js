@@ -4,13 +4,13 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 import {
-  getRL318DataSatuSehat,
-  syncRL318DataSatuSehat,
-} from "../services/rl318.services";
+  getRL311DataSatuSehat,
+  syncRL311DataSatuSehat,
+} from "../services/rl311.services";
 import { useCSRFTokenContext } from "../components/Context/CSRFTokenContext";
 import { useAuthAxios } from "./useAuthAxios";
 
-export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
+export const useRL311 = (axiosJWT, token, CSRFToken, currentUser) => {
   const [dataRL, setDataRL] = useState([]);
   const [tahun, setTahun] = useState(new Date().getFullYear());
   const [loadingTable, setLoadingTable] = useState(false); // loading di dalam tabel
@@ -40,7 +40,7 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
       if (!isBackground) setLoadingTable(true);
 
       try {
-        const res = await getRL318DataSatuSehat({
+        const res = await getRL311DataSatuSehat({
           axiosJWT,
           rsId: currentUser.satKerId,
           tahun: currentTahun,
@@ -76,7 +76,7 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
 
       pollingRef.current = setInterval(async () => {
         try {
-          const res = await getRL318DataSatuSehat({
+          const res = await getRL311DataSatuSehat({
             axiosJWT,
             rsId: currentUser.satKerId,
             tahun: currentTahun,
@@ -158,15 +158,13 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
   const handleClose = () => setShow(false);
 
   const MANUAL_SYNC_COOLDOWN = 5; // menit
+
   const MANUAL_SYNC_COOLDOWN_SECONDS = MANUAL_SYNC_COOLDOWN * 60;
 
   const [now, setNow] = useState(Date.now());
 
   /**
    * Update waktu setiap detik selama cooldown.
-   *
-   * Cooldown dihitung berdasarkan sync.lastSync dari backend,
-   * sehingga countdown tetap akurat walaupun halaman di-refresh.
    */
   useEffect(() => {
     if (!sync.lastSync || sync.isUpdating) {
@@ -180,30 +178,13 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
 
     updateNow();
 
-    const interval = setInterval(() => {
-      const currentTime = Date.now();
-      const remaining = Math.max(
-        0,
-        Math.ceil(
-          (new Date(sync.lastSync).getTime() +
-            MANUAL_SYNC_COOLDOWN_SECONDS * 1000 -
-            currentTime) /
-            1000,
-        ),
-      );
-
-      setNow(currentTime);
-
-      if (remaining <= 0) {
-        clearInterval(interval);
-      }
-    }, 1000);
+    const interval = setInterval(updateNow, 1000);
 
     return () => clearInterval(interval);
-  }, [sync.lastSync, sync.isUpdating, MANUAL_SYNC_COOLDOWN_SECONDS]);
+  }, [sync.lastSync, sync.isUpdating]);
 
   /**
-   * Hitung waktu terakhir sync dalam milliseconds.
+   * Waktu terakhir sinkronisasi.
    */
   const lastSyncTime = sync.lastSync ? new Date(sync.lastSync).getTime() : null;
 
@@ -222,15 +203,15 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
 
   /**
    * Tombol SYNC hanya aktif jika:
-   * - tidak sedang sync
-   * - tidak sedang manual syncing
+   * - tidak sedang update dari backend
+   * - tidak sedang manual sync
    * - cooldown sudah selesai
    */
   const canSync =
     !sync.isUpdating && !isManualSyncing && cooldownRemainingSeconds <= 0;
 
   /**
-   * Format countdown menjadi:
+   * Format countdown:
    * 4:59
    * 4:58
    * 4:57
@@ -252,7 +233,7 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
     setLoadingTable(true);
 
     try {
-      await syncRL318DataSatuSehat(
+      await syncRL311DataSatuSehat(
         axiosJWT,
         user.satKerId,
         tahun,
@@ -291,7 +272,7 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
   };
 };
 
-export const useRL318Bootstrap = () => {
+export const useRL311Bootstrap = () => {
   const { CSRFToken } = useCSRFTokenContext();
 
   const [token, setToken] = useState("");

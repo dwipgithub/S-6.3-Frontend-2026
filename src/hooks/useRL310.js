@@ -4,14 +4,18 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 import {
-  getRL318DataSatuSehat,
-  syncRL318DataSatuSehat,
-} from "../services/rl318.services";
+  getRL310DataSatuSehat,
+  syncRL310DataSatuSehat,
+} from "../services/rl310.services";
 import { useCSRFTokenContext } from "../components/Context/CSRFTokenContext";
 import { useAuthAxios } from "./useAuthAxios";
+import { MONTHS } from "../constants/date";
 
-export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
+export const useRL310 = (axiosJWT, token, CSRFToken, currentUser) => {
+  const currentMonth = new Date().getMonth() + 1; // getMonth() returns 0-11
+
   const [dataRL, setDataRL] = useState([]);
+  const [bulan, setBulan] = useState(currentMonth);
   const [tahun, setTahun] = useState(new Date().getFullYear());
   const [loadingTable, setLoadingTable] = useState(false); // loading di dalam tabel
   const [filterLabel, setFilterLabel] = useState([]);
@@ -34,16 +38,19 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
       pageNumber = 1,
       isBackground = false,
       currentUser = user,
+      currentBulan = bulan,
       currentTahun = tahun,
     ) => {
       if (!currentUser.satKerId) return;
       if (!isBackground) setLoadingTable(true);
 
       try {
-        const res = await getRL318DataSatuSehat({
+        const periode = `${currentTahun}-${String(currentBulan).padStart(2, "0")}`;
+
+        const res = await getRL310DataSatuSehat({
           axiosJWT,
           rsId: currentUser.satKerId,
-          tahun: currentTahun,
+          periode: periode,
           pageNumber,
           limit,
         });
@@ -67,19 +74,21 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
         if (!isBackground) setLoadingTable(false);
       }
     },
-    [axiosJWT, user, tahun],
+    [axiosJWT, user, bulan, tahun],
   );
 
   const startPolling = useCallback(
-    (currentUser, currentTahun) => {
+    (currentUser, currentBulan, currentTahun) => {
       clearInterval(pollingRef.current);
 
       pollingRef.current = setInterval(async () => {
         try {
-          const res = await getRL318DataSatuSehat({
+          const periode = `${currentTahun}-${String(currentBulan).padStart(2, "0")}`;
+
+          const res = await getRL310DataSatuSehat({
             axiosJWT,
             rsId: currentUser.satKerId,
-            tahun: currentTahun,
+            periode: periode,
             pageNumber: 1,
             limit,
           });
@@ -125,6 +134,14 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
     async (e) => {
       e.preventDefault();
 
+      if (!bulan) {
+        toast("Pilih Bulan Terlebih Dahulu", {
+          type: "error",
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        return;
+      }
+
       if (!tahun) {
         toast("Pilih Tahun Terlebih Dahulu", {
           type: "error",
@@ -133,14 +150,17 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
         return;
       }
 
-      setFilterLabel([`Periode: ${tahun}`]);
+      const monthLabel =
+        MONTHS.find((m) => m.value === String(bulan))?.label ?? bulan;
+
+      setFilterLabel([`Periode: ${monthLabel} ${tahun}`]);
       setIsFilterApplied(true);
       setDataRL([]);
       setLoadingTable(true); // tampilkan loading di tabel
       handleClose();
 
       // Fetch pertama kali
-      const latestSync = await fetchData(1, false, user, tahun);
+      const latestSync = await fetchData(1, false, user, bulan, tahun);
 
       if (
         latestSync.isUpdating ||
@@ -148,25 +168,23 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
         latestSync.status === "syncing"
       ) {
         setLoadingTable(true);
-        startPolling(user, tahun);
+        startPolling(user, bulan, tahun);
       }
     },
-    [tahun, user, fetchData, startPolling],
+    [bulan, tahun, user, fetchData, startPolling],
   );
 
   const handleShow = () => setShow(true);
   const handleClose = () => setShow(false);
 
   const MANUAL_SYNC_COOLDOWN = 5; // menit
+
   const MANUAL_SYNC_COOLDOWN_SECONDS = MANUAL_SYNC_COOLDOWN * 60;
 
   const [now, setNow] = useState(Date.now());
 
   /**
    * Update waktu setiap detik selama cooldown.
-   *
-   * Cooldown dihitung berdasarkan sync.lastSync dari backend,
-   * sehingga countdown tetap akurat walaupun halaman di-refresh.
    */
   useEffect(() => {
     if (!sync.lastSync || sync.isUpdating) {
@@ -180,30 +198,13 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
 
     updateNow();
 
-    const interval = setInterval(() => {
-      const currentTime = Date.now();
-      const remaining = Math.max(
-        0,
-        Math.ceil(
-          (new Date(sync.lastSync).getTime() +
-            MANUAL_SYNC_COOLDOWN_SECONDS * 1000 -
-            currentTime) /
-            1000,
-        ),
-      );
-
-      setNow(currentTime);
-
-      if (remaining <= 0) {
-        clearInterval(interval);
-      }
-    }, 1000);
+    const interval = setInterval(updateNow, 1000);
 
     return () => clearInterval(interval);
-  }, [sync.lastSync, sync.isUpdating, MANUAL_SYNC_COOLDOWN_SECONDS]);
+  }, [sync.lastSync, sync.isUpdating]);
 
   /**
-   * Hitung waktu terakhir sync dalam milliseconds.
+   * Waktu terakhir sinkronisasi.
    */
   const lastSyncTime = sync.lastSync ? new Date(sync.lastSync).getTime() : null;
 
@@ -222,15 +223,15 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
 
   /**
    * Tombol SYNC hanya aktif jika:
-   * - tidak sedang sync
-   * - tidak sedang manual syncing
+   * - tidak sedang update dari backend
+   * - tidak sedang manual sync
    * - cooldown sudah selesai
    */
   const canSync =
     !sync.isUpdating && !isManualSyncing && cooldownRemainingSeconds <= 0;
 
   /**
-   * Format countdown menjadi:
+   * Format countdown:
    * 4:59
    * 4:58
    * 4:57
@@ -248,27 +249,30 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
     console.log("Manual Sync triggered");
     if (!canSync) return;
 
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+
     setIsManualSyncing(true); // ← langsung disable tombol saat klik
     setLoadingTable(true);
 
     try {
-      await syncRL318DataSatuSehat(
+      await syncRL310DataSatuSehat(
         axiosJWT,
         user.satKerId,
-        tahun,
+        periode,
         token,
         CSRFToken,
       );
 
-      startPolling(user, tahun);
+      startPolling(user, bulan, tahun);
     } catch (err) {
       console.error(err);
       setLoadingTable(false);
     }
-  }, [axiosJWT, user, tahun, token, CSRFToken, startPolling, canSync]);
+  }, [axiosJWT, user, bulan, tahun, token, CSRFToken, startPolling, canSync]);
 
   return {
     dataRL,
+    bulan,
     tahun,
     loadingTable,
     show,
@@ -283,6 +287,7 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
     getRL,
     handleShow,
     handleClose,
+    setBulan,
     setTahun,
     fetchData,
     startPolling,
@@ -291,7 +296,7 @@ export const useRL318 = (axiosJWT, token, CSRFToken, currentUser) => {
   };
 };
 
-export const useRL318Bootstrap = () => {
+export const useRL310Bootstrap = () => {
   const { CSRFToken } = useCSRFTokenContext();
 
   const [token, setToken] = useState("");

@@ -8,6 +8,10 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
+
+if (!toast.POSITION) {
+  toast.POSITION = { TOP_RIGHT: "top-right" };
+}
 // import Table from 'react-bootstrap/Table'
 
 // ✅ Semua import di atas, baru kode executable di bawah ini

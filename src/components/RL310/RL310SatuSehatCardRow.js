@@ -5,9 +5,8 @@ import {
   FaSlidersH,
   FaSyncAlt,
 } from "react-icons/fa";
-import { HiSaveAs } from "react-icons/hi";
-import { formatDate } from "../../utils/rl317.utils";
 import { SiMicrosoftexcel } from "react-icons/si";
+import { formatDate } from "../../utils/rl310.utils";
 
 const SatuSehatCardRow = ({ sync, manualSyncCooldown }) => {
   return (
@@ -242,8 +241,8 @@ const SatuSehatCardRow = ({ sync, manualSyncCooldown }) => {
               lineHeight: 1.6,
             }}
           >
-            Data yang ditampilkan bersumber dari  <strong>SATUSEHAT</strong>{" "}
-            yang sudah tersimpan dalam database <strong>SIRS</strong>.
+            Data yang ditampilkan bersumber dari <strong>SATUSEHAT</strong> yang
+            sudah tersimpan dalam database <strong>SIRS</strong>.
           </p>
           <div style={{ position: "relative", flexShrink: 0 }}>
             <FaDatabase size={38} color="#bfdbfe" />

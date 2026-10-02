@@ -16,23 +16,54 @@ const RL318Table = ({
 }) => {
   const totals = calculateTotals(dataRL);
 
-  // Komponen loading di dalam tabel
-  const TableLoading = () => (
+  const FullLoading = () => (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
         justifyContent: "center",
-        padding: "60px 0",
+        alignItems: "center",
+        width: "100%",
+        minHeight: "350px",
+        textAlign: "center",
         gap: 16,
       }}
     >
       <Spinner animation="border" variant="primary" />
-      <p style={{ margin: 0, color: "#555", fontSize: 14 }}>
+      <p style={{ margin: 0 }}>
         Sedang mengambil data dari SatuSehat, mohon tunggu...
       </p>
     </div>
+  );
+
+  // Komponen loading di dalam tabel
+  const TableLoading = () => (
+    <tr>
+      <td colSpan={6}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "250px",
+            gap: 16,
+            textAlign: "center",
+          }}
+        >
+          <Spinner animation="border" variant="primary" />
+          <p
+            style={{
+              margin: 0,
+              color: "#555",
+              fontSize: 14,
+            }}
+          >
+            Sedang mengambil data dari SatuSehat, mohon tunggu...
+          </p>
+        </div>
+      </td>
+    </tr>
   );
 
   return (
@@ -52,7 +83,7 @@ const RL318Table = ({
           <strong>Silakan pilih filter terlebih dahulu.</strong>
         </div>
       ) : loadingTable && dataRL.length === 0 ? (
-        <TableLoading />
+        <FullLoading />
       ) : !loadingTable && dataRL.length === 0 && sync.status === "success" ? (
         <div
           style={{

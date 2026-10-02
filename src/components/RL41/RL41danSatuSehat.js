@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
@@ -29,6 +35,9 @@ import * as XLSX from "xlsx";
 import { SiMicrosoftexcel } from "react-icons/si";
 import { FaFilter } from "react-icons/fa";
 import Pagination from "../Pagination/Pagination.js";
+import SyncButton from "../SyncButton/SyncButton.js";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 export default function TabMenu() {
   const [activeTab, setActiveTab] = useState("tab1");
@@ -126,7 +135,7 @@ export default function TabMenu() {
             </li>
 
             {/* TAB SATUSEHAT */}
-            {user.jenisUserId === 4 && statusSatset === 1 && (
+            {statusSatset === 1 && (
               <li className="nav-item">
                 <button
                   style={{ color: activeTab === "tab2" ? "#00b9ad" : "black" }}
@@ -202,6 +211,8 @@ function TabOne() {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
   const [selectedRsID, setSelectedRsID] = useState(null);
+  const [selectedProvId, setSelectedProvId] = useState(null);
+  const [selectedKabId, setselectedKabId] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -334,11 +345,13 @@ function TabOne() {
 
   const provinsiChangeHandler = (e) => {
     const provinsiId = e.target.value;
+    setSelectedProvId(provinsiId);
     getKabKota(provinsiId);
   };
 
   const kabKotaChangeHandler = (e) => {
     const kabKotaId = e.target.value;
+    setselectedKabId(kabKotaId);
     getRumahSakit(kabKotaId);
   };
 
@@ -357,13 +370,32 @@ function TabOne() {
       } else {
         params.kabKotaId = id;
       }
+      if (id === 99999 || id === "9999") {
+        setLoadingRS(false);
+        setDaftarRumahSakit([
+          { id: "999999", nama: "ALL" }, // Sesuaikan key 'id' dan 'nama' dengan struktur data API Anda
+        ]);
+        return;
+      }
       const response = await axiosJWT.get("/apisirs6v2/rumahsakit", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
         params: params,
       });
-      setDaftarRumahSakit(response.data.data);
+
+      const daftarKabKota = [
+        {
+          id: "999999",
+          nama: "ALL Rumah Sakit",
+          alamat: "",
+          kab_kota_nama: "",
+          provinsi_nama: "",
+        }, // Sesuaikan key 'id' dan 'nama' dengan struktur API Anda
+        ...response.data.data,
+      ];
+
+      setDaftarRumahSakit(daftarKabKota);
     } catch (error) {}
     setLoadingRS(false);
   };
@@ -470,10 +502,94 @@ function TabOne() {
     setSpinner(false);
   };
 
+  // const getRL = async (e) => {
+  //   e.preventDefault();
+
+  //   if (
+  //     user.jenisUserId == 3 ||
+  //     user.jenisUserId == 2 ||
+  //     user.jenisUserId == 1
+  //   ) {
+  //     if (!selectedRsID) {
+  //       toast(`rumah sakit harus dipilih`, {
+  //         position: toast.POSITION.TOP_RIGHT,
+  //       });
+  //       return;
+  //     }
+  //   }
+
+  //   const filter = [];
+  //   filter.push("Nama Rumah Sakit: " + rumahSakit.nama);
+  //   filter.push("Periode: " + `${tahun}-${bulan}`);
+  //   setFilterLabel(filter);
+
+  //   setNamaFile(`rl41_${rumahSakit.id}_${tahun}-${bulan}-01`);
+
+  //   handleClose();
+  //   setActiveTab("tab1");
+  //   setIsFilterApplied(true);
+
+  //   await fetchRL(1); // ⬅️ mulai dari halaman 1
+  //   await getValidasi();
+  // };
+
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const downloadAllExcel = async (params) => {
+    setSpinner(true);
+    try {
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rlempattitiksatudownload",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+          responseType: "blob",
+        },
+      );
+
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+      let fileName = `rl41_${params.rsId || params.provId || "all"}_${params.kabId || "all"}_${params.periode}_${timestamp}.xlsx`;
+
+      // Kalau backend kirim nama file lewat header, pakai itu (lebih akurat)
+      const disposition = response.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast("File berhasil diunduh", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    } catch (error) {
+      console.log(error);
+      toast("Gagal mengunduh file", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    }
+    setSpinner(false);
+  };
+
   const getRL = async (e) => {
     e.preventDefault();
 
-    if (user.jenisUserId == 3) {
+    if (
+      user.jenisUserId == 3 ||
+      user.jenisUserId == 2 ||
+      user.jenisUserId == 1
+    ) {
       if (!selectedRsID) {
         toast(`rumah sakit harus dipilih`, {
           position: toast.POSITION.TOP_RIGHT,
@@ -482,18 +598,41 @@ function TabOne() {
       }
     }
 
-    const filter = [];
-    filter.push("Nama Rumah Sakit: " + rumahSakit.nama);
-    filter.push("Periode: " + `${tahun}-${bulan}`);
-    setFilterLabel(filter);
-
-    setNamaFile(`rl41_${rumahSakit.id}_${tahun}-${bulan}-01`);
+    const periode = `${tahun}-${bulan}`;
+    const rsIsAll = selectedRsID === "999999";
 
     handleClose();
+
+    if (rsIsAll) {
+      // salah satu level di atasnya (provinsi/kabkota/rs) pasti ALL,
+      // karena daftar RS cuma berisi "ALL" saat itu terjadi
+      const params = { periode };
+
+      // provId hanya dikirim kalau provinsi dipilih spesifik (bukan ALL/99)
+      if (selectedProvId && selectedProvId !== 99 && selectedProvId !== "99") {
+        params.provId = selectedProvId;
+      }
+      // kabId hanya dikirim kalau kabkota dipilih spesifik (bukan ALL/9999)
+      if (selectedKabId && selectedKabId !== "9999") {
+        params.kabId = selectedKabId;
+      }
+
+      await downloadAllExcel(params);
+      return;
+    }
+
+    // RS spesifik dipilih → flow tabel seperti biasa
+    const filter = [];
+    filter.push("Nama Rumah Sakit: " + rumahSakit.nama);
+    filter.push("Periode: " + periode);
+    setFilterLabel(filter);
+
+    setNamaFile(`rl41_${rumahSakit.id}_${periode}-01`);
+
     setActiveTab("tab1");
     setIsFilterApplied(true);
 
-    await fetchRL(1); // ⬅️ mulai dari halaman 1
+    await fetchRL(1);
     await getValidasi();
   };
 
@@ -509,11 +648,14 @@ function TabOne() {
         setShow(true);
         break;
       case 2:
+        setSelectedProvId(satKerId); // provinsi user sudah tetap, set manual
         getKabKota(satKerId);
         setBulan("01");
         setShow(true);
         break;
       case 3:
+        // setSelectedProvId(user.provinsiId); // kalau ada di token
+        setselectedKabId(satKerId); // kabkota user sudah tetap, set manual
         getRumahSakit(satKerId);
         setBulan("01");
         setShow(true);
@@ -549,6 +691,11 @@ function TabOne() {
 
   const getKabKota = async (provinsiId) => {
     try {
+      if (provinsiId === "99" || provinsiId === 99) {
+        setDaftarKabKota([{ id: "9999", nama: "ALL" }]);
+        return;
+      }
+
       const customConfig = {
         headers: {
           "Content-Type": "application/json",
@@ -560,9 +707,19 @@ function TabOne() {
       };
       const results = await axiosJWT.get("/apisirs6v2/kabkota", customConfig);
 
-      const daftarKabKota = results.data.data.map((value) => {
+      // const daftarKabKota = results.data.data.map((value) => {
+      //   return value;
+      // });
+
+      const dataApi = results.data.data.map((value) => {
         return value;
       });
+
+      // 2. Gabungkan opsi "Pilih" di awal array dengan data dari API
+      const daftarKabKota = [
+        { id: "9999", nama: "Select ALL Kabkota" }, // Sesuaikan key 'id' dan 'nama' dengan struktur API Anda
+        ...dataApi,
+      ];
 
       setDaftarKabKota(daftarKabKota);
     } catch (error) {
@@ -680,164 +837,44 @@ function TabOne() {
   };
 
   const handleDownloadExcel = async () => {
-    try {
-      setSpinner(true);
+    const periode = `${tahun}-${bulan}`;
 
-      const res = await axiosJWT.get(
-        "/apisirs6v2/rlempattitiksatu", // ← API GET ALL
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            rsId: rumahSakit.id,
-            periode: `${tahun}-${bulan}`,
-          },
-        },
-      );
-
-      const allData = res.data.data; // sesuaikan struktur response
-
-      const header = [
-        "No",
-        "Kode ICD-10",
-        "Diagnosis Penyakit",
-        "< 1 Jam L",
-        "< 1 Jam P",
-        "1 - 23 Jam L",
-        "1 - 23 Jam P",
-        "1 - 7 Hari L",
-        "1 - 7 Hari P",
-        "8 - 28 Hari L",
-        "8 - 28 Hari P",
-        "29 Hari - <3 Bulan L",
-        "29 Hari - <3 Bulan P",
-        "3 - <6 Bulan L",
-        "3 - <6 Bulan P",
-        "6 - 11 Bulan L",
-        "6 - 11 Bulan P",
-        "1 - 4 Tahun L",
-        "1 - 4 Tahun P",
-        "5 - 9 Tahun L",
-        "5 - 9 Tahun P",
-        "10 - 14 Tahun L",
-        "10 - 14 Tahun P",
-        "15 - 19 Tahun L",
-        "15 - 19 Tahun P",
-        "20 - 24 Tahun L",
-        "20 - 24 Tahun P",
-        "25 - 29 Tahun L",
-        "25 - 29 Tahun P",
-        "30 - 34 Tahun L",
-        "30 - 34 Tahun P",
-        "35 - 39 Tahun L",
-        "35 - 39 Tahun P",
-        "40 - 44 Tahun L",
-        "40 - 44 Tahun P",
-        "45 - 49 Tahun L",
-        "45 - 49 Tahun P",
-        "50 - 54 Tahun L",
-        "50 - 54 Tahun P",
-        "55 - 59 Tahun L",
-        "55 - 59 Tahun P",
-        "60 - 64 Tahun L",
-        "60 - 64 Tahun P",
-        "65 - 69 Tahun L",
-        "65 - 69 Tahun P",
-        "70 - 74 Tahun L",
-        "70 - 74 Tahun P",
-        "75 - 79 Tahun L",
-        "75 - 79 Tahun P",
-        "80 - 84 Tahun L",
-        "80 - 84 Tahun P",
-        "≥ 85 Tahun L",
-        "≥ 85 Tahun P",
-        "Hidup & Mati L",
-        "Hidup & Mati P",
-        "Total Hidup & Mati",
-        "Keluar Mati L",
-        "Keluar Mati P",
-        "Total Keluar Mati",
-      ];
-
-      const body = allData.map((value, index) => [
-        index + 1,
-        value.icd.icd_code,
-        value.icd.description_code,
-        value.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
-        value.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
-        value.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
-        value.jmlh_pas_hidup_mati_umur_gen_1_23jam_p,
-        value.jmlh_pas_hidup_mati_umur_gen_1_7hr_l,
-        value.jmlh_pas_hidup_mati_umur_gen_1_7hr_p,
-        value.jmlh_pas_hidup_mati_umur_gen_8_28hr_l,
-        value.jmlh_pas_hidup_mati_umur_gen_8_28hr_p,
-        value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l,
-        value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p,
-        value.jmlh_pas_hidup_mati_umur_gen_3_6bln_l,
-        value.jmlh_pas_hidup_mati_umur_gen_3_6bln_p,
-        value.jmlh_pas_hidup_mati_umur_gen_6_11bln_l,
-        value.jmlh_pas_hidup_mati_umur_gen_6_11bln_p,
-        value.jmlh_pas_hidup_mati_umur_gen_1_4th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_1_4th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_5_9th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_5_9th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_10_14th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_10_14th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_15_19th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_15_19th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_20_24th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_20_24th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_25_29th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_25_29th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_30_34th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_30_34th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_35_39th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_35_39th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_40_44th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_40_44th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_45_49th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_45_49th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_50_54th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_50_54th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_55_59th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_55_59th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_60_64th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_60_64th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_65_69th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_65_69th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_70_74th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_70_74th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_75_79th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_75_79th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_80_84th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_80_84th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_lebih85th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_lebih85th_p,
-        value.jmlh_pas_hidup_mati_gen_l,
-        value.jmlh_pas_hidup_mati_gen_p,
-        value.total_pas_hidup_mati,
-        value.jmlh_pas_keluar_mati_gen_l,
-        value.jmlh_pas_keluar_mati_gen_p,
-        value.total_pas_keluar_mati,
-      ]);
-
-      downloadExcel({
-        fileName: namafile,
-        sheet: "RL 4.1",
-        tablePayload: {
-          header,
-          body,
-        },
+    if (user.jenisUserId === 4) {
+      // Role 4: selalu RS sendiri
+      await downloadAllExcel({
+        rsId: user.satKerId,
+        periode,
       });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSpinner(false);
+      return;
+    }
+
+    // Role 1/2/3: wajib pilih RS dulu lewat filter (modal), sama seperti validasi sebelumnya
+    if (!selectedRsID) {
+      toast.warn("Rumah sakit harus dipilih", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      return;
+    }
+
+    if (selectedRsID === "999999") {
+      // RS = ALL -> kirim provId/kabId (bukan rsId), sama seperti logic di getRL untuk mode ALL
+      const params = { periode };
+      if (selectedProvId && selectedProvId !== "99" && selectedProvId !== 99) {
+        params.provId = selectedProvId;
+      }
+      if (selectedKabId && selectedKabId !== "9999") {
+        params.kabId = selectedKabId;
+      }
+      await downloadAllExcel(params);
+    } else {
+      // RS spesifik -> kirim rsId
+      await downloadAllExcel({
+        rsId: selectedRsID,
+        periode,
+      });
     }
   };
-
   const [activeTab, setActiveTab] = useState("tab1");
 
   const handleTabClick = (tab) => {
@@ -851,6 +888,17 @@ function TabOne() {
     user.jenisUserId === 4
       ? { no: "0px", aksi: "35px", icd: "100px", diag: "190px" }
       : { no: "0px", icd: "40px", diag: "140px" };
+
+  const isDownloadDisabled = () => {
+    // if (!bulan || !tahun) return true;
+
+    // if (user.jenisUserId === 4) {
+    //   return false;
+    // }
+
+    // Lebih strict: filter harus benar-benar sudah "Terapkan"
+    return !isFilterApplied;
+  };
 
   return (
     <div
@@ -875,6 +923,7 @@ function TabOne() {
       )}
 
       <ToastContainer />
+
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
           <Modal.Title>Filter</Modal.Title>
@@ -897,6 +946,13 @@ function TabOne() {
                     <option key={0} value={0}>
                       Pilih
                     </option>
+                    {user.jenisUserId === 1 || user.jenisUserId === 99 ? (
+                      <option key={99} value={99}>
+                        Pilih Semua Provinsi
+                      </option>
+                    ) : (
+                      <></>
+                    )}
                     {daftarProvinsi.map((nilai) => {
                       return (
                         <option key={nilai.id} value={nilai.id}>
@@ -1091,7 +1147,6 @@ function TabOne() {
           </Modal.Body>
           <Modal.Footer>
             <div className="mt-3 mb-3">
-              <ToastContainer />
               <button type="submit" className={style.btnPrimary}>
                 <HiSaveAs size={20} /> Terapkan
               </button>
@@ -1117,7 +1172,15 @@ function TabOne() {
             <button className={style.btnPrimary} onClick={handleShow}>
               Filter
             </button>
-            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
+            <button
+              className={style.btnPrimary}
+              onClick={handleDownloadExcel}
+              disabled={isDownloadDisabled()}
+              style={{
+                opacity: isDownloadDisabled() ? 0.5 : 1,
+                cursor: isDownloadDisabled() ? "not-allowed" : "pointer",
+              }}
+            >
               Download
             </button>
           </div>
@@ -1791,8 +1854,6 @@ function TabOne() {
                       (user.jenisUserId === 3 ||
                         (user.jenisUserId === 4 && idValidasi)) && (
                         <form onSubmit={simpanValidasi}>
-                          <ToastContainer />
-
                           <div className={style.validasiFormGroup}>
                             <label htmlFor="statusValidasi">Status</label>
                             <select
@@ -1877,6 +1938,13 @@ function TabTwo() {
   const { CSRFToken } = useCSRFTokenContext();
   const pollingRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [selectedRsID, setSelectedRsID] = useState(null);
+  const [loadingRS, setLoadingRS] = useState(false);
+  const [namafile, setNamaFile] = useState("");
+
+  // --- Tambahan untuk filter bertingkat (role 1/2/3) ---
+  const [selectedProvId, setSelectedProvId] = useState(null);
+  const [selectedKabId, setSelectedKabId] = useState(null);
 
   useEffect(() => {
     refreshToken();
@@ -1892,9 +1960,11 @@ function TabTwo() {
         getProvinsi();
         break;
       case 2:
+        setSelectedProvId(satKerId);
         getKabKota(satKerId);
         break;
       case 3:
+        setSelectedKabId(satKerId);
         getRumahSakit(satKerId);
         break;
       case 4:
@@ -1908,17 +1978,14 @@ function TabTwo() {
 
   const provinsiChangeHandler = (e) => {
     const provinsiId = e.target.value;
+    setSelectedProvId(provinsiId);
     getKabKota(provinsiId);
   };
 
   const kabKotaChangeHandler = (e) => {
     const kabKotaId = e.target.value;
+    setSelectedKabId(kabKotaId);
     getRumahSakit(kabKotaId);
-  };
-
-  const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
   };
 
   const getProvinsi = async () => {
@@ -1934,26 +2001,54 @@ function TabTwo() {
 
   const getKabKota = async (provinsiId) => {
     try {
+      if (provinsiId === "99" || provinsiId === 99) {
+        setDaftarKabKota([{ id: "9999", nama: "ALL" }]);
+        return;
+      }
       const response = await axiosJWT.get("/apisirs6v2/kabkota", {
         headers: { Authorization: `Bearer ${token}` },
         params: { provinsiId },
       });
-      setDaftarKabKota(response.data.data);
+      const dataApi = response.data.data ?? [];
+      setDaftarKabKota([
+        { id: "9999", nama: "Select ALL Kabkota" },
+        ...dataApi,
+      ]);
     } catch (error) {
       console.error(error);
     }
   };
 
-  const getRumahSakit = async (kabKotaId) => {
+  const getRumahSakit = async (id, type = "kabkota") => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
     try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+      if (id === 99999 || id === "9999") {
+        setLoadingRS(false);
+        setDaftarRumahSakit([{ id: "999999", nama: "ALL" }]);
+        return;
+      }
+
+      let params = {};
+      if (type === "provinsi") {
+        params.provinsiId = id;
+      } else {
+        params.kabKotaId = id;
+      }
+
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit", {
         headers: { Authorization: `Bearer ${token}` },
-        params: { kabKotaId },
+        params,
       });
-      setDaftarRumahSakit(response.data.data);
+
+      setDaftarRumahSakit([
+        { id: "999999", nama: "ALL Rumah Sakit" },
+        ...(response.data.data ?? []),
+      ]);
     } catch (error) {
       console.error(error);
     }
+    setLoadingRS(false);
   };
 
   const refreshToken = async () => {
@@ -1967,6 +2062,19 @@ function TabTwo() {
       setUser(decoded);
     } catch (error) {
       if (error.response) navigate("/");
+    }
+  };
+
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
     }
   };
 
@@ -1987,13 +2095,11 @@ function TabTwo() {
         setExpire(decoded.exp);
       }
 
-      // Di interceptor axiosJWT TabTwo yang sudah ada
       if (
         ["post", "put", "patch", "delete"].includes(
           config.method?.toLowerCase(),
         )
       ) {
-        // HMAC yang sudah ada
         const timestamp = Date.now().toString();
         const bodyString = JSON.stringify(config.data || {});
         const signature = CryptoJS.HmacSHA256(
@@ -2003,7 +2109,7 @@ function TabTwo() {
 
         config.headers["X-Timestamp"] = timestamp;
         config.headers["X-Signature"] = signature;
-        config.headers["XSRF-TOKEN"] = CSRFToken; // ← tambahkan di sini
+        config.headers["XSRF-TOKEN"] = CSRFToken;
       }
 
       return config;
@@ -2031,15 +2137,19 @@ function TabTwo() {
     ]);
   };
 
+  // --- fetchData sekarang menerima rsId secara eksplisit ---
   const fetchData = async (
     pageNumber = 1,
     isBackground = false,
     currentToken = token,
-    currentUser = user,
+    currentRsId = null,
     currentTahun = tahun,
     currentBulan = bulan,
   ) => {
-    if (!currentToken || !currentUser.satKerId) return;
+    const rsIdToUse =
+      currentRsId ?? (user.jenisUserId === 4 ? user.satKerId : selectedRsID);
+
+    if (!currentToken || !rsIdToUse) return;
 
     if (!isBackground) setLoadingTable(true);
 
@@ -2047,7 +2157,7 @@ function TabTwo() {
       const res = await axiosJWT.get("/apisirs6v2/rlempattitiksatusatusehat", {
         headers: { Authorization: `Bearer ${currentToken}` },
         params: {
-          rsId: currentUser.satKerId,
+          rsId: rsIdToUse,
           periode: `${currentTahun}-${currentBulan}`,
           page: pageNumber,
           limit,
@@ -2072,24 +2182,23 @@ function TabTwo() {
     if (!isBackground) setLoadingTable(false);
   };
 
-  // Mulai polling — dipanggil setelah filter diterapkan
+  // Mulai polling — dipanggil setelah filter diterapkan (khusus role 4)
   const startPolling = (
     currentToken,
-    currentUser,
+    currentRsId,
     currentTahun,
     currentBulan,
   ) => {
     clearInterval(pollingRef.current); // bersihkan polling lama
 
     pollingRef.current = setInterval(async () => {
-      // Cek status sync terbaru dulu
       try {
         const res = await axiosJWT.get(
           "/apisirs6v2/rlempattitiksatusatusehat",
           {
             headers: { Authorization: `Bearer ${currentToken}` },
             params: {
-              rsId: currentUser.satKerId,
+              rsId: currentRsId,
               periode: `${currentTahun}-${currentBulan}`,
               page: 1,
               limit,
@@ -2103,23 +2212,90 @@ function TabTwo() {
         setTotalPages(res.data.pagination?.totalPages || 0);
         setPage(res.data.pagination?.page || 1);
 
-        // Data sudah ada dan sync selesai → stop polling
-        if (
-          !newSync.isUpdating &&
-          (newSync.status === "success" || newSync.status === "failed")
-        ) {
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-          setLoadingTable(false);
+        if (!newSync.isUpdating) {
+          if (newSync.status === "success") {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            await fetchData(
+              1,
+              false,
+              currentToken,
+              currentRsId,
+              currentTahun,
+              currentBulan,
+            );
+            setLoadingTable(false);
+            toast.success("Data berhasil disinkronkan!");
+          } else if (newSync.status === "failed") {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            setLoadingTable(false);
+            toast.error("Gagal sync data dari SatuSehat");
+          } else if (newSync.status === "never") {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            setLoadingTable(false);
+          }
         }
-
-        // console.log(newSync.status);
       } catch (err) {
         console.error(err);
       }
     }, 4000); // cek tiap 4 detik
   };
 
+  // --- Helper: cek apakah RS yang dipilih adalah opsi "ALL" ---
+  const isRsAll = (id) => id === "999999";
+  const pad = (n) => String(n).padStart(2, "0");
+
+  // --- Download Excel multi-RS/wilayah lewat endpoint backend (streaming) ---
+  const downloadAllExcelSatuSehat = async (params) => {
+    setIsDownloading(true);
+    try {
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rlempattitiksatusatusehatdownload",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+          responseType: "blob",
+        },
+      );
+
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+      let fileName = `RL_41_SatuSehat_${params.periode}_${timestamp}.xlsx`;
+      const disposition = response.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast("File berhasil diunduh", {
+        type: "success",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    } catch (error) {
+      console.error(error);
+      toast("Gagal mengunduh file", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    }
+    setIsDownloading(false);
+  };
+
+  // --- getRL: titik keputusan utama, bercabang sesuai role & pilihan RS ---
   const getRL = async (e) => {
     e.preventDefault();
     if (!tahun || !bulan) {
@@ -2131,29 +2307,55 @@ function TabTwo() {
     }
 
     const periode = `${tahun}-${bulan}`;
-    // setFilterLabel([`Periode: ${periode}`]);
+    const jenisUserId = user.jenisUserId;
+
+    // Role 4: selalu RS sendiri, seperti sebelumnya
+    if (jenisUserId === 4) {
+      setFilterLabel([
+        `Rumah Sakit: ${rumahSakit.nama}`,
+        `Periode: ${periode}`,
+      ]);
+      setIsFilterApplied(true);
+      setDataRL([]);
+      setLoadingTable(true);
+      handleClose();
+      await fetchData(1, false, token, user.satKerId, tahun, bulan);
+      return;
+    }
+
+    // Role 1/2/3: RS wajib dipilih (termasuk opsi ALL)
+    if (!selectedRsID) {
+      toast("Rumah sakit harus dipilih", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    handleClose();
+
+    if (isRsAll(selectedRsID)) {
+      // ALL di level manapun -> langsung download, tidak tampil tabel
+      setIsFilterApplied(false);
+      setDataRL([]);
+      await downloadAllExcelSatuSehat({
+        provId:
+          selectedProvId && selectedProvId !== "99" && selectedProvId !== 99
+            ? selectedProvId
+            : undefined,
+        kabId:
+          selectedKabId && selectedKabId !== "9999" ? selectedKabId : undefined,
+        periode,
+      });
+      return;
+    }
+
+    // RS spesifik dipilih -> tampil tabel seperti RS, TANPA tombol sync
     setFilterLabel([`Rumah Sakit: ${rumahSakit.nama}`, `Periode: ${periode}`]);
     setIsFilterApplied(true);
     setDataRL([]);
-    setLoadingTable(true); // tampilkan loading di tabel
-    handleClose();
-
-    // Fetch pertama kali
-    await fetchData(1, false, token, user, tahun, bulan);
-
-    // Jika setelah fetch pertama data masih kosong / masih syncing → mulai polling
-    // Cek sync state terbaru via callback
-    setSync((prevSync) => {
-      if (
-        prevSync.isUpdating ||
-        prevSync.status === "never" ||
-        prevSync.status === "syncing"
-      ) {
-        setLoadingTable(true);
-        startPolling(token, user, tahun, bulan);
-      }
-      return prevSync;
-    });
+    setLoadingTable(true);
+    await fetchData(1, false, token, selectedRsID, tahun, bulan);
   };
 
   const handleShow = () => setShow(true);
@@ -2172,39 +2374,44 @@ function TabTwo() {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    setNow(Date.now()); // ← tambah ini
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 100);
 
-    if (!sync.lastSync || sync.isUpdating) return;
+    return () => clearInterval(interval);
+  }, []);
 
-    const elapsed = (Date.now() - new Date(sync.lastSync).getTime()) / 60000;
-    if (elapsed >= MANUAL_SYNC_COOLDOWN) return;
-
-    const remainingMs = (MANUAL_SYNC_COOLDOWN - elapsed) * 60 * 1000;
-    const timeout = setTimeout(() => setNow(Date.now()), remainingMs);
-
-    return () => clearTimeout(timeout);
-  }, [sync.lastSync, sync.isUpdating]);
-
-  // Ganti Date.now() → now
   const minutesSinceSync = sync.lastSync
     ? (now - new Date(sync.lastSync).getTime()) / 60000
     : null;
 
   const canSync =
     !sync.isUpdating &&
-    !isManualSyncing && // ← tambah ini
+    !isManualSyncing &&
     (minutesSinceSync === null || minutesSinceSync >= MANUAL_SYNC_COOLDOWN);
 
-  // Sisa menit cooldown (untuk info ke user)
   const cooldownLeft =
     minutesSinceSync !== null
-      ? Math.max(0, MANUAL_SYNC_COOLDOWN - minutesSinceSync).toFixed(1)
+      ? Math.max(0, MANUAL_SYNC_COOLDOWN - minutesSinceSync)
       : null;
 
-  const handleManualSync = async () => {
-    if (!canSync) return;
+  const cooldownDisplay = useMemo(() => {
+    if (cooldownLeft === null || cooldownLeft <= 0) return null;
 
-    setIsManualSyncing(true); // ← langsung disable tombol saat klik
+    const totalSeconds = Math.ceil(cooldownLeft * 60);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    const formattedSeconds = seconds < 10 ? `0${seconds}` : seconds;
+
+    return `${minutes}:${formattedSeconds}`;
+  }, [cooldownLeft]);
+
+  // --- Manual sync HANYA untuk role 4 (RS sendiri) ---
+  const handleManualSync = async () => {
+    if (!canSync || user.jenisUserId !== 4) return;
+
+    setIsManualSyncing(true);
     setLoadingTable(true);
 
     try {
@@ -2218,7 +2425,7 @@ function TabTwo() {
           },
         },
       );
-      startPolling(token, user, tahun, bulan);
+      startPolling(token, user.satKerId, tahun, bulan);
     } catch (err) {
       console.error(err);
       setLoadingTable(false);
@@ -2248,6 +2455,7 @@ function TabTwo() {
     </div>
   );
 
+  // --- Download Excel untuk tampilan tabel RS tunggal (dipakai role 4 & role 1/2/3 yang pilih RS spesifik) ---
   const handleDownloadExcel = async () => {
     if (!isFilterApplied) {
       toast("Terapkan filter terlebih dahulu", {
@@ -2257,202 +2465,290 @@ function TabTwo() {
       return;
     }
 
-    setIsDownloading(true);
+    const rsIdToUse = user.jenisUserId === 4 ? user.satKerId : selectedRsID;
+    const periode = `${tahun}-${bulan}`;
+    // console.log(rsIdToUse);
+    // console.log(periode);
 
+    setIsDownloading(true);
     try {
-      // ── Step 1: Fetch halaman pertama, pakai limit max (200) ──
-      const MAX_LIMIT = 200;
-      const firstRes = await axiosJWT.get(
-        "/apisirs6v2/rlempattitiksatusatusehat",
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rlempattitiksatusatusehatdownload",
         {
           headers: { Authorization: `Bearer ${token}` },
           params: {
-            rsId: user.satKerId,
+            rsId: rsIdToUse,
             periode: `${tahun}-${bulan}`,
-            page: 1,
-            limit: MAX_LIMIT,
           },
+          responseType: "blob",
         },
       );
 
-      const { totalPages: tp } = firstRes.data.pagination;
-      let allData = [...(firstRes.data.data ?? [])];
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 
-      // ── Step 2: Fetch sisa halaman secara paralel ──
-      if (tp > 1) {
-        const remainingPages = Array.from({ length: tp - 1 }, (_, i) => i + 2);
-        const results = await Promise.all(
-          remainingPages.map((p) =>
-            axiosJWT.get("/apisirs6v2/rlempattitiksatusatusehat", {
-              headers: { Authorization: `Bearer ${token}` },
-              params: {
-                rsId: user.satKerId,
-                periode: `${tahun}-${bulan}`,
-                page: p,
-                limit: MAX_LIMIT,
-              },
-            }),
-          ),
-        );
-        results.forEach((r) => allData.push(...(r.data.data ?? [])));
+      let fileName = `RL_41_SatuSehat_${tahun}-${bulan}_${timestamp}.xlsx`;
+      const disposition = response.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
       }
 
-      // ── Step 3: Susun header ──
-      const headers = [
-        "No",
-        "Kode ICD-10",
-        "Diagnosis Penyakit",
-        "Periode",
-        // 25 kelompok umur × L & P
-        "< 1 Jam L",
-        "< 1 Jam P",
-        "1-23 Jam L",
-        "1-23 Jam P",
-        "1-7 Hari L",
-        "1-7 Hari P",
-        "8-28 Hari L",
-        "8-28 Hari P",
-        "29 Hari-<3 Bln L",
-        "29 Hari-<3 Bln P",
-        "3-<6 Bln L",
-        "3-<6 Bln P",
-        "6-11 Bln L",
-        "6-11 Bln P",
-        "1-4 Th L",
-        "1-4 Th P",
-        "5-9 Th L",
-        "5-9 Th P",
-        "10-14 Th L",
-        "10-14 Th P",
-        "15-19 Th L",
-        "15-19 Th P",
-        "20-24 Th L",
-        "20-24 Th P",
-        "25-29 Th L",
-        "25-29 Th P",
-        "30-34 Th L",
-        "30-34 Th P",
-        "35-39 Th L",
-        "35-39 Th P",
-        "40-44 Th L",
-        "40-44 Th P",
-        "45-49 Th L",
-        "45-49 Th P",
-        "50-54 Th L",
-        "50-54 Th P",
-        "55-59 Th L",
-        "55-59 Th P",
-        "60-64 Th L",
-        "60-64 Th P",
-        "65-69 Th L",
-        "65-69 Th P",
-        "70-74 Th L",
-        "70-74 Th P",
-        "75-79 Th L",
-        "75-79 Th P",
-        "80-84 Th L",
-        "80-84 Th P",
-        "≥85 Th L",
-        "≥85 Th P",
-        // Keluar Hidup/Mati
-        "Keluar Hidup/Mati L",
-        "Keluar Hidup/Mati P",
-        "Keluar Hidup/Mati Total",
-        // Keluar Mati
-        "Keluar Mati L",
-        "Keluar Mati P",
-        "Keluar Mati Total",
-      ];
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
 
-      // ── Step 4: Susun baris data ──
-      const rows = allData.map((v, i) => [
-        i + 1,
-        v.kode_icd,
-        v.diagnosis,
-        `${tahun}-${bulan}`,
-        v.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
-        v.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
-        v.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
-        v.jmlh_pas_hidup_mati_umur_gen_1_23jam_p,
-        v.jmlh_pas_hidup_mati_umur_gen_1_7hr_l,
-        v.jmlh_pas_hidup_mati_umur_gen_1_7hr_p,
-        v.jmlh_pas_hidup_mati_umur_gen_8_28hr_l,
-        v.jmlh_pas_hidup_mati_umur_gen_8_28hr_p,
-        v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l,
-        v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p,
-        v.jmlh_pas_hidup_mati_umur_gen_3_6bln_l,
-        v.jmlh_pas_hidup_mati_umur_gen_3_6bln_p,
-        v.jmlh_pas_hidup_mati_umur_gen_6_11bln_l,
-        v.jmlh_pas_hidup_mati_umur_gen_6_11bln_p,
-        v.jmlh_pas_hidup_mati_umur_gen_1_4th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_1_4th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_5_9th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_5_9th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_10_14th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_10_14th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_15_19th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_15_19th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_20_24th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_20_24th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_25_29th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_25_29th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_30_34th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_30_34th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_35_39th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_35_39th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_40_44th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_40_44th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_45_49th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_45_49th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_50_54th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_50_54th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_55_59th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_55_59th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_60_64th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_60_64th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_65_69th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_65_69th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_70_74th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_70_74th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_75_79th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_75_79th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_80_84th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_80_84th_p,
-        v.jmlh_pas_hidup_mati_umur_gen_lebih85th_l,
-        v.jmlh_pas_hidup_mati_umur_gen_lebih85th_p,
-        v.keluar_hidup_mati_l,
-        v.keluar_hidup_mati_p,
-        v.keluar_hidup_mati_total,
-        v.keluar_mati_l,
-        v.keluar_mati_p,
-        v.keluar_mati_total,
-      ]);
-
-      // ── Step 5: Generate & trigger download ──
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-
-      // Auto-width kolom (opsional tapi bagus)
-      ws["!cols"] = headers.map((h, i) =>
-        i === 2 ? { wch: 35 } : { wch: Math.max(h.length + 2, 8) },
-      );
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `RL4.1 ${tahun}-${bulan}`);
-      XLSX.writeFile(wb, `RL4.1_${tahun}-${bulan}.xlsx`);
-
-      toast("Download berhasil!", {
+      toast("File berhasil diunduh", {
         type: "success",
         position: toast.POSITION.TOP_RIGHT,
       });
-    } catch (err) {
-      console.error(err);
-      toast("Gagal download Excel", {
+    } catch (error) {
+      console.error(error);
+      toast("Gagal mengunduh file", {
         type: "error",
         position: toast.POSITION.TOP_RIGHT,
       });
-    } finally {
-      setIsDownloading(false);
     }
+    setIsDownloading(false);
+
+    // try {
+    //   // ── Step 1: Fetch halaman pertama, pakai limit max (200) ──
+    //   const MAX_LIMIT = 200;
+    //   const firstRes = await axiosJWT.get(
+    //     "/apisirs6v2/rlempattitiksatusatusehat",
+    //     {
+    //       headers: { Authorization: `Bearer ${token}` },
+    //       params: {
+    //         rsId: rsIdToUse,
+    //         periode: `${tahun}-${bulan}`,
+    //         page: 1,
+    //         limit: MAX_LIMIT,
+    //       },
+    //     },
+    //   );
+
+    //   const { totalPages: tp } = firstRes.data.pagination;
+    //   let allData = [...(firstRes.data.data ?? [])];
+
+    //   // ── Step 2: Fetch sisa halaman secara paralel ──
+    //   if (tp > 1) {
+    //     const remainingPages = Array.from({ length: tp - 1 }, (_, i) => i + 2);
+    //     const results = await Promise.all(
+    //       remainingPages.map((p) =>
+    //         axiosJWT.get("/apisirs6v2/rlempattitiksatusatusehat", {
+    //           headers: { Authorization: `Bearer ${token}` },
+    //           params: {
+    //             rsId: rsIdToUse,
+    //             periode: `${tahun}-${bulan}`,
+    //             page: p,
+    //             limit: MAX_LIMIT,
+    //           },
+    //         }),
+    //       ),
+    //     );
+    //     results.forEach((r) => allData.push(...(r.data.data ?? [])));
+    //   }
+
+    //   // ── Step 3: Susun header tabel utama ──
+    //   const headers = [
+    //     "No",
+    //     "Rumah Sakit",
+    //     "Kode ICD-10",
+    //     "Diagnosis Penyakit",
+    //     "Periode",
+    //     "< 1 Jam L",
+    //     "< 1 Jam P",
+    //     "1-23 Jam L",
+    //     "1-23 Jam P",
+    //     "1-7 Hari L",
+    //     "1-7 Hari P",
+    //     "8-28 Hari L",
+    //     "8-28 Hari P",
+    //     "29 Hari-<3 Bln L",
+    //     "29 Hari-<3 Bln P",
+    //     "3-<6 Bln L",
+    //     "3-<6 Bln P",
+    //     "6-11 Bln L",
+    //     "6-11 Bln P",
+    //     "1-4 Th L",
+    //     "1-4 Th P",
+    //     "5-9 Th L",
+    //     "5-9 Th P",
+    //     "10-14 Th L",
+    //     "10-14 Th P",
+    //     "15-19 Th L",
+    //     "15-19 Th P",
+    //     "20-24 Th L",
+    //     "20-24 Th P",
+    //     "25-29 Th L",
+    //     "25-29 Th P",
+    //     "30-34 Th L",
+    //     "30-34 Th P",
+    //     "35-39 Th L",
+    //     "35-39 Th P",
+    //     "40-44 Th L",
+    //     "40-44 Th P",
+    //     "45-49 Th L",
+    //     "45-49 Th P",
+    //     "50-54 Th L",
+    //     "50-54 Th P",
+    //     "55-59 Th L",
+    //     "55-59 Th P",
+    //     "60-64 Th L",
+    //     "60-64 Th P",
+    //     "65-69 Th L",
+    //     "65-69 Th P",
+    //     "70-74 Th L",
+    //     "70-74 Th P",
+    //     "75-79 Th L",
+    //     "75-79 Th P",
+    //     "80-84 Th L",
+    //     "80-84 Th P",
+    //     "≥85 Th L",
+    //     "≥85 Th P",
+    //     "Keluar Hidup/Mati L",
+    //     "Keluar Hidup/Mati P",
+    //     "Keluar Hidup/Mati Total",
+    //     "Keluar Mati L",
+    //     "Keluar Mati P",
+    //     "Keluar Mati Total",
+    //   ];
+
+    //   // ── Step 4: Susun baris data ──
+    //   const rows = allData.map((v, i) => [
+    //     i + 1,
+    //     rumahSakit.nama,
+    //     v.kode_icd,
+    //     v.diagnosis,
+    //     `${tahun}-${bulan}`,
+    //     v.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_1_23jam_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_1_7hr_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_1_7hr_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_8_28hr_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_8_28hr_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_3_6bln_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_3_6bln_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_6_11bln_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_6_11bln_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_1_4th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_1_4th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_5_9th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_5_9th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_10_14th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_10_14th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_15_19th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_15_19th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_20_24th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_20_24th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_25_29th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_25_29th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_30_34th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_30_34th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_35_39th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_35_39th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_40_44th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_40_44th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_45_49th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_45_49th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_50_54th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_50_54th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_55_59th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_55_59th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_60_64th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_60_64th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_65_69th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_65_69th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_70_74th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_70_74th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_75_79th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_75_79th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_80_84th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_80_84th_p,
+    //     v.jmlh_pas_hidup_mati_umur_gen_lebih85th_l,
+    //     v.jmlh_pas_hidup_mati_umur_gen_lebih85th_p,
+    //     v.keluar_hidup_mati_l,
+    //     v.keluar_hidup_mati_p,
+    //     v.keluar_hidup_mati_total,
+    //     v.keluar_mati_l,
+    //     v.keluar_mati_p,
+    //     v.keluar_mati_total,
+    //   ]);
+
+    //   // ── Step 5: Buat header info (judul, periode) ──
+    //   const bulanName =
+    //     daftarBulan?.find((b) => b.value == bulan)?.key || `Bulan ${bulan}`;
+
+    //   const headerInfo = [
+    //     ["SIRS ONLINE RL 4.1 - SATUSEHAT"],
+    //     [],
+    //     ["Periode Data"],
+    //     [`Bulan:`, `${bulanName}`],
+    //     [`Tahun:`, `${tahun}`],
+    //     [],
+    //   ];
+
+    //   // ── Step 6: Gabungkan header info + headers tabel + data rows ──
+    //   const allRows = [...headerInfo, headers, ...rows];
+
+    //   // ── Step 7: Generate & trigger download ──
+    //   const ws = XLSX.utils.aoa_to_sheet(allRows);
+
+    //   // ── Step 8: Set column widths ──
+    //   ws["!cols"] = [
+    //     { wch: 6 },
+    //     { wch: 12 },
+    //     { wch: 35 },
+    //     { wch: 12 },
+    //     ...Array(headers.length - 4).fill({ wch: 12 }),
+    //   ];
+
+    //   // ── Step 9: Set row heights ──
+    //   ws["!rows"] = [
+    //     { hpt: 25, hidden: false },
+    //     { hpt: 8, hidden: false },
+    //     { hpt: 18, hidden: false },
+    //     { hpt: 18, hidden: false },
+    //     { hpt: 18, hidden: false },
+    //     { hpt: 8, hidden: false },
+    //     { hpt: 30, hidden: false },
+    //   ];
+
+    //   const wb = XLSX.utils.book_new();
+    //   XLSX.utils.book_append_sheet(wb, ws, `RL4.1 ${tahun}-${bulan}`);
+    //   const currentDate = new Date();
+
+    //   const jam = String(currentDate.getHours()).padStart(2, "0");
+    //   const menit = String(currentDate.getMinutes()).padStart(2, "0");
+    //   const detik = String(currentDate.getSeconds()).padStart(2, "0");
+
+    //   const fileName = `RL4.1_${tahun}-${bulan}_${jam}${menit}${detik}.xlsx`;
+    //   XLSX.writeFile(wb, fileName);
+
+    //   toast("Download berhasil!", {
+    //     type: "success",
+    //     position: toast.POSITION.TOP_RIGHT,
+    //   });
+    // } catch (err) {
+    //   console.error(err);
+    //   toast("Gagal download Excel", {
+    //     type: "error",
+    //     position: toast.POSITION.TOP_RIGHT,
+    //   });
+    // } finally {
+    //   setIsDownloading(false);
+    // }
   };
 
   const showRumahSakit = async (id) => {
@@ -2466,196 +2762,382 @@ function TabTwo() {
     }
   };
 
+  // Sync manual hanya relevan/tersedia untuk role 4
+  const showSyncButton = user.jenisUserId === 4;
+
   return (
     <div
       className="container"
       style={{ marginTop: "0px", marginBottom: "70px" }}
     >
-      <ToastContainer />
-
-      {/* Modal Filter */}
-      {/* <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
-        <Modal.Header closeButton>
-          <Modal.Title>Filter</Modal.Title>
-        </Modal.Header>
-        <form onSubmit={getRL}>
-          <Modal.Body>
-            <div
-              className="form-floating"
-              style={{ width: "70%", display: "inline-block" }}
-            >
-              <select
-                className="form-control"
-                onChange={(e) => setBulan(e.target.value)}
-              >
-                {daftarBulan.map((b) => (
-                  <option key={b.value} value={b.value}>
-                    {b.key}
-                  </option>
-                ))}
-              </select>
-              <label>Bulan</label>
-            </div>
-            <div
-              className="form-floating"
-              style={{ width: "30%", display: "inline-block" }}
-            >
-              <input
-                type="number"
-                className="form-control"
-                value={tahun}
-                onChange={(e) => setTahun(e.target.value)}
-              />
-              <label>Tahun</label>
-            </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <button type="submit" className={style.btnPrimary}>
-              <HiSaveAs size={20} /> Terapkan
-            </button>
-          </Modal.Footer>
-        </form>
-      </Modal> */}
-
-      <div className="row">
-        <div className="col-md-12">
+      {isDownloading && (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            zIndex: 9999,
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+          }}
+        >
           <div
             style={{
-              background: "var(--color-background-primary, #fff)",
-              border: "1px solid #e2e8f0",
-              borderRadius: 10,
-              padding: "16px 20px",
-              marginBottom: 14,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 12,
             }}
           >
-            {/* Heading */}
-            <p
-              style={{
-                fontWeight: 700,
-                fontSize: 13,
-                color: "#1e293b",
-                margin: "0 0 14px 0",
-                letterSpacing: 0.2,
-              }}
-            >
-              Periode Data
+            <Spinner animation="border" variant="primary" />
+            <p style={{ margin: 0, color: "#555", fontSize: 14 }}>
+              Sedang menyiapkan file Excel, mohon tunggu...
             </p>
+          </div>
+        </div>
+      )}
+      <ToastContainer />
 
-            {/* Row: input + tombol */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-end",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              {/* Bulan */}
-              <div>
-                <label
-                  style={{
-                    fontSize: 12,
-                    color: "#64748b",
-                    display: "block",
-                    marginBottom: 5,
-                    fontWeight: 500,
-                  }}
-                >
-                  Bulan
-                </label>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: 7,
-                    padding: "7px 10px",
-                    background: "#f8fafc",
-                    minWidth: 155,
-                  }}
-                >
-                  <FaCalendarAlt
-                    size={13}
-                    color="#94a3b8"
-                    style={{ marginRight: 7, flexShrink: 0 }}
-                  />
-                  <select
-                    value={bulan}
-                    onChange={(e) => setBulan(e.target.value)}
-                    style={{
-                      border: "none",
-                      outline: "none",
-                      background: "transparent",
-                      flex: 1,
-                      fontSize: 13,
-                      color: "#334155",
-                    }}
+      {/* --- Modal Filter khusus role 1/2/3, filter bertingkat Provinsi -> Kab/Kota -> RS --- */}
+      {user.jenisUserId !== 4 && (
+        <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
+          <Modal.Header closeButton>
+            <Modal.Title>Filter</Modal.Title>
+          </Modal.Header>
+          <form onSubmit={getRL}>
+            <Modal.Body>
+              {(user.jenisUserId === 1 || user.jenisUserId === 99) && (
+                <>
+                  <div
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
                   >
-                    {daftarBulan.map((b) => (
-                      <option key={b.value} value={b.value}>
-                        {b.key}
+                    <select
+                      name="provinsi"
+                      id="provinsi"
+                      className="form-select"
+                      value={selectedProvId || ""}
+                      onChange={(e) => provinsiChangeHandler(e)}
+                    >
+                      <option key={0} value="">
+                        Pilih
+                      </option>
+                      <option key={99} value={99}>
+                        Pilih Semua Provinsi
+                      </option>
+                      {daftarProvinsi.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="provinsi">Provinsi</label>
+                  </div>
+
+                  <div
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
+                  >
+                    <select
+                      name="kabKota"
+                      id="kabKota"
+                      className="form-select"
+                      value={selectedKabId || ""}
+                      onChange={(e) => kabKotaChangeHandler(e)}
+                    >
+                      <option key={0} value="">
+                        Pilih
+                      </option>
+                      {daftarKabKota.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="kabKota">Kab/Kota</label>
+                  </div>
+
+                  <div
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
+                  >
+                    <select
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={selectedRsID || ""}
+                      onChange={(e) => handleSelectRumahSakit(e)}
+                    >
+                      <option key={0} value={0}>
+                        {loadingRS ? "Loading..." : "Pilih"}
+                      </option>
+                      {daftarRumahSakit.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="rumahSakit">Rumah Sakit</label>
+                  </div>
+                </>
+              )}
+
+              {user.jenisUserId === 2 && (
+                <>
+                  <div
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
+                  >
+                    <select
+                      name="kabKota"
+                      id="kabKota"
+                      className="form-select"
+                      value={selectedKabId || ""}
+                      onChange={(e) => kabKotaChangeHandler(e)}
+                    >
+                      <option key={0} value="">
+                        Pilih
+                      </option>
+                      {daftarKabKota.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="kabKota">Kab/Kota</label>
+                  </div>
+
+                  <div
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
+                  >
+                    <select
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={selectedRsID || ""}
+                      onChange={(e) => handleSelectRumahSakit(e)}
+                    >
+                      <option key={0} value={0}>
+                        {loadingRS ? "Loading..." : "Pilih"}
+                      </option>
+                      {daftarRumahSakit.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="rumahSakit">Rumah Sakit</label>
+                  </div>
+                </>
+              )}
+
+              {user.jenisUserId === 3 && (
+                <div
+                  className="form-floating"
+                  style={{ width: "100%", paddingBottom: "5px" }}
+                >
+                  <select
+                    name="rumahSakit"
+                    id="rumahSakit"
+                    className="form-select"
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
+                  >
+                    <option key={0} value={0}>
+                      {loadingRS ? "Loading..." : "Pilih"}
+                    </option>
+                    {daftarRumahSakit.map((nilai) => (
+                      <option key={nilai.id} value={nilai.id}>
+                        {nilai.nama}
                       </option>
                     ))}
                   </select>
+                  <label htmlFor="rumahSakit">Rumah Sakit</label>
                 </div>
-              </div>
+              )}
 
-              {/* Tahun */}
-              <div>
-                <label
-                  style={{
-                    fontSize: 12,
-                    color: "#64748b",
-                    display: "block",
-                    marginBottom: 5,
-                    fontWeight: 500,
-                  }}
+              <div
+                className="form-floating"
+                style={{ width: "70%", display: "inline-block" }}
+              >
+                <select
+                  className="form-control"
+                  value={bulan}
+                  onChange={(e) => setBulan(e.target.value)}
                 >
-                  Tahun
-                </label>
+                  {daftarBulan.map((b) => (
+                    <option key={b.value} value={b.value}>
+                      {b.key}
+                    </option>
+                  ))}
+                </select>
+                <label>Bulan</label>
+              </div>
+              <div
+                className="form-floating"
+                style={{ width: "30%", display: "inline-block" }}
+              >
+                <input
+                  name="tahun"
+                  type="number"
+                  className="form-control"
+                  value={tahun}
+                  onChange={(e) => setTahun(e.target.value)}
+                />
+                <label htmlFor="tahun">Tahun</label>
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <div className="mt-3 mb-3">
+                <button type="submit" className={style.btnPrimary}>
+                  <HiSaveAs size={20} /> Terapkan
+                </button>
+              </div>
+            </Modal.Footer>
+          </form>
+        </Modal>
+      )}
+
+      <div className="row">
+        <div className="col-md-12">
+          {/* --- Panel filter inline khusus role 4 (RS sendiri): bulan/tahun + sync + download --- */}
+          {user.jenisUserId === 4 && (
+            <div
+              style={{
+                background: "var(--color-background-primary, #fff)",
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                padding: "16px 20px",
+                marginBottom: 14,
+              }}
+            >
+              <p
+                style={{
+                  fontWeight: 700,
+                  fontSize: 13,
+                  color: "#1e293b",
+                  margin: "0 0 14px 0",
+                  letterSpacing: 0.2,
+                }}
+              >
+                Periode Data
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                {/* Bulan */}
+                <div>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      color: "#64748b",
+                      display: "block",
+                      marginBottom: 5,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Bulan
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 7,
+                      padding: "7px 10px",
+                      background: "#f8fafc",
+                      minWidth: 155,
+                    }}
+                  >
+                    <FaCalendarAlt
+                      size={13}
+                      color="#94a3b8"
+                      style={{ marginRight: 7, flexShrink: 0 }}
+                    />
+                    <select
+                      value={bulan}
+                      onChange={(e) => setBulan(e.target.value)}
+                      style={{
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        flex: 1,
+                        fontSize: 13,
+                        color: "#334155",
+                      }}
+                    >
+                      {daftarBulan.map((b) => (
+                        <option key={b.value} value={b.value}>
+                          {b.key}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Tahun */}
+                <div>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      color: "#64748b",
+                      display: "block",
+                      marginBottom: 5,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Tahun
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 7,
+                      padding: "7px 10px",
+                      background: "#f8fafc",
+                      width: 125,
+                    }}
+                  >
+                    <FaCalendarAlt
+                      size={13}
+                      color="#94a3b8"
+                      style={{ marginRight: 7, flexShrink: 0 }}
+                    />
+                    <input
+                      type="number"
+                      value={tahun}
+                      onChange={(e) => setTahun(e.target.value)}
+                      style={{
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        width: "100%",
+                        fontSize: 13,
+                        color: "#334155",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Tombol-tombol */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: 7,
-                    padding: "7px 10px",
-                    background: "#f8fafc",
-                    width: 125,
+                    gap: 10,
+                    flexWrap: "wrap",
                   }}
                 >
-                  <FaCalendarAlt
-                    size={13}
-                    color="#94a3b8"
-                    style={{ marginRight: 7, flexShrink: 0 }}
-                  />
-                  <input
-                    type="number"
-                    value={tahun}
-                    onChange={(e) => setTahun(e.target.value)}
-                    style={{
-                      border: "none",
-                      outline: "none",
-                      background: "transparent",
-                      width: "100%",
-                      fontSize: 13,
-                      color: "#334155",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* ── Tombol-tombol ── */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 10,
-                  flexWrap: "wrap",
-                }}
-              >
-                {/* FILTER */}
-                <div style={{ textAlign: "center" }}>
                   <button
                     onClick={getRL}
                     style={{
@@ -2669,91 +3151,23 @@ function TabTwo() {
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
+                      justifyContent: "center",
                       gap: 7,
                       whiteSpace: "nowrap",
+                      height: 42,
                     }}
                   >
                     <FaFilter size={14} /> FILTER
                   </button>
-                  {/* <div
-                    style={{
-                      fontSize: 10,
-                      color: "#94a3b8",
-                      marginTop: 5,
-                      maxWidth: 120,
-                      lineHeight: 1.4,
-                      textAlign: "center",
-                    }}
-                  >
-                    Menampilkan data dari
-                    <br />
-                    database SIRS Online
-                  </div> */}
-                </div>
 
-                {/* SYNC SATUSEHAT */}
-                <div style={{ textAlign: "center" }}>
-                  <button
-                    onClick={handleManualSync}
-                    disabled={!canSync || isManualSyncing || !isFilterApplied}
-                    title={
-                      !isFilterApplied
-                        ? "Terapkan filter terlebih dahulu"
-                        : isManualSyncing || sync.isUpdating
-                          ? "Sedang sinkronisasi..."
-                          : !canSync
-                            ? `Tunggu ${cooldownLeft} menit lagi`
-                            : "Klik untuk sync manual"
-                    }
-                    style={{
-                      background: "#059669",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 7,
-                      padding: "9px 18px",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      whiteSpace: "nowrap",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      cursor:
-                        canSync && !isManualSyncing && isFilterApplied
-                          ? "pointer"
-                          : "not-allowed",
-                      opacity:
-                        canSync && !isManualSyncing && isFilterApplied
-                          ? 1
-                          : 0.55,
-                    }}
-                  >
-                    {isManualSyncing || sync.isUpdating ? (
-                      <>
-                        <Spinner animation="border" size="sm" /> Syncing...
-                      </>
-                    ) : (
-                      <>
-                        <FaSyncAlt size={14} /> SYNC SATUSEHAT
-                      </>
-                    )}
-                  </button>
-                  {/* <div
-                    style={{
-                      fontSize: 10,
-                      color: "#94a3b8",
-                      marginTop: 5,
-                      maxWidth: 140,
-                      lineHeight: 1.4,
-                      textAlign: "center",
-                    }}
-                  >
-                    Mengambil data terbaru
-                    <br />
-                    dari SATUSEHAT
-                  </div> */}
-                </div>
+                  <SyncButton
+                    canSync={canSync}
+                    isSyncing={isManualSyncing || sync.isUpdating}
+                    isFilterApplied={isFilterApplied}
+                    cooldownDisplay={cooldownDisplay}
+                    onSync={handleManualSync}
+                  />
 
-                <div style={{ textAlign: "center" }}>
                   <button
                     onClick={handleDownloadExcel}
                     disabled={
@@ -2779,8 +3193,10 @@ function TabTwo() {
                       opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
                       display: "flex",
                       alignItems: "center",
+                      justifyContent: "center",
                       gap: 7,
                       whiteSpace: "nowrap",
+                      height: 42,
                     }}
                   >
                     {isDownloading ? (
@@ -2789,16 +3205,86 @@ function TabTwo() {
                       </>
                     ) : (
                       <>
-                        <>
-                          <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
-                        </>
+                        <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
                       </>
                     )}
                   </button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* --- Panel untuk role 1/2/3: tombol Filter membuka modal, Download muncul kalau RS spesifik dipilih --- */}
+          {user.jenisUserId !== 4 && (
+            <div
+              style={{
+                background: "var(--color-background-primary, #fff)",
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                padding: "16px 20px",
+                marginBottom: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                onClick={handleShow}
+                style={{
+                  background: "#1d4ed8",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 7,
+                  padding: "9px 18px",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 7,
+                  height: 42,
+                }}
+              >
+                <FaFilter size={14} /> FILTER
+              </button>
+
+              {isFilterApplied && !isRsAll(selectedRsID) && (
+                <button
+                  onClick={handleDownloadExcel}
+                  disabled={isDownloading || dataRL.length === 0}
+                  style={{
+                    background: "#059669",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 7,
+                    padding: "9px 18px",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: !isDownloading ? "pointer" : "not-allowed",
+                    opacity: !isDownloading ? 1 : 0.55,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                    height: 42,
+                  }}
+                >
+                  {isDownloading ? (
+                    <>
+                      <Spinner animation="border" size="sm" /> Mengunduh...
+                    </>
+                  ) : (
+                    <>
+                      <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+
           <div
             style={{
               display: "flex",
@@ -2856,14 +3342,20 @@ function TabTwo() {
                   icon: <FaFilter size={11} />,
                   bg: "#1d4ed8",
                   label: "FILTER",
-                  desc: "Menampilkan data dari database SIRS Online",
+                  desc: showSyncButton
+                    ? "Menampilkan data dari database SIRS Online"
+                    : "Pilih Provinsi/Kab-Kota/RS. Pilih RS spesifik untuk melihat tabel, atau ALL untuk mengunduh langsung",
                 },
-                {
-                  icon: <FaSyncAlt size={11} />,
-                  bg: "#059669",
-                  label: "SYNC SATUSEHAT",
-                  desc: "Mengambil data terbaru dari SATUSEHAT",
-                },
+                ...(showSyncButton
+                  ? [
+                      {
+                        icon: <FaSyncAlt size={11} />,
+                        bg: "#059669",
+                        label: "SYNC SATUSEHAT",
+                        desc: "Mengambil data terbaru dari SATUSEHAT",
+                      },
+                    ]
+                  : []),
                 {
                   icon: <SiMicrosoftexcel size={15} />,
                   bg: "#059669",
@@ -2906,88 +3398,98 @@ function TabTwo() {
               ))}
             </div>
 
-            {/* Card 2: Status Sinkronisasi */}
-            <div
-              style={{
-                flex: "1 1 210px",
-                border: "1.5px solid #e2e8f0",
-                borderRadius: 10,
-                padding: "14px 16px",
-                background: "#fff",
-              }}
-            >
+            {/* Card 2: Status Sinkronisasi — hanya relevan untuk role 4 */}
+            {showSyncButton && (
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 7,
-                  marginBottom: 14,
+                  flex: "1 1 210px",
+                  border: "1.5px solid #e2e8f0",
+                  borderRadius: 10,
+                  padding: "14px 16px",
+                  background: "#fff",
                 }}
               >
-                <FaSyncAlt size={15} color="#059669" />
-                <span
+                <div
                   style={{
-                    fontWeight: 700,
-                    fontSize: 13,
-                    color: "#059669",
-                    letterSpacing: 0.3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    marginBottom: 14,
                   }}
                 >
-                  STATUS SINKRONISASI
-                </span>
-              </div>
-
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 11 }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                  <div
+                  <FaSyncAlt size={15} color="#059669" />
+                  <span
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 6,
-                      background: "#f1f5f9",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      color: "#059669",
+                      letterSpacing: 0.3,
                     }}
                   >
-                    <FaCalendarAlt size={13} color="#64748b" />
-                  </div>
-                  <span style={{ fontSize: 12, color: "#475569" }}>
-                    Terakhir Sync&nbsp;:&nbsp;
-                    <strong>
-                      {sync.lastSync ? formatDate(sync.lastSync) : "-"}
-                    </strong>
+                    STATUS SINKRONISASI
                   </span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 11 }}
+                >
                   <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 6,
-                      background: "#f1f5f9",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
+                    style={{ display: "flex", alignItems: "center", gap: 9 }}
                   >
-                    <span
-                      style={{ fontSize: 15, lineHeight: 1, color: "#64748b" }}
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        background: "#f1f5f9",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
                     >
-                      ⏱
+                      <FaCalendarAlt size={13} color="#64748b" />
+                    </div>
+                    <span style={{ fontSize: 12, color: "#475569" }}>
+                      Terakhir Sync&nbsp;:&nbsp;
+                      <strong>
+                        {sync.lastSync ? formatDate(sync.lastSync) : "-"}
+                      </strong>
                     </span>
                   </div>
-                  <span style={{ fontSize: 12, color: "#475569" }}>
-                    Interval Sync&nbsp;:&nbsp;
-                    <strong>{MANUAL_SYNC_COOLDOWN} Menit</strong>
-                  </span>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 9 }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        background: "#f1f5f9",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 15,
+                          lineHeight: 1,
+                          color: "#64748b",
+                        }}
+                      >
+                        ⏱
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 12, color: "#475569" }}>
+                      Interval Sync&nbsp;:&nbsp;
+                      <strong>{MANUAL_SYNC_COOLDOWN} Menit</strong>
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Card 3: Sumber Data */}
             <div
@@ -3082,16 +3584,6 @@ function TabTwo() {
                 <h5 style={{ fontSize: "14px", margin: 0 }}>
                   Filtered By {filterLabel.join(", ")}
                 </h5>
-                {/* {isFilterApplied && (
-                  <span style={{ fontSize: 12, color: "gray" }}>
-                    {sync.status === "success" && (
-                      <span style={{ fontSize: 12, color: "gray" }}>
-                        ✓ Diperbarui: {formatDate(sync.lastSync)} (
-                        {sync.totalData} data)
-                      </span>
-                    )}
-                  </span>
-                )} */}
               </div>
             )}
           </div>
@@ -3146,319 +3638,382 @@ function TabTwo() {
                 Gagal mengambil data dari SatuSehat. Coba filter ulang.
               </strong>
             </div>
+          ) : !loadingTable &&
+            dataRL.length === 0 &&
+            sync.status === "never" ? (
+            <div
+              style={{
+                backgroundColor: "#e8f4fd",
+                border: "1px solid #b6d4fe",
+                color: "#084298",
+                padding: 15,
+                borderRadius: 4,
+                textAlign: "center",
+                fontSize: "14px",
+                lineHeight: "1.5",
+              }}
+            >
+              <strong>
+                Data belum disinkronkan dengan SATUSEHAT untuk periode ini.
+                {showSyncButton
+                  ? " Silakan lakukan sinkronisasi terlebih dahulu."
+                  : ""}
+              </strong>
+            </div>
           ) : (
             <div
               className={style["outer-wrapper"]}
               style={{ width: "100%", overflowX: "auto" }}
             >
               <div className={style["inner-content"]}>
-                <div className={style["table-container"]}>
-                  <table className={style["table"]}>
-                    <thead className={style["thead"]}>
-                      <tr className="main-header-row">
-                        <th
-                          className={style["sticky-header-view"]}
-                          rowSpan="3"
-                          style={{ left: "0px" }}
-                        >
-                          No.
-                        </th>
-                        <th
-                          className={style["sticky-header-view"]}
-                          rowSpan="3"
-                          style={{ left: "35px", width: "2%" }}
-                        >
-                          Kode ICD-10
-                        </th>
-                        <th
-                          className={style["sticky-header-view"]}
-                          rowSpan="3"
-                          style={{ left: "110px", width: "10%" }}
-                        >
-                          Diagnosis Penyakit
-                        </th>
-                        <th colSpan={50} style={{ textAlign: "center" }}>
-                          Jumlah Pasien Hidup dan Mati Menurut Kelompok Umur &
-                          Jenis Kelamin
-                        </th>
-                        <th
-                          colSpan={3}
-                          rowSpan={2}
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          Jumlah Pasien Keluar Hidup/Mati
-                        </th>
-                        <th
-                          colSpan={3}
-                          rowSpan={2}
-                          style={{
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          Jumlah Pasien Keluar Mati
-                        </th>
-                      </tr>
-                      <tr className={style["subheader-row"]}>
-                        {[
-                          "< 1 Jam",
-                          "1 - 23 Jam",
-                          "1 - 7 Hari",
-                          "8 - 28 Hari",
-                          "29 Hari - <3 Bln",
-                          "3 - <6 Bln",
-                          "6 - 11 Bln",
-                          "1 - 4 Th",
-                          "5 - 9 Th",
-                          "10 - 14 Th",
-                          "15 - 19 Th",
-                          "20 - 24 Th",
-                          "25 - 29 Th",
-                          "30 - 34 Th",
-                          "35 - 39 Th",
-                          "40 - 44 Th",
-                          "45 - 49 Th",
-                          "50 - 54 Th",
-                          "55 - 59 Th",
-                          "60 - 64 Th",
-                          "65 - 69 Th",
-                          "70 - 74 Th",
-                          "75 - 79 Th",
-                          "80 - 84 Th",
-                          "≥ 85 Th",
-                        ].map((label) => (
+                <div
+                  className="table-container mt-2 mb-1 pb-2"
+                  style={{
+                    position: "sticky",
+                    overflow: "hidden",
+                    borderRadius: "8px",
+                  }}
+                >
+                  {loadingTable && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        backgroundColor: "rgba(255,255,255,0.7)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 10,
+                        pointerEvents: "all",
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "sticky",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          padding: "16px",
+                        }}
+                      >
+                        <Spinner
+                          animation="border"
+                          variant="primary"
+                          style={{ willChange: "transform" }}
+                        />
+                        <p style={{ margin: 0, color: "#555", fontSize: 14 }}>
+                          Sedang mengambil data dari SatuSehat, mohon tunggu...
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ overflowX: "auto" }}>
+                    <table className={style["table"]}>
+                      <thead className={style["thead"]}>
+                        <tr className="main-header-row">
                           <th
-                            key={label}
-                            colSpan={2}
-                            style={{ textAlign: "center" }}
+                            className={style["sticky-header-view"]}
+                            rowSpan="3"
+                            style={{ left: "0px" }}
                           >
-                            {label}
+                            No.
                           </th>
-                        ))}
-                      </tr>
-                      <tr className={style["subsubheader-row"]}>
-                        {Array(25)
-                          .fill(null)
-                          .flatMap((_, i) => [
-                            <th key={`l${i}`} style={{ textAlign: "center" }}>
-                              L
-                            </th>,
-                            <th key={`p${i}`} style={{ textAlign: "center" }}>
-                              P
-                            </th>,
-                          ])}
-                        <th style={{ textAlign: "center" }}>L</th>
-                        <th style={{ textAlign: "center" }}>P</th>
-                        <th style={{ textAlign: "center" }}>Total</th>
-                        <th style={{ textAlign: "center" }}>L</th>
-                        <th style={{ textAlign: "center" }}>P</th>
-                        <th style={{ textAlign: "center" }}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dataRL.map((value, index) => (
-                        <tr
-                          key={value.id}
-                          style={{
-                            verticalAlign: "center",
-                            textAlign: "center",
-                          }}
-                        >
-                          <td
-                            className={style["sticky-column-view"]}
-                            style={{ textAlign: "center", left: "0px" }}
+                          <th
+                            className={style["sticky-header-view"]}
+                            rowSpan="3"
+                            style={{ left: "35px", width: "2%" }}
                           >
-                            {(page - 1) * limit + index + 1}
-                          </td>
-                          <td
-                            className={style["sticky-column-view"]}
-                            style={{ textAlign: "center", left: "35px" }}
+                            Kode ICD-10
+                          </th>
+                          <th
+                            className={style["sticky-header-view"]}
+                            rowSpan="3"
+                            style={{ left: "110px", width: "10%" }}
                           >
-                            {value.kode_icd}
-                          </td>
-                          <td
-                            className={style["sticky-column-view"]}
-                            style={{ textAlign: "left", left: "110px" }}
+                            Diagnosis Penyakit
+                          </th>
+                          <th colSpan={50} style={{ textAlign: "center" }}>
+                            Jumlah Pasien Hidup dan Mati Menurut Kelompok Umur &
+                            Jenis Kelamin
+                          </th>
+                          <th
+                            colSpan={3}
+                            rowSpan={2}
+                            style={{
+                              textAlign: "center",
+                              verticalAlign: "middle",
+                            }}
                           >
-                            {value.diagnosis}
-                          </td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_0_1jam_l}</td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_0_1jam_p}</td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_p}
-                          </td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_1_7hr_l}</td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_1_7hr_p}</td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_8_28hr_l}</td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_8_28hr_p}</td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p}
-                          </td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_3_6bln_l}</td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_3_6bln_p}</td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_p}
-                          </td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_1_4th_l}</td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_1_4th_p}</td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_5_9th_l}</td>
-                          <td>{value.jmlh_pas_hidup_mati_umur_gen_5_9th_p}</td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_10_14th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_10_14th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_15_19th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_15_19th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_20_24th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_20_24th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_25_29th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_25_29th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_30_34th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_30_34th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_35_39th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_35_39th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_40_44th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_40_44th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_45_49th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_45_49th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_50_54th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_50_54th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_55_59th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_55_59th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_60_64th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_60_64th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_65_69th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_65_69th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_70_74th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_70_74th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_75_79th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_75_79th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_80_84th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_80_84th_p}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_lebih85th_l}
-                          </td>
-                          <td>
-                            {value.jmlh_pas_hidup_mati_umur_gen_lebih85th_p}
-                          </td>
-                          <td>{value.keluar_hidup_mati_l}</td>
-                          <td>{value.keluar_hidup_mati_p}</td>
-                          <td>{value.keluar_hidup_mati_total}</td>
-                          <td>{value.keluar_mati_l}</td>
-                          <td>{value.keluar_mati_p}</td>
-                          <td>{value.keluar_mati_total}</td>
+                            Jumlah Pasien Keluar Hidup/Mati
+                          </th>
+                          <th
+                            colSpan={3}
+                            rowSpan={2}
+                            style={{
+                              textAlign: "center",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            Jumlah Pasien Keluar Mati
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination */}
-                {/* {totalPages > 1 && (
-                  <div
-                    style={{
-                      padding: "12px 0",
-                      display: "flex",
-                      justifyContent: "center",
-                      gap: 12,
-                      borderTop: "1px solid #ddd",
-                    }}
-                  >
-                    <button
-                      disabled={page === 1}
-                      onClick={() => fetchData(page - 1)}
-                    >
-                      ◀ Prev
-                    </button>
-                    <span>
-                      Halaman {page} / {totalPages}
-                    </span>
-                    <button
-                      disabled={page === totalPages}
-                      onClick={() => fetchData(page + 1)}
-                    >
-                      Next ▶
-                    </button>
+                        <tr className={style["subheader-row"]}>
+                          {[
+                            "< 1 Jam",
+                            "1 - 23 Jam",
+                            "1 - 7 Hari",
+                            "8 - 28 Hari",
+                            "29 Hari - <3 Bln",
+                            "3 - <6 Bln",
+                            "6 - 11 Bln",
+                            "1 - 4 Th",
+                            "5 - 9 Th",
+                            "10 - 14 Th",
+                            "15 - 19 Th",
+                            "20 - 24 Th",
+                            "25 - 29 Th",
+                            "30 - 34 Th",
+                            "35 - 39 Th",
+                            "40 - 44 Th",
+                            "45 - 49 Th",
+                            "50 - 54 Th",
+                            "55 - 59 Th",
+                            "60 - 64 Th",
+                            "65 - 69 Th",
+                            "70 - 74 Th",
+                            "75 - 79 Th",
+                            "80 - 84 Th",
+                            "≥ 85 Th",
+                          ].map((label) => (
+                            <th
+                              key={label}
+                              colSpan={2}
+                              style={{ textAlign: "center" }}
+                            >
+                              {label}
+                            </th>
+                          ))}
+                        </tr>
+                        <tr className={style["subsubheader-row"]}>
+                          {Array(25)
+                            .fill(null)
+                            .flatMap((_, i) => [
+                              <th key={`l${i}`} style={{ textAlign: "center" }}>
+                                L
+                              </th>,
+                              <th key={`p${i}`} style={{ textAlign: "center" }}>
+                                P
+                              </th>,
+                            ])}
+                          <th style={{ textAlign: "center" }}>L</th>
+                          <th style={{ textAlign: "center" }}>P</th>
+                          <th style={{ textAlign: "center" }}>Total</th>
+                          <th style={{ textAlign: "center" }}>L</th>
+                          <th style={{ textAlign: "center" }}>P</th>
+                          <th style={{ textAlign: "center" }}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dataRL.map((value, index) => (
+                          <tr
+                            key={value.id}
+                            style={{
+                              verticalAlign: "center",
+                              textAlign: "center",
+                            }}
+                          >
+                            <td
+                              className={style["sticky-column-view"]}
+                              style={{ textAlign: "center", left: "0px" }}
+                            >
+                              {(page - 1) * limit + index + 1}
+                            </td>
+                            <td
+                              className={style["sticky-column-view"]}
+                              style={{ textAlign: "center", left: "35px" }}
+                            >
+                              {value.kode_icd}
+                            </td>
+                            <td
+                              className={style["sticky-column-view"]}
+                              style={{ textAlign: "left", left: "110px" }}
+                            >
+                              {value.diagnosis}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_0_1jam_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_0_1jam_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_1_7hr_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_1_7hr_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_8_28hr_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_8_28hr_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_3_6bln_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_3_6bln_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_1_4th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_1_4th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_5_9th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_5_9th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_10_14th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_10_14th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_15_19th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_15_19th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_20_24th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_20_24th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_25_29th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_25_29th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_30_34th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_30_34th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_35_39th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_35_39th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_40_44th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_40_44th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_45_49th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_45_49th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_50_54th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_50_54th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_55_59th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_55_59th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_60_64th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_60_64th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_65_69th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_65_69th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_70_74th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_70_74th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_75_79th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_75_79th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_80_84th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_80_84th_p}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_lebih85th_l}
+                            </td>
+                            <td>
+                              {value.jmlh_pas_hidup_mati_umur_gen_lebih85th_p}
+                            </td>
+                            <td>{value.keluar_hidup_mati_l}</td>
+                            <td>{value.keluar_hidup_mati_p}</td>
+                            <td>{value.keluar_hidup_mati_total}</td>
+                            <td>{value.keluar_mati_l}</td>
+                            <td>{value.keluar_mati_p}</td>
+                            <td>{value.keluar_mati_total}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                )} */}
-
-                {totalPages > 1 && (
-                  <Pagination
-                    page={page}
-                    totalPages={totalPages}
-                    onPageChange={(newPage) => fetchData(newPage)}
-                  />
-                )}
+                  {totalPages > 1 && (
+                    <Pagination
+                      page={page}
+                      totalPages={totalPages}
+                      onPageChange={(newPage) => fetchData(newPage)}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -3467,3 +4022,1965 @@ function TabTwo() {
     </div>
   );
 }
+
+// function TabTwo() {
+//   const [tahun, setTahun] = useState(new Date().getFullYear());
+//   const [bulan, setBulan] = useState("01");
+//   const [dataRL, setDataRL] = useState([]);
+//   const [token, setToken] = useState("");
+//   const [expire, setExpire] = useState("");
+//   const [user, setUser] = useState({});
+//   const [spinner, setSpinner] = useState(false); // spinner fullscreen (filter)
+//   const [loadingTable, setLoadingTable] = useState(false); // loading di dalam tabel
+//   const [show, setShow] = useState(false);
+//   const [filterLabel, setFilterLabel] = useState([]);
+//   const [daftarBulan, setDaftarBulan] = useState([]);
+//   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
+//   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
+//   const [daftarKabKota, setDaftarKabKota] = useState([]);
+//   const [rumahSakit, setRumahSakit] = useState("");
+//   const [sync, setSync] = useState({});
+//   const [page, setPage] = useState(1);
+//   const [totalPages, setTotalPages] = useState(0);
+//   const [isFilterApplied, setIsFilterApplied] = useState(false);
+//   const [isManualSyncing, setIsManualSyncing] = useState(false);
+//   const limit = 50;
+//   const navigate = useNavigate();
+//   const { CSRFToken } = useCSRFTokenContext();
+//   const pollingRef = useRef(null);
+//   const [isDownloading, setIsDownloading] = useState(false);
+//   const [selectedRsID, setSelectedRsID] = useState(null);
+//   const [loadingRS, setLoadingRS] = useState(false);
+//   const [namafile, setNamaFile] = useState("");
+
+//   useEffect(() => {
+//     refreshToken();
+//     getBulan();
+//     return () => clearInterval(pollingRef.current); // cleanup polling saat unmount
+//   }, []);
+
+//   useEffect(() => {
+//     if (!user || !user.jenisUserId) return;
+//     const { jenisUserId, satKerId } = user;
+//     switch (jenisUserId) {
+//       case 1:
+//         getProvinsi();
+//         break;
+//       case 2:
+//         getKabKota(satKerId);
+//         break;
+//       case 3:
+//         getRumahSakit(satKerId);
+//         break;
+//       case 4:
+//         showRumahSakit(satKerId);
+//         break;
+//       default:
+//         break;
+//     }
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [user.jenisUserId]);
+
+//   const provinsiChangeHandler = (e) => {
+//     const provinsiId = e.target.value;
+//     getKabKota(provinsiId);
+//   };
+
+//   const kabKotaChangeHandler = (e) => {
+//     const kabKotaId = e.target.value;
+//     getRumahSakit(kabKotaId);
+//   };
+
+//   const rumahSakitChangeHandler = (e) => {
+//     const rsId = e.target.value;
+//     showRumahSakit(rsId);
+//   };
+
+//   const getProvinsi = async () => {
+//     try {
+//       const response = await axiosJWT.get("/apisirs6v2/provinsi", {
+//         headers: { Authorization: `Bearer ${token}` },
+//       });
+//       setDaftarProvinsi(response.data.data);
+//     } catch (error) {
+//       console.error(error);
+//     }
+//   };
+
+//   const getKabKota = async (provinsiId) => {
+//     try {
+//       const response = await axiosJWT.get("/apisirs6v2/kabkota", {
+//         headers: { Authorization: `Bearer ${token}` },
+//         params: { provinsiId },
+//       });
+//       setDaftarKabKota(response.data.data);
+//     } catch (error) {
+//       console.error(error);
+//     }
+//   };
+
+//   const getRumahSakit = async (kabKotaId) => {
+//     try {
+//       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
+//         headers: { Authorization: `Bearer ${token}` },
+//         params: { kabKotaId },
+//       });
+//       setDaftarRumahSakit(response.data.data);
+//     } catch (error) {
+//       console.error(error);
+//     }
+//   };
+
+//   const refreshToken = async () => {
+//     try {
+//       const response = await axios.get("/apisirs6v2/token", {
+//         headers: { "XSRF-TOKEN": CSRFToken },
+//       });
+//       setToken(response.data.accessToken);
+//       const decoded = jwt_decode(response.data.accessToken);
+//       setExpire(decoded.exp);
+//       setUser(decoded);
+//     } catch (error) {
+//       if (error.response) navigate("/");
+//     }
+//   };
+
+//   const handleSelectRumahSakit = (e) => {
+//     const id = e.target.value;
+//     const selected = daftarRumahSakit.find((item) => item.id == id);
+
+//     if (selected) {
+//       setSelectedRsID(selected.id);
+//       setRumahSakit(selected);
+//     } else {
+//       setSelectedRsID(null);
+//       setRumahSakit(null);
+//     }
+//   };
+
+//   const axiosJWT = axios.create();
+//   axiosJWT.interceptors.request.use(
+//     async (config) => {
+//       const currentDate = new Date();
+//       if (expire * 1000 < currentDate.getTime()) {
+//         const customConfig = {
+//           headers: {
+//             "XSRF-TOKEN": CSRFToken,
+//           },
+//         };
+//         const response = await axios.get("/apisirs6v2/token", customConfig);
+//         config.headers.Authorization = `Bearer ${response.data.accessToken}`;
+//         setToken(response.data.accessToken);
+//         const decoded = jwt_decode(response.data.accessToken);
+//         setExpire(decoded.exp);
+//       }
+
+//       // Di interceptor axiosJWT TabTwo yang sudah ada
+//       if (
+//         ["post", "put", "patch", "delete"].includes(
+//           config.method?.toLowerCase(),
+//         )
+//       ) {
+//         // HMAC yang sudah ada
+//         const timestamp = Date.now().toString();
+//         const bodyString = JSON.stringify(config.data || {});
+//         const signature = CryptoJS.HmacSHA256(
+//           timestamp + bodyString,
+//           process.env.REACT_APP_HMAC_SECRET,
+//         ).toString();
+
+//         config.headers["X-Timestamp"] = timestamp;
+//         config.headers["X-Signature"] = signature;
+//         config.headers["XSRF-TOKEN"] = CSRFToken; // ← tambahkan di sini
+//       }
+
+//       return config;
+//     },
+//     (error) => {
+//       return Promise.reject(error);
+//     },
+//   );
+
+//   const getBulan = () => {
+//     setDaftarBulan([
+//       { key: "Pilih Bulan", value: "" },
+//       { key: "Januari", value: "01" },
+//       { key: "Februari", value: "02" },
+//       { key: "Maret", value: "03" },
+//       { key: "April", value: "04" },
+//       { key: "Mei", value: "05" },
+//       { key: "Juni", value: "06" },
+//       { key: "Juli", value: "07" },
+//       { key: "Agustus", value: "08" },
+//       { key: "September", value: "09" },
+//       { key: "Oktober", value: "10" },
+//       { key: "November", value: "11" },
+//       { key: "Desember", value: "12" },
+//     ]);
+//   };
+
+//   const fetchData = async (
+//     pageNumber = 1,
+//     isBackground = false,
+//     currentToken = token,
+//     currentUser = user,
+//     currentTahun = tahun,
+//     currentBulan = bulan,
+//   ) => {
+//     if (!currentToken || !currentUser.satKerId) return;
+
+//     if (!isBackground) setLoadingTable(true);
+
+//     try {
+//       const res = await axiosJWT.get("/apisirs6v2/rlempattitiksatusatusehat", {
+//         headers: { Authorization: `Bearer ${currentToken}` },
+//         params: {
+//           rsId: currentUser.satKerId,
+//           periode: `${currentTahun}-${currentBulan}`,
+//           page: pageNumber,
+//           limit,
+//         },
+//       });
+
+//       const newSync = res.data.sync ?? {};
+//       setDataRL(res.data.data ?? []);
+//       setSync(newSync);
+//       setTotalPages(res.data.pagination?.totalPages || 0);
+//       setPage(res.data.pagination?.page || 1);
+
+//       // Hentikan polling jika data sudah ada dan tidak sedang updating
+//       if (!newSync.isUpdating && newSync.status === "success") {
+//         clearInterval(pollingRef.current);
+//         pollingRef.current = null;
+//       }
+//     } catch (err) {
+//       console.error(err);
+//     }
+
+//     if (!isBackground) setLoadingTable(false);
+//   };
+
+//   // Mulai polling — dipanggil setelah filter diterapkan
+//   const startPolling = (
+//     currentToken,
+//     currentUser,
+//     currentTahun,
+//     currentBulan,
+//   ) => {
+//     clearInterval(pollingRef.current); // bersihkan polling lama
+
+//     pollingRef.current = setInterval(async () => {
+//       // Cek status sync terbaru dulu
+//       try {
+//         const res = await axiosJWT.get(
+//           "/apisirs6v2/rlempattitiksatusatusehat",
+//           {
+//             headers: { Authorization: `Bearer ${currentToken}` },
+//             params: {
+//               rsId: currentUser.satKerId,
+//               periode: `${currentTahun}-${currentBulan}`,
+//               page: 1,
+//               limit,
+//             },
+//           },
+//         );
+
+//         const newSync = res.data.sync ?? {};
+//         setDataRL(res.data.data ?? []);
+//         setSync(newSync);
+//         setTotalPages(res.data.pagination?.totalPages || 0);
+//         setPage(res.data.pagination?.page || 1);
+
+//         // Data sudah ada dan sync selesai → stop polling
+//         if (!newSync.isUpdating) {
+//           if (newSync.status === "success") {
+//             // ✅ Sync berhasil - fetch data
+//             clearInterval(pollingRef.current);
+//             pollingRef.current = null;
+//             await fetchData(1, false, currentToken);
+//             setLoadingTable(false);
+//             toast.success("Data berhasil disinkronkan!");
+//           } else if (newSync.status === "failed") {
+//             // ❌ Sync gagal - JANGAN fetch, preserve status "failed"
+//             clearInterval(pollingRef.current);
+//             pollingRef.current = null;
+//             setLoadingTable(false);
+//             toast.error("Gagal sync data dari SatuSehat");
+//           } else if (newSync.status === "never") {
+//             // ⚠️ Belum pernah sync - JANGAN fetch
+//             clearInterval(pollingRef.current);
+//             pollingRef.current = null;
+//             setLoadingTable(false);
+//           }
+//         }
+
+//         // console.log(newSync.status);
+//       } catch (err) {
+//         console.error(err);
+//       }
+//     }, 4000); // cek tiap 4 detik
+//   };
+
+//   const getRL = async (e) => {
+//     e.preventDefault();
+//     if (!tahun || !bulan) {
+//       toast("Pilih Bulan & Tahun", {
+//         type: "error",
+//         position: toast.POSITION.TOP_RIGHT,
+//       });
+//       return;
+//     }
+
+//     const periode = `${tahun}-${bulan}`;
+//     // setFilterLabel([`Periode: ${periode}`]);
+//     setFilterLabel([`Rumah Sakit: ${rumahSakit.nama}`, `Periode: ${periode}`]);
+//     setIsFilterApplied(true);
+//     setDataRL([]);
+//     setLoadingTable(true); // tampilkan loading di tabel
+//     handleClose();
+
+//     // Fetch pertama kali
+//     await fetchData(1, false, token, user, tahun, bulan);
+
+//     // SYNC OTOMATIS
+//     // setSync((prevSync) => {
+//     //   if (
+//     //     prevSync.isUpdating ||
+//     //     prevSync.status === "never" ||
+//     //     prevSync.status === "syncing"
+//     //   ) {
+//     //     setLoadingTable(true);
+//     //     startPolling(token, user, tahun, bulan);
+//     //   }
+//     //   return prevSync;
+//     // });
+//   };
+
+//   const handleShow = () => setShow(true);
+//   const handleClose = () => setShow(false);
+
+//   const formatDate = (dateStr) => {
+//     if (!dateStr) return "-";
+//     return (
+//       new Date(dateStr).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) +
+//       " WIB"
+//     );
+//   };
+
+//   const MANUAL_SYNC_COOLDOWN = 5; // menit
+
+//   const [now, setNow] = useState(Date.now());
+
+//   // Timer update setiap 100ms untuk real-time countdown
+//   useEffect(() => {
+//     const interval = setInterval(() => {
+//       setNow(Date.now());
+//     }, 100); // Update setiap 100ms untuk smoothness
+
+//     return () => clearInterval(interval);
+//   }, []);
+
+//   // Ganti Date.now() → now
+//   const minutesSinceSync = sync.lastSync
+//     ? (now - new Date(sync.lastSync).getTime()) / 60000
+//     : null;
+
+//   const canSync =
+//     !sync.isUpdating &&
+//     !isManualSyncing && // ← tambah ini
+//     (minutesSinceSync === null || minutesSinceSync >= MANUAL_SYNC_COOLDOWN);
+
+//   // Sisa menit cooldown (untuk info ke user)
+//   const cooldownLeft =
+//     minutesSinceSync !== null
+//       ? Math.max(0, MANUAL_SYNC_COOLDOWN - minutesSinceSync)
+//       : null;
+
+//   // Format display: jika >= 1 menit, tampilkan dalam menit; jika < 1 menit, tampilkan dalam detik
+//   const cooldownDisplay = useMemo(() => {
+//     if (cooldownLeft === null || cooldownLeft <= 0) return null;
+
+//     // Konversi total nilai (menit) ke total detik
+//     const totalSeconds = Math.ceil(cooldownLeft * 60);
+//     const minutes = Math.floor(totalSeconds / 60);
+//     const seconds = totalSeconds % 60;
+
+//     // Tambahkan angka 0 di depan jika detik kurang dari 10 (contoh: 04 -> "04")
+//     const formattedSeconds = seconds < 10 ? `0${seconds}` : seconds;
+
+//     return `${minutes}:${formattedSeconds}`;
+//   }, [cooldownLeft]);
+
+//   const handleManualSync = async () => {
+//     if (!canSync) return;
+
+//     setIsManualSyncing(true); // ← langsung disable tombol saat klik
+//     setLoadingTable(true);
+
+//     try {
+//       await axiosJWT.post(
+//         "/apisirs6v2/rlempattitiksatusatusehat/sync",
+//         { rsId: user.satKerId, periode: `${tahun}-${bulan}` },
+//         {
+//           headers: {
+//             Authorization: `Bearer ${token}`,
+//             "XSRF-TOKEN": CSRFToken,
+//           },
+//         },
+//       );
+//       startPolling(token, user, tahun, bulan);
+//     } catch (err) {
+//       console.error(err);
+//       setLoadingTable(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     setIsManualSyncing(false);
+//   }, [sync]);
+
+//   // Komponen loading di dalam tabel
+//   const TableLoading = () => (
+//     <div
+//       style={{
+//         display: "flex",
+//         flexDirection: "column",
+//         alignItems: "center",
+//         justifyContent: "center",
+//         padding: "60px 0",
+//         gap: 16,
+//       }}
+//     >
+//       <Spinner animation="border" variant="primary" />
+//       <p style={{ margin: 0, color: "#555", fontSize: 14 }}>
+//         Sedang mengambil data dari SatuSehat, mohon tunggu...
+//       </p>
+//     </div>
+//   );
+
+//   // const handleDownloadExcel = async () => {
+//   //   if (!isFilterApplied) {
+//   //     toast("Terapkan filter terlebih dahulu", {
+//   //       type: "error",
+//   //       position: toast.POSITION.TOP_RIGHT,
+//   //     });
+//   //     return;
+//   //   }
+
+//   //   setIsDownloading(true);
+
+//   //   try {
+//   //     // ── Step 1: Fetch halaman pertama, pakai limit max (200) ──
+//   //     const MAX_LIMIT = 200;
+//   //     const firstRes = await axiosJWT.get(
+//   //       "/apisirs6v2/rlempattitiksatusatusehat",
+//   //       {
+//   //         headers: { Authorization: `Bearer ${token}` },
+//   //         params: {
+//   //           rsId: user.satKerId,
+//   //           periode: `${tahun}-${bulan}`,
+//   //           page: 1,
+//   //           limit: MAX_LIMIT,
+//   //         },
+//   //       },
+//   //     );
+
+//   //     const { totalPages: tp } = firstRes.data.pagination;
+//   //     let allData = [...(firstRes.data.data ?? [])];
+
+//   //     // ── Step 2: Fetch sisa halaman secara paralel ──
+//   //     if (tp > 1) {
+//   //       const remainingPages = Array.from({ length: tp - 1 }, (_, i) => i + 2);
+//   //       const results = await Promise.all(
+//   //         remainingPages.map((p) =>
+//   //           axiosJWT.get("/apisirs6v2/rlempattitiksatusatusehat", {
+//   //             headers: { Authorization: `Bearer ${token}` },
+//   //             params: {
+//   //               rsId: user.satKerId,
+//   //               periode: `${tahun}-${bulan}`,
+//   //               page: p,
+//   //               limit: MAX_LIMIT,
+//   //             },
+//   //           }),
+//   //         ),
+//   //       );
+//   //       results.forEach((r) => allData.push(...(r.data.data ?? [])));
+//   //     }
+
+//   //     // ── Step 3: Susun header ──
+//   //     const headers = [
+//   //       "No",
+//   //       "Kode ICD-10",
+//   //       "Diagnosis Penyakit",
+//   //       "Periode",
+//   //       // 25 kelompok umur × L & P
+//   //       "< 1 Jam L",
+//   //       "< 1 Jam P",
+//   //       "1-23 Jam L",
+//   //       "1-23 Jam P",
+//   //       "1-7 Hari L",
+//   //       "1-7 Hari P",
+//   //       "8-28 Hari L",
+//   //       "8-28 Hari P",
+//   //       "29 Hari-<3 Bln L",
+//   //       "29 Hari-<3 Bln P",
+//   //       "3-<6 Bln L",
+//   //       "3-<6 Bln P",
+//   //       "6-11 Bln L",
+//   //       "6-11 Bln P",
+//   //       "1-4 Th L",
+//   //       "1-4 Th P",
+//   //       "5-9 Th L",
+//   //       "5-9 Th P",
+//   //       "10-14 Th L",
+//   //       "10-14 Th P",
+//   //       "15-19 Th L",
+//   //       "15-19 Th P",
+//   //       "20-24 Th L",
+//   //       "20-24 Th P",
+//   //       "25-29 Th L",
+//   //       "25-29 Th P",
+//   //       "30-34 Th L",
+//   //       "30-34 Th P",
+//   //       "35-39 Th L",
+//   //       "35-39 Th P",
+//   //       "40-44 Th L",
+//   //       "40-44 Th P",
+//   //       "45-49 Th L",
+//   //       "45-49 Th P",
+//   //       "50-54 Th L",
+//   //       "50-54 Th P",
+//   //       "55-59 Th L",
+//   //       "55-59 Th P",
+//   //       "60-64 Th L",
+//   //       "60-64 Th P",
+//   //       "65-69 Th L",
+//   //       "65-69 Th P",
+//   //       "70-74 Th L",
+//   //       "70-74 Th P",
+//   //       "75-79 Th L",
+//   //       "75-79 Th P",
+//   //       "80-84 Th L",
+//   //       "80-84 Th P",
+//   //       "≥85 Th L",
+//   //       "≥85 Th P",
+//   //       // Keluar Hidup/Mati
+//   //       "Keluar Hidup/Mati L",
+//   //       "Keluar Hidup/Mati P",
+//   //       "Keluar Hidup/Mati Total",
+//   //       // Keluar Mati
+//   //       "Keluar Mati L",
+//   //       "Keluar Mati P",
+//   //       "Keluar Mati Total",
+//   //     ];
+
+//   //     // ── Step 4: Susun baris data ──
+//   //     const rows = allData.map((v, i) => [
+//   //       i + 1,
+//   //       v.kode_icd,
+//   //       v.diagnosis,
+//   //       `${tahun}-${bulan}`,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_1_23jam_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_1_7hr_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_1_7hr_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_8_28hr_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_8_28hr_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_3_6bln_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_3_6bln_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_6_11bln_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_6_11bln_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_1_4th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_1_4th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_5_9th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_5_9th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_10_14th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_10_14th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_15_19th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_15_19th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_20_24th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_20_24th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_25_29th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_25_29th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_30_34th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_30_34th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_35_39th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_35_39th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_40_44th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_40_44th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_45_49th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_45_49th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_50_54th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_50_54th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_55_59th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_55_59th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_60_64th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_60_64th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_65_69th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_65_69th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_70_74th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_70_74th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_75_79th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_75_79th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_80_84th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_80_84th_p,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_lebih85th_l,
+//   //       v.jmlh_pas_hidup_mati_umur_gen_lebih85th_p,
+//   //       v.keluar_hidup_mati_l,
+//   //       v.keluar_hidup_mati_p,
+//   //       v.keluar_hidup_mati_total,
+//   //       v.keluar_mati_l,
+//   //       v.keluar_mati_p,
+//   //       v.keluar_mati_total,
+//   //     ]);
+
+//   //     // ── Step 5: Generate & trigger download ──
+//   //     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+//   //     // Auto-width kolom (opsional tapi bagus)
+//   //     ws["!cols"] = headers.map((h, i) =>
+//   //       i === 2 ? { wch: 35 } : { wch: Math.max(h.length + 2, 8) },
+//   //     );
+
+//   //     const wb = XLSX.utils.book_new();
+//   //     XLSX.utils.book_append_sheet(wb, ws, `RL4.1 ${tahun}-${bulan}`);
+//   //     XLSX.writeFile(wb, `RL4.1_${tahun}-${bulan}.xlsx`);
+
+//   //     toast("Download berhasil!", {
+//   //       type: "success",
+//   //       position: toast.POSITION.TOP_RIGHT,
+//   //     });
+//   //   } catch (err) {
+//   //     console.error(err);
+//   //     toast("Gagal download Excel", {
+//   //       type: "error",
+//   //       position: toast.POSITION.TOP_RIGHT,
+//   //     });
+//   //   } finally {
+//   //     setIsDownloading(false);
+//   //   }
+//   // };
+
+//   const handleDownloadExcel = async () => {
+//     if (!isFilterApplied) {
+//       toast("Terapkan filter terlebih dahulu", {
+//         type: "error",
+//         position: toast.POSITION.TOP_RIGHT,
+//       });
+//       return;
+//     }
+
+//     setIsDownloading(true);
+
+//     try {
+//       // ── Step 1: Fetch halaman pertama, pakai limit max (200) ──
+//       const MAX_LIMIT = 200;
+//       const firstRes = await axiosJWT.get(
+//         "/apisirs6v2/rlempattitiksatusatusehat",
+//         {
+//           headers: { Authorization: `Bearer ${token}` },
+//           params: {
+//             rsId: user.satKerId,
+//             periode: `${tahun}-${bulan}`,
+//             page: 1,
+//             limit: MAX_LIMIT,
+//           },
+//         },
+//       );
+
+//       const { totalPages: tp } = firstRes.data.pagination;
+//       let allData = [...(firstRes.data.data ?? [])];
+
+//       // ── Step 2: Fetch sisa halaman secara paralel ──
+//       if (tp > 1) {
+//         const remainingPages = Array.from({ length: tp - 1 }, (_, i) => i + 2);
+//         const results = await Promise.all(
+//           remainingPages.map((p) =>
+//             axiosJWT.get("/apisirs6v2/rlempattitiksatusatusehat", {
+//               headers: { Authorization: `Bearer ${token}` },
+//               params: {
+//                 rsId: user.satKerId,
+//                 periode: `${tahun}-${bulan}`,
+//                 page: p,
+//                 limit: MAX_LIMIT,
+//               },
+//             }),
+//           ),
+//         );
+//         results.forEach((r) => allData.push(...(r.data.data ?? [])));
+//       }
+
+//       // ── Step 3: Susun header tabel utama ──
+//       const headers = [
+//         "No",
+//         "Rumah Sakit",
+//         "Kode ICD-10",
+//         "Diagnosis Penyakit",
+//         "Periode",
+//         // 25 kelompok umur × L & P
+//         "< 1 Jam L",
+//         "< 1 Jam P",
+//         "1-23 Jam L",
+//         "1-23 Jam P",
+//         "1-7 Hari L",
+//         "1-7 Hari P",
+//         "8-28 Hari L",
+//         "8-28 Hari P",
+//         "29 Hari-<3 Bln L",
+//         "29 Hari-<3 Bln P",
+//         "3-<6 Bln L",
+//         "3-<6 Bln P",
+//         "6-11 Bln L",
+//         "6-11 Bln P",
+//         "1-4 Th L",
+//         "1-4 Th P",
+//         "5-9 Th L",
+//         "5-9 Th P",
+//         "10-14 Th L",
+//         "10-14 Th P",
+//         "15-19 Th L",
+//         "15-19 Th P",
+//         "20-24 Th L",
+//         "20-24 Th P",
+//         "25-29 Th L",
+//         "25-29 Th P",
+//         "30-34 Th L",
+//         "30-34 Th P",
+//         "35-39 Th L",
+//         "35-39 Th P",
+//         "40-44 Th L",
+//         "40-44 Th P",
+//         "45-49 Th L",
+//         "45-49 Th P",
+//         "50-54 Th L",
+//         "50-54 Th P",
+//         "55-59 Th L",
+//         "55-59 Th P",
+//         "60-64 Th L",
+//         "60-64 Th P",
+//         "65-69 Th L",
+//         "65-69 Th P",
+//         "70-74 Th L",
+//         "70-74 Th P",
+//         "75-79 Th L",
+//         "75-79 Th P",
+//         "80-84 Th L",
+//         "80-84 Th P",
+//         "≥85 Th L",
+//         "≥85 Th P",
+//         // Keluar Hidup/Mati
+//         "Keluar Hidup/Mati L",
+//         "Keluar Hidup/Mati P",
+//         "Keluar Hidup/Mati Total",
+//         // Keluar Mati
+//         "Keluar Mati L",
+//         "Keluar Mati P",
+//         "Keluar Mati Total",
+//       ];
+
+//       // ── Step 4: Susun baris data ──
+//       const rows = allData.map((v, i) => [
+//         i + 1,
+//         rumahSakit.nama,
+//         v.kode_icd,
+//         v.diagnosis,
+//         `${tahun}-${bulan}`,
+//         v.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_1_23jam_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_1_7hr_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_1_7hr_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_8_28hr_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_8_28hr_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_3_6bln_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_3_6bln_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_6_11bln_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_6_11bln_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_1_4th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_1_4th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_5_9th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_5_9th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_10_14th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_10_14th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_15_19th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_15_19th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_20_24th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_20_24th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_25_29th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_25_29th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_30_34th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_30_34th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_35_39th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_35_39th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_40_44th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_40_44th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_45_49th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_45_49th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_50_54th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_50_54th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_55_59th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_55_59th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_60_64th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_60_64th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_65_69th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_65_69th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_70_74th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_70_74th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_75_79th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_75_79th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_80_84th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_80_84th_p,
+//         v.jmlh_pas_hidup_mati_umur_gen_lebih85th_l,
+//         v.jmlh_pas_hidup_mati_umur_gen_lebih85th_p,
+//         v.keluar_hidup_mati_l,
+//         v.keluar_hidup_mati_p,
+//         v.keluar_hidup_mati_total,
+//         v.keluar_mati_l,
+//         v.keluar_mati_p,
+//         v.keluar_mati_total,
+//       ]);
+
+//       // ── Step 5: Buat header info (judul, periode) ──
+//       // Format:
+//       // [Judul] (merged)
+//       // [Kosong]
+//       // [Periode Data]
+//       // [Bulan, Tahun]
+//       // [Kosong]
+//       // [Headers tabel]
+//       // [Data rows...]
+
+//       const bulanName =
+//         daftarBulan?.find((b) => b.value == bulan)?.key || `Bulan ${bulan}`;
+
+//       const headerInfo = [
+//         ["SIRS ONLINE RL 4.1 - SATUSEHAT"], // Row 1: Judul (akan di-merge)
+//         [], // Row 2: Kosong (skip)
+//         ["Periode Data"], // Row 3: Label
+//         [`Bulan:`, `${bulanName}`], // Row 4: Data periode
+//         [`Tahun:`, `${tahun}`],
+//         [], // Row 5: Kosong (spacer)
+//       ];
+
+//       // ── Step 6: Gabungkan header info + headers tabel + data rows ──
+//       const allRows = [...headerInfo, headers, ...rows];
+
+//       // ── Step 7: Generate & trigger download ──
+//       const ws = XLSX.utils.aoa_to_sheet(allRows);
+
+//       // ── Step 8: Set column widths ──
+//       ws["!cols"] = [
+//         { wch: 6 }, // No
+//         { wch: 12 }, // Kode ICD-10
+//         { wch: 35 }, // Diagnosis Penyakit (lebih lebar)
+//         { wch: 12 }, // Periode
+//         ...Array(headers.length - 4).fill({ wch: 12 }), // Kolom data umur
+//       ];
+
+//       // ── Step 9: Set row heights (opsional, tapi bagus untuk readability) ──
+//       ws["!rows"] = [
+//         { hpt: 25, hidden: false }, // Row 1: Judul (tinggi)
+//         { hpt: 8, hidden: false }, // Row 2: Kosong
+//         { hpt: 18, hidden: false }, // Row 3: Periode Data
+//         { hpt: 18, hidden: false }, // Row 4: Data periode
+//         { hpt: 18, hidden: false }, // Row 4: Data periode
+//         { hpt: 8, hidden: false }, // Row 5: Kosong
+//         { hpt: 30, hidden: false }, // Row 6: Headers tabel (lebih tinggi)
+//       ];
+
+//       const wb = XLSX.utils.book_new();
+//       XLSX.utils.book_append_sheet(wb, ws, `RL4.1 ${tahun}-${bulan}`);
+//       // XLSX.writeFile(wb, `RL4.1_${tahun}-${bulan}.xlsx`);
+//       const currentDate = new Date();
+
+//       // Mengambil komponen waktu
+//       const jam = String(currentDate.getHours()).padStart(2, "0");
+//       const menit = String(currentDate.getMinutes()).padStart(2, "0");
+//       const detik = String(currentDate.getSeconds()).padStart(2, "0");
+
+//       // Hasil: RL4.1_2026-08_090411.xlsx
+//       const fileName = `RL4.1_${tahun}-${bulan}_${jam}${menit}${detik}.xlsx`;
+//       XLSX.writeFile(wb, fileName);
+
+//       toast("Download berhasil!", {
+//         type: "success",
+//         position: toast.POSITION.TOP_RIGHT,
+//       });
+//     } catch (err) {
+//       console.error(err);
+//       toast("Gagal download Excel", {
+//         type: "error",
+//         position: toast.POSITION.TOP_RIGHT,
+//       });
+//     } finally {
+//       setIsDownloading(false);
+//     }
+//   };
+
+//   const showRumahSakit = async (id) => {
+//     try {
+//       const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
+//         headers: { Authorization: `Bearer ${token}` },
+//       });
+//       setRumahSakit(response.data.data);
+//     } catch (error) {
+//       console.error(error);
+//     }
+//   };
+
+//   return (
+//     <div
+//       className="container"
+//       style={{ marginTop: "0px", marginBottom: "70px" }}
+//     >
+//       <ToastContainer />
+
+//       <div className="row">
+//         <div className="col-md-12">
+//           <div
+//             style={{
+//               background: "var(--color-background-primary, #fff)",
+//               border: "1px solid #e2e8f0",
+//               borderRadius: 10,
+//               padding: "16px 20px",
+//               marginBottom: 14,
+//             }}
+//           >
+//             <p
+//               style={{
+//                 fontWeight: 700,
+//                 fontSize: 13,
+//                 color: "#1e293b",
+//                 margin: "0 0 14px 0",
+//                 letterSpacing: 0.2,
+//               }}
+//             >
+//               Periode Data
+//             </p>
+
+//             {/* Row: input + tombol */}
+//             <div
+//               style={{
+//                 display: "flex",
+//                 alignItems: "flex-end",
+//                 gap: 12,
+//                 flexWrap: "wrap",
+//               }}
+//             >
+//               {/* Bulan */}
+//               <div>
+//                 <label
+//                   style={{
+//                     fontSize: 12,
+//                     color: "#64748b",
+//                     display: "block",
+//                     marginBottom: 5,
+//                     fontWeight: 500,
+//                   }}
+//                 >
+//                   Bulan
+//                 </label>
+//                 <div
+//                   style={{
+//                     display: "flex",
+//                     alignItems: "center",
+//                     border: "1px solid #cbd5e1",
+//                     borderRadius: 7,
+//                     padding: "7px 10px",
+//                     background: "#f8fafc",
+//                     minWidth: 155,
+//                   }}
+//                 >
+//                   <FaCalendarAlt
+//                     size={13}
+//                     color="#94a3b8"
+//                     style={{ marginRight: 7, flexShrink: 0 }}
+//                   />
+//                   <select
+//                     value={bulan}
+//                     onChange={(e) => setBulan(e.target.value)}
+//                     style={{
+//                       border: "none",
+//                       outline: "none",
+//                       background: "transparent",
+//                       flex: 1,
+//                       fontSize: 13,
+//                       color: "#334155",
+//                     }}
+//                   >
+//                     {daftarBulan.map((b) => (
+//                       <option key={b.value} value={b.value}>
+//                         {b.key}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//               </div>
+
+//               {/* Tahun */}
+//               <div>
+//                 <label
+//                   style={{
+//                     fontSize: 12,
+//                     color: "#64748b",
+//                     display: "block",
+//                     marginBottom: 5,
+//                     fontWeight: 500,
+//                   }}
+//                 >
+//                   Tahun
+//                 </label>
+//                 <div
+//                   style={{
+//                     display: "flex",
+//                     alignItems: "center",
+//                     border: "1px solid #cbd5e1",
+//                     borderRadius: 7,
+//                     padding: "7px 10px",
+//                     background: "#f8fafc",
+//                     width: 125,
+//                   }}
+//                 >
+//                   <FaCalendarAlt
+//                     size={13}
+//                     color="#94a3b8"
+//                     style={{ marginRight: 7, flexShrink: 0 }}
+//                   />
+//                   <input
+//                     type="number"
+//                     value={tahun}
+//                     onChange={(e) => setTahun(e.target.value)}
+//                     style={{
+//                       border: "none",
+//                       outline: "none",
+//                       background: "transparent",
+//                       width: "100%",
+//                       fontSize: 13,
+//                       color: "#334155",
+//                     }}
+//                   />
+//                 </div>
+//               </div>
+
+//               {/* Kab/Kota */}
+//               {/* <div>
+//                 <label
+//                   htmlFor="kabKota"
+//                   style={{
+//                     fontSize: 12,
+//                     color: "#64748b",
+//                     display: "block",
+//                     marginBottom: 5,
+//                     fontWeight: 500,
+//                   }}
+//                 >
+//                   Kab/Kota
+//                 </label>
+//                 <div
+//                   style={{
+//                     display: "flex",
+//                     alignItems: "center",
+//                     border: "1px solid #cbd5e1",
+//                     borderRadius: 7,
+//                     padding: "7px 10px",
+//                     background: "#f8fafc",
+//                     width: 155,
+//                   }}
+//                 >
+//                   <select
+//                     id="kabKota"
+//                     onChange={(e) => kabKotaChangeHandler(e)}
+//                     style={{
+//                       border: "none",
+//                       outline: "none",
+//                       background: "transparent",
+//                       width: "100%",
+//                       fontSize: 13,
+//                       color: "#334155",
+//                       cursor: "pointer",
+//                     }}
+//                   >
+//                     <option value="">Pilih</option>
+//                     {daftarKabKota.map((nilai) => (
+//                       <option key={nilai.id} value={nilai.id}>
+//                         {nilai.nama}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//               </div> */}
+
+//               {/* Rumah Sakit */}
+//               {/* <div>
+//                 <label
+//                   htmlFor="rumahSakit"
+//                   style={{
+//                     fontSize: 12,
+//                     color: "#64748b",
+//                     display: "block",
+//                     marginBottom: 5,
+//                     fontWeight: 500,
+//                   }}
+//                 >
+//                   Rumah Sakit
+//                 </label>
+//                 <div
+//                   style={{
+//                     display: "flex",
+//                     alignItems: "center",
+//                     border: "1px solid #cbd5e1",
+//                     borderRadius: 7,
+//                     padding: "7px 10px",
+//                     background: "#f8fafc",
+//                     width: 180,
+//                   }}
+//                 >
+//                   <select
+//                     id="rumahSakit"
+//                     value={selectedRsID || ""}
+//                     onChange={(e) => handleSelectRumahSakit(e)}
+//                     style={{
+//                       border: "none",
+//                       outline: "none",
+//                       background: "transparent",
+//                       width: "100%",
+//                       fontSize: 13,
+//                       color: "#334155",
+//                       cursor: "pointer",
+//                     }}
+//                   >
+//                     <option value="">
+//                       {loadingRS ? "Loading..." : "Pilih"}
+//                     </option>
+//                     {daftarRumahSakit.map((nilai) => (
+//                       <option key={nilai.id} value={nilai.id}>
+//                         {nilai.nama}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//               </div> */}
+
+//               {/* Tombol-tombol */}
+//               <div
+//                 style={{
+//                   display: "flex",
+//                   alignItems: "center",
+//                   gap: 10,
+//                   flexWrap: "wrap",
+//                 }}
+//               >
+//                 {/* FILTER */}
+//                 <button
+//                   onClick={getRL}
+//                   style={{
+//                     background: "#1d4ed8",
+//                     color: "#fff",
+//                     border: "none",
+//                     borderRadius: 7,
+//                     padding: "9px 18px",
+//                     fontWeight: 700,
+//                     fontSize: 13,
+//                     cursor: "pointer",
+//                     display: "flex",
+//                     alignItems: "center",
+//                     justifyContent: "center",
+//                     gap: 7,
+//                     whiteSpace: "nowrap",
+//                     height: 42,
+//                   }}
+//                 >
+//                   <FaFilter size={14} /> FILTER
+//                 </button>
+
+//                 {/* SYNC SATUSEHAT */}
+//                 <SyncButton
+//                   canSync={canSync}
+//                   isSyncing={isManualSyncing || sync.isUpdating}
+//                   isFilterApplied={isFilterApplied}
+//                   cooldownDisplay={cooldownDisplay}
+//                   onSync={handleManualSync}
+//                 />
+
+//                 {/* DOWNLOAD EXCEL */}
+//                 <button
+//                   onClick={handleDownloadExcel}
+//                   disabled={
+//                     !isFilterApplied || isDownloading || dataRL.length === 0
+//                   }
+//                   title={
+//                     !isFilterApplied
+//                       ? "Terapkan filter terlebih dahulu"
+//                       : "Download semua data ke Excel"
+//                   }
+//                   style={{
+//                     background: "#059669",
+//                     color: "#fff",
+//                     border: "none",
+//                     borderRadius: 7,
+//                     padding: "9px 18px",
+//                     fontWeight: 700,
+//                     fontSize: 13,
+//                     cursor:
+//                       isFilterApplied && !isDownloading
+//                         ? "pointer"
+//                         : "not-allowed",
+//                     opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
+//                     display: "flex",
+//                     alignItems: "center",
+//                     justifyContent: "center",
+//                     gap: 7,
+//                     whiteSpace: "nowrap",
+//                     height: 42,
+//                   }}
+//                 >
+//                   {isDownloading ? (
+//                     <>
+//                       <Spinner animation="border" size="sm" /> Mengunduh...
+//                     </>
+//                   ) : (
+//                     <>
+//                       <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
+//                     </>
+//                   )}
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+
+//           <div
+//             style={{
+//               display: "flex",
+//               gap: 14,
+//               marginBottom: 16,
+//               flexWrap: "wrap",
+//             }}
+//           >
+//             {/* Card 1: Keterangan Tombol */}
+//             <div
+//               style={{
+//                 flex: "1 1 240px",
+//                 border: "1.5px solid #3b82f6",
+//                 borderRadius: 10,
+//                 padding: "14px 16px",
+//                 background: "#fff",
+//               }}
+//             >
+//               <div
+//                 style={{
+//                   display: "flex",
+//                   alignItems: "center",
+//                   gap: 7,
+//                   marginBottom: 13,
+//                 }}
+//               >
+//                 <div
+//                   style={{
+//                     width: 22,
+//                     height: 22,
+//                     borderRadius: "50%",
+//                     background: "#dbeafe",
+//                     display: "flex",
+//                     alignItems: "center",
+//                     justifyContent: "center",
+//                     flexShrink: 0,
+//                   }}
+//                 >
+//                   <FaInfoCircle size={12} color="#2563eb" />
+//                 </div>
+//                 <span
+//                   style={{
+//                     fontWeight: 700,
+//                     fontSize: 13,
+//                     color: "#2563eb",
+//                     letterSpacing: 0.3,
+//                   }}
+//                 >
+//                   KETERANGAN TOMBOL
+//                 </span>
+//               </div>
+
+//               {[
+//                 {
+//                   icon: <FaFilter size={11} />,
+//                   bg: "#1d4ed8",
+//                   label: "FILTER",
+//                   desc: "Menampilkan data dari database SIRS Online",
+//                 },
+//                 {
+//                   icon: <FaSyncAlt size={11} />,
+//                   bg: "#059669",
+//                   label: "SYNC SATUSEHAT",
+//                   desc: "Mengambil data terbaru dari SATUSEHAT",
+//                 },
+//                 {
+//                   icon: <SiMicrosoftexcel size={15} />,
+//                   bg: "#059669",
+//                   label: "DOWNLOAD EXCEL",
+//                   desc: "Mengunduh data hasil filter",
+//                 },
+//               ].map((item) => (
+//                 <div
+//                   key={item.label}
+//                   style={{
+//                     display: "flex",
+//                     alignItems: "flex-start",
+//                     gap: 9,
+//                     marginBottom: 9,
+//                   }}
+//                 >
+//                   <div
+//                     style={{
+//                       background: item.bg,
+//                       borderRadius: 5,
+//                       width: 26,
+//                       height: 26,
+//                       flexShrink: 0,
+//                       display: "flex",
+//                       alignItems: "center",
+//                       justifyContent: "center",
+//                       color: "#fff",
+//                     }}
+//                   >
+//                     {item.icon}
+//                   </div>
+//                   <div
+//                     style={{ fontSize: 12, color: "#475569", lineHeight: 1.45 }}
+//                   >
+//                     <strong style={{ fontWeight: 700 }}>{item.label}</strong>
+//                     {" : "}
+//                     {item.desc}
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+
+//             {/* Card 2: Status Sinkronisasi */}
+//             <div
+//               style={{
+//                 flex: "1 1 210px",
+//                 border: "1.5px solid #e2e8f0",
+//                 borderRadius: 10,
+//                 padding: "14px 16px",
+//                 background: "#fff",
+//               }}
+//             >
+//               <div
+//                 style={{
+//                   display: "flex",
+//                   alignItems: "center",
+//                   gap: 7,
+//                   marginBottom: 14,
+//                 }}
+//               >
+//                 <FaSyncAlt size={15} color="#059669" />
+//                 <span
+//                   style={{
+//                     fontWeight: 700,
+//                     fontSize: 13,
+//                     color: "#059669",
+//                     letterSpacing: 0.3,
+//                   }}
+//                 >
+//                   STATUS SINKRONISASI
+//                 </span>
+//               </div>
+
+//               <div
+//                 style={{ display: "flex", flexDirection: "column", gap: 11 }}
+//               >
+//                 <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+//                   <div
+//                     style={{
+//                       width: 28,
+//                       height: 28,
+//                       borderRadius: 6,
+//                       background: "#f1f5f9",
+//                       display: "flex",
+//                       alignItems: "center",
+//                       justifyContent: "center",
+//                       flexShrink: 0,
+//                     }}
+//                   >
+//                     <FaCalendarAlt size={13} color="#64748b" />
+//                   </div>
+//                   <span style={{ fontSize: 12, color: "#475569" }}>
+//                     Terakhir Sync&nbsp;:&nbsp;
+//                     <strong>
+//                       {sync.lastSync ? formatDate(sync.lastSync) : "-"}
+//                     </strong>
+//                   </span>
+//                 </div>
+//                 <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+//                   <div
+//                     style={{
+//                       width: 28,
+//                       height: 28,
+//                       borderRadius: 6,
+//                       background: "#f1f5f9",
+//                       display: "flex",
+//                       alignItems: "center",
+//                       justifyContent: "center",
+//                       flexShrink: 0,
+//                     }}
+//                   >
+//                     <span
+//                       style={{ fontSize: 15, lineHeight: 1, color: "#64748b" }}
+//                     >
+//                       ⏱
+//                     </span>
+//                   </div>
+//                   <span style={{ fontSize: 12, color: "#475569" }}>
+//                     Interval Sync&nbsp;:&nbsp;
+//                     <strong>{MANUAL_SYNC_COOLDOWN} Menit</strong>
+//                   </span>
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Card 3: Sumber Data */}
+//             <div
+//               style={{
+//                 flex: "1 1 180px",
+//                 border: "1.5px solid #e2e8f0",
+//                 borderRadius: 10,
+//                 padding: "14px 16px",
+//                 background: "#fff",
+//                 display: "flex",
+//                 flexDirection: "column",
+//               }}
+//             >
+//               <div
+//                 style={{
+//                   display: "flex",
+//                   alignItems: "center",
+//                   gap: 7,
+//                   marginBottom: 12,
+//                 }}
+//               >
+//                 <FaDatabase size={14} color="#3b82f6" />
+//                 <span
+//                   style={{
+//                     fontWeight: 700,
+//                     fontSize: 13,
+//                     color: "#3b82f6",
+//                     letterSpacing: 0.3,
+//                   }}
+//                 >
+//                   SUMBER DATA
+//                 </span>
+//               </div>
+//               <div
+//                 style={{
+//                   display: "flex",
+//                   alignItems: "center",
+//                   gap: 14,
+//                   flex: 1,
+//                 }}
+//               >
+//                 <p
+//                   style={{
+//                     fontSize: 12,
+//                     color: "#475569",
+//                     margin: 0,
+//                     flex: 1,
+//                     lineHeight: 1.6,
+//                   }}
+//                 >
+//                   Data yang ditampilkan bersumber dari{" "}
+//                   <strong>SATUSEHAT</strong> yang sudah tersimpan dalam database{" "}
+//                   <strong>SIRS</strong>.
+//                 </p>
+//                 <div style={{ position: "relative", flexShrink: 0 }}>
+//                   <FaDatabase size={38} color="#bfdbfe" />
+//                   <div
+//                     style={{
+//                       position: "absolute",
+//                       bottom: -3,
+//                       right: -6,
+//                       background: "#059669",
+//                       color: "#fff",
+//                       borderRadius: "50%",
+//                       width: 18,
+//                       height: 18,
+//                       display: "flex",
+//                       alignItems: "center",
+//                       justifyContent: "center",
+//                       fontSize: 11,
+//                       fontWeight: 700,
+//                       lineHeight: 1,
+//                     }}
+//                   >
+//                     ✓
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Filter label + status sync */}
+//           <div className={style.filterLabel}>
+//             {filterLabel.length > 0 && (
+//               <div
+//                 style={{
+//                   display: "flex",
+//                   justifyContent: "space-between",
+//                   alignItems: "center",
+//                 }}
+//               >
+//                 <h5 style={{ fontSize: "14px", margin: 0 }}>
+//                   Filtered By {filterLabel.join(", ")}
+//                 </h5>
+//                 {/* {isFilterApplied && (
+//                   <span style={{ fontSize: 12, color: "gray" }}>
+//                     {sync.status === "success" && (
+//                       <span style={{ fontSize: 12, color: "gray" }}>
+//                         ✓ Diperbarui: {formatDate(sync.lastSync)} (
+//                         {sync.totalData} data)
+//                       </span>
+//                     )}
+//                   </span>
+//                 )} */}
+//               </div>
+//             )}
+//           </div>
+
+//           {/* Konten utama */}
+//           {!isFilterApplied ? (
+//             <div
+//               style={{
+//                 backgroundColor: "#fff3cd",
+//                 border: "1px solid #ffc107",
+//                 color: "#856404",
+//                 padding: 15,
+//                 borderRadius: 4,
+//                 textAlign: "center",
+//               }}
+//             >
+//               <strong>Silakan pilih filter terlebih dahulu.</strong>
+//             </div>
+//           ) : loadingTable && dataRL.length === 0 ? (
+//             <TableLoading />
+//           ) : !loadingTable &&
+//             dataRL.length === 0 &&
+//             sync.status === "success" ? (
+//             <div
+//               style={{
+//                 backgroundColor: "#d1ecf1",
+//                 border: "1px solid #bee5eb",
+//                 color: "#0c5460",
+//                 padding: 15,
+//                 borderRadius: 4,
+//                 textAlign: "center",
+//               }}
+//             >
+//               <strong>
+//                 Data tidak ditemukan di SATUSEHAT untuk periode ini.
+//               </strong>
+//             </div>
+//           ) : !loadingTable &&
+//             dataRL.length === 0 &&
+//             sync.status === "failed" ? (
+//             <div
+//               style={{
+//                 backgroundColor: "#f8d7da",
+//                 border: "1px solid #f5c6cb",
+//                 color: "#721c24",
+//                 padding: 15,
+//                 borderRadius: 4,
+//                 textAlign: "center",
+//               }}
+//             >
+//               <strong>
+//                 Gagal mengambil data dari SatuSehat. Coba filter ulang.
+//               </strong>
+//             </div>
+//           ) : !loadingTable &&
+//             dataRL.length === 0 &&
+//             sync.status === "never" ? (
+//             <div
+//               style={{
+//                 backgroundColor: "#e8f4fd",
+//                 border: "1px solid #b6d4fe",
+//                 color: "#084298",
+//                 padding: 15,
+//                 borderRadius: 4,
+//                 textAlign: "center",
+//                 fontSize: "14px",
+//                 lineHeight: "1.5",
+//               }}
+//             >
+//               <strong>
+//                 Data belum disinkronkan dengan SATUSEHAT untuk periode ini.
+//                 Silakan lakukan sinkronisasi terlebih dahulu.
+//               </strong>
+//             </div>
+//           ) : (
+//             <div
+//               className={style["outer-wrapper"]}
+//               style={{ width: "100%", overflowX: "auto" }}
+//             >
+//               <div className={style["inner-content"]}>
+//                 <div
+//                   className="table-container mt-2 mb-1 pb-2"
+//                   style={{
+//                     position: "sticky",
+//                     overflow: "hidden", // 1. Mencegah overlay meluber keluar dari kontainer tabel
+//                     borderRadius: "8px",
+//                   }}
+//                 >
+//                   {loadingTable && (
+//                     <div
+//                       style={{
+//                         position: "absolute",
+//                         top: 0,
+//                         left: 0,
+//                         width: "100%",
+//                         height: "100%",
+//                         backgroundColor: "rgba(255,255,255,0.7)",
+//                         display: "flex",
+//                         justifyContent: "center",
+//                         alignItems: "center",
+//                         zIndex: 10,
+//                         pointerEvents: "all",
+//                       }}
+//                     >
+//                       <div
+//                         style={{
+//                           position: "sticky",
+//                           top: "50%",
+//                           transform: "translateY(-50%)",
+//                           display: "flex",
+//                           flexDirection: "column",
+//                           alignItems: "center",
+//                           padding: "16px",
+//                         }}
+//                       >
+//                         <Spinner
+//                           animation="border"
+//                           variant="primary"
+//                           style={{ willChange: "transform" }}
+//                         />
+//                         <p style={{ margin: 0, color: "#555", fontSize: 14 }}>
+//                           Sedang mengambil data dari SatuSehat, mohon tunggu...
+//                         </p>
+//                       </div>
+//                     </div>
+//                   )}
+//                   <div style={{ overflowX: "auto" }}>
+//                     <table className={style["table"]}>
+//                       <thead className={style["thead"]}>
+//                         <tr className="main-header-row">
+//                           <th
+//                             className={style["sticky-header-view"]}
+//                             rowSpan="3"
+//                             style={{ left: "0px" }}
+//                           >
+//                             No.
+//                           </th>
+//                           <th
+//                             className={style["sticky-header-view"]}
+//                             rowSpan="3"
+//                             style={{ left: "35px", width: "2%" }}
+//                           >
+//                             Kode ICD-10
+//                           </th>
+//                           <th
+//                             className={style["sticky-header-view"]}
+//                             rowSpan="3"
+//                             style={{ left: "110px", width: "10%" }}
+//                           >
+//                             Diagnosis Penyakit
+//                           </th>
+//                           <th colSpan={50} style={{ textAlign: "center" }}>
+//                             Jumlah Pasien Hidup dan Mati Menurut Kelompok Umur &
+//                             Jenis Kelamin
+//                           </th>
+//                           <th
+//                             colSpan={3}
+//                             rowSpan={2}
+//                             style={{
+//                               textAlign: "center",
+//                               verticalAlign: "middle",
+//                             }}
+//                           >
+//                             Jumlah Pasien Keluar Hidup/Mati
+//                           </th>
+//                           <th
+//                             colSpan={3}
+//                             rowSpan={2}
+//                             style={{
+//                               textAlign: "center",
+//                               verticalAlign: "middle",
+//                             }}
+//                           >
+//                             Jumlah Pasien Keluar Mati
+//                           </th>
+//                         </tr>
+//                         <tr className={style["subheader-row"]}>
+//                           {[
+//                             "< 1 Jam",
+//                             "1 - 23 Jam",
+//                             "1 - 7 Hari",
+//                             "8 - 28 Hari",
+//                             "29 Hari - <3 Bln",
+//                             "3 - <6 Bln",
+//                             "6 - 11 Bln",
+//                             "1 - 4 Th",
+//                             "5 - 9 Th",
+//                             "10 - 14 Th",
+//                             "15 - 19 Th",
+//                             "20 - 24 Th",
+//                             "25 - 29 Th",
+//                             "30 - 34 Th",
+//                             "35 - 39 Th",
+//                             "40 - 44 Th",
+//                             "45 - 49 Th",
+//                             "50 - 54 Th",
+//                             "55 - 59 Th",
+//                             "60 - 64 Th",
+//                             "65 - 69 Th",
+//                             "70 - 74 Th",
+//                             "75 - 79 Th",
+//                             "80 - 84 Th",
+//                             "≥ 85 Th",
+//                           ].map((label) => (
+//                             <th
+//                               key={label}
+//                               colSpan={2}
+//                               style={{ textAlign: "center" }}
+//                             >
+//                               {label}
+//                             </th>
+//                           ))}
+//                         </tr>
+//                         <tr className={style["subsubheader-row"]}>
+//                           {Array(25)
+//                             .fill(null)
+//                             .flatMap((_, i) => [
+//                               <th key={`l${i}`} style={{ textAlign: "center" }}>
+//                                 L
+//                               </th>,
+//                               <th key={`p${i}`} style={{ textAlign: "center" }}>
+//                                 P
+//                               </th>,
+//                             ])}
+//                           <th style={{ textAlign: "center" }}>L</th>
+//                           <th style={{ textAlign: "center" }}>P</th>
+//                           <th style={{ textAlign: "center" }}>Total</th>
+//                           <th style={{ textAlign: "center" }}>L</th>
+//                           <th style={{ textAlign: "center" }}>P</th>
+//                           <th style={{ textAlign: "center" }}>Total</th>
+//                         </tr>
+//                       </thead>
+//                       <tbody>
+//                         {dataRL.map((value, index) => (
+//                           <tr
+//                             key={value.id}
+//                             style={{
+//                               verticalAlign: "center",
+//                               textAlign: "center",
+//                             }}
+//                           >
+//                             <td
+//                               className={style["sticky-column-view"]}
+//                               style={{ textAlign: "center", left: "0px" }}
+//                             >
+//                               {(page - 1) * limit + index + 1}
+//                             </td>
+//                             <td
+//                               className={style["sticky-column-view"]}
+//                               style={{ textAlign: "center", left: "35px" }}
+//                             >
+//                               {value.kode_icd}
+//                             </td>
+//                             <td
+//                               className={style["sticky-column-view"]}
+//                               style={{ textAlign: "left", left: "110px" }}
+//                             >
+//                               {value.diagnosis}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_0_1jam_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_0_1jam_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_1_23jam_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_1_7hr_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_1_7hr_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_8_28hr_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_8_28hr_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_3_6bln_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_3_6bln_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_6_11bln_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_1_4th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_1_4th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_5_9th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_5_9th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_10_14th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_10_14th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_15_19th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_15_19th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_20_24th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_20_24th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_25_29th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_25_29th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_30_34th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_30_34th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_35_39th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_35_39th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_40_44th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_40_44th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_45_49th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_45_49th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_50_54th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_50_54th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_55_59th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_55_59th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_60_64th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_60_64th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_65_69th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_65_69th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_70_74th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_70_74th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_75_79th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_75_79th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_80_84th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_80_84th_p}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_lebih85th_l}
+//                             </td>
+//                             <td>
+//                               {value.jmlh_pas_hidup_mati_umur_gen_lebih85th_p}
+//                             </td>
+//                             <td>{value.keluar_hidup_mati_l}</td>
+//                             <td>{value.keluar_hidup_mati_p}</td>
+//                             <td>{value.keluar_hidup_mati_total}</td>
+//                             <td>{value.keluar_mati_l}</td>
+//                             <td>{value.keluar_mati_p}</td>
+//                             <td>{value.keluar_mati_total}</td>
+//                           </tr>
+//                         ))}
+//                       </tbody>
+//                     </table>
+//                   </div>
+//                   {totalPages > 1 && (
+//                     <Pagination
+//                       page={page}
+//                       totalPages={totalPages}
+//                       onPageChange={(newPage) => fetchData(newPage)}
+//                     />
+//                   )}
+//                 </div>
+//               </div>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }

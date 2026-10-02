@@ -1,21 +1,21 @@
-import React from "react";
-
-import style from "./RL317.module.css";
-
-import RL317Table from "./RL317SatuSehatTable";
-import RL317Toolbar from "./RL317SatuSehatToolbar";
-
-import { exportRL317ExcelSatuSehat, formatDate } from "../../utils/rl317.utils";
-
-import { useRL317, useRL317Bootstrap } from "../../hooks/useRL317";
 import { ToastContainer } from "react-toastify";
-import SatuSehatCardRow from "./RL317SatuSehatCardRow";
 
-const RL317SatuSehat = () => {
-  const { axiosJWT, user, token, CSRFToken } = useRL317Bootstrap();
+import style from "./RL310.module.css";
+
+import RL310Toolbar from "./RL310SatuSehatToolbar";
+import SatuSehatCardRow from "./RL310SatuSehatCardRow";
+import RL310SatuSehatTable from "./RL310SatuSehatTable";
+
+import { MONTHS } from "../../constants/date";
+import { useRL310, useRL310Bootstrap } from "../../hooks/useRL310";
+import { exportRL310ExcelSatuSehat } from "../../utils/rl310.utils";
+
+const RL310SatuSehat = () => {
+  const { axiosJWT, user, token, CSRFToken } = useRL310Bootstrap();
 
   const {
     dataRL,
+    bulan,
     tahun,
     loadingTable,
     filterLabel,
@@ -27,14 +27,17 @@ const RL317SatuSehat = () => {
     page,
     totalPages,
     getRL,
+    setBulan,
     setTahun,
     fetchData,
     handleManualSync,
     MANUAL_SYNC_COOLDOWN,
-  } = useRL317(axiosJWT, token, CSRFToken, user);
+  } = useRL310(axiosJWT, token, CSRFToken, user);
 
   const handleDownloadExcel = () => {
-    exportRL317ExcelSatuSehat(dataRL, tahun);
+    const monthLabel =
+      MONTHS.find((m) => m.value === String(bulan))?.label ?? bulan;
+    exportRL310ExcelSatuSehat(dataRL, `${monthLabel}-${tahun}`);
   };
 
   return (
@@ -46,7 +49,10 @@ const RL317SatuSehat = () => {
 
       <div className="row">
         <div className="col-md-12">
-          <RL317Toolbar
+          <RL310Toolbar
+            dataRL={dataRL}
+            bulan={bulan}
+            setBulan={setBulan}
             tahun={tahun}
             setTahun={setTahun}
             handleManualSync={handleManualSync}
@@ -79,7 +85,7 @@ const RL317SatuSehat = () => {
                 }}
               >
                 <h5 style={{ fontSize: "14px", margin: 0 }}>
-                  Filtered By {filterLabel.join(", ")}
+                  Filtered By {filterLabel}
                 </h5>
               </div>
             )}
@@ -87,7 +93,7 @@ const RL317SatuSehat = () => {
         </div>
 
         {/* Main Content */}
-        <RL317Table
+        <RL310SatuSehatTable
           isFilterApplied={isFilterApplied}
           loadingTable={loadingTable}
           dataRL={dataRL}
@@ -101,4 +107,4 @@ const RL317SatuSehat = () => {
   );
 };
 
-export default RL317SatuSehat;
+export default RL310SatuSehat;

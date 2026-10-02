@@ -5,8 +5,8 @@ import {
   FaSlidersH,
   FaSyncAlt,
 } from "react-icons/fa";
-import { HiSaveAs } from "react-icons/hi";
 import { formatDate } from "../../utils/rl317.utils";
+import { SiMicrosoftexcel } from "react-icons/si";
 
 const SatuSehatCardRow = ({ sync, manualSyncCooldown }) => {
   return (
@@ -76,7 +76,7 @@ const SatuSehatCardRow = ({ sync, manualSyncCooldown }) => {
             desc: "Mengambil data terbaru dari SATUSEHAT",
           },
           {
-            icon: <HiSaveAs size={12} />,
+            icon: <SiMicrosoftexcel size={12} />,
             bg: "#059669",
             label: "DOWNLOAD EXCEL",
             desc: "Mengunduh data hasil filter",
@@ -241,9 +241,8 @@ const SatuSehatCardRow = ({ sync, manualSyncCooldown }) => {
               lineHeight: 1.6,
             }}
           >
-            Data yang ditampilkan bersumber dari database{" "}
-            <strong>SIRS Online</strong>. Informasi disajikan berdasarkan data
-            yang tersedia pada sistem.
+            Data yang ditampilkan bersumber dari <strong>SATUSEHAT</strong> yang
+            sudah tersimpan dalam database <strong>SIRS</strong>.
           </p>
           <div style={{ position: "relative", flexShrink: 0 }}>
             <FaDatabase size={38} color="#bfdbfe" />

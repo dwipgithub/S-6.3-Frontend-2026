@@ -382,3 +382,254 @@
   color: gray;
   font-size: 15px;
 }
+
+.satusehatControlPanel {
+  background: var(--color-background-primary, #fff);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 14px;
+}
+
+.satusehatPanelTitle {
+  font-weight: 700;
+  font-size: 13px;
+  color: #1e293b;
+  margin: 0 0 14px 0;
+  letter-spacing: 0.2;
+}
+
+.satusehatControlRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end; /* Sumbu bawah input dan button akan sejajar */
+}
+
+.satusehatField,
+.satusehatFieldSmall {
+  min-width: 140px;
+}
+
+.satusehatField {
+  width: 220px;
+}
+
+.satusehatFieldSmall {
+  width: 110px;
+}
+
+.satusehatLabel {
+  font-size: 12px;
+  color: #64748b;
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.satusehatInputWrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 7px 10px;
+  background: #f8fafc;
+}
+
+.satusehatInputIcon {
+  color: #94a3b8;
+  margin-right: 7px;
+  flex-shrink: 0;
+}
+
+.satusehatSelect,
+.satusehatInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 13px;
+  color: #334155;
+}
+
+.satusehatActionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.satusehatActionItem {
+  text-align: center;
+}
+
+.satusehatActionButton {
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 9px 18px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.satusehatActionButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.satusehatFilterButton {
+  background: #1d4ed8;
+}
+
+.satusehatSyncButton {
+  background: #059669;
+}
+
+.satusehatExcelButton {
+  background: #059669;
+}
+
+.satusehatInfoGrid {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.satusehatInfoCard {
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.satusehatInfoCardTombol {
+  flex: 1 1 240px;
+  border: 1.5px solid #3b82f6;
+}
+
+.satusehatInfoCardStatus {
+  flex: 1 1 210px;
+  border: 1.5px solid #e2e8f0;
+}
+
+.satusehatInfoCardDataSource {
+  flex: 1 1 180px;
+  border: 1.5px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.satusehatInfoTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #2563eb;
+  margin-bottom: 14px;
+}
+
+.satusehatLegendItem,
+.satusehatStatusItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.satusehatLegendBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.satusehatStatusIcon {
+  color: #94a3b8;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.satusehatSourceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 90px;
+}
+
+.satusehatSourceText {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #4b5563;
+  margin: 0;
+}
+
+.satusehatSourceIcon {
+  font-size: 34px;
+  color: #93c5fd;
+  flex-shrink: 0;
+}
+
+@media (max-width: 991px) {
+  .satusehatInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .satusehatActionGroup {
+    width: 100%;
+  }
+}
+
+.satuSehatFilterNotApplied {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+  padding: 15px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.satuSehatFilteredSyncSuccessNoData {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+  padding: 15px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.satuSehatFilteredSyncFailed {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 15px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+/* Tab utama SIRS / SATUSEHAT */
+:global(.nav-tabs .nav-link.active) {
+  color: #00a884 !important;
+  font-weight: 600;
+}
+
+:global(.nav-tabs .nav-link.active:hover) {
+  color: #00a884 !important;
+}
+
+:global(.nav-tabs .nav-link) {
+  color: #212529;
+}
