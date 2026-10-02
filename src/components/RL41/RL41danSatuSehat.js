@@ -550,7 +550,16 @@ function TabOne() {
       const now = new Date();
       const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 
-      const fileName = `rl41_${params.provId || "all"}_${params.kabId || "all"}_${params.periode}_${timestamp}.xlsx`;
+      let fileName = `rl41_${params.rsId || params.provId || "all"}_${params.kabId || "all"}_${params.periode}_${timestamp}.xlsx`;
+
+      // Kalau backend kirim nama file lewat header, pakai itu (lebih akurat)
+      const disposition = response.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
@@ -828,177 +837,44 @@ function TabOne() {
   };
 
   const handleDownloadExcel = async () => {
-    if (
-      user.jenisUserId == 3 ||
-      user.jenisUserId == 2 ||
-      user.jenisUserId == 1
-    ) {
-      if (!selectedRsID) {
-        toast.warn("Rumah sakit harus dipilih", {
-          position: "top-right", // Gunakan string langsung, bukan toast.POSITION
-          autoClose: 3000,
-        });
-        return;
-      }
+    const periode = `${tahun}-${bulan}`;
+
+    if (user.jenisUserId === 4) {
+      // Role 4: selalu RS sendiri
+      await downloadAllExcel({
+        rsId: user.satKerId,
+        periode,
+      });
+      return;
     }
 
-    try {
-      setSpinner(true);
-      const res = await axiosJWT.get(
-        "/apisirs6v2/rlempattitiksatu", // ← API GET ALL
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            rsId: rumahSakit.id,
-            periode: `${tahun}-${bulan}`,
-          },
-        },
-      );
-
-      const allData = res.data.data; // sesuaikan struktur response
-
-      const header = [
-        "No",
-        "Kode ICD-10",
-        "Diagnosis Penyakit",
-        "< 1 Jam L",
-        "< 1 Jam P",
-        "1 - 23 Jam L",
-        "1 - 23 Jam P",
-        "1 - 7 Hari L",
-        "1 - 7 Hari P",
-        "8 - 28 Hari L",
-        "8 - 28 Hari P",
-        "29 Hari - <3 Bulan L",
-        "29 Hari - <3 Bulan P",
-        "3 - <6 Bulan L",
-        "3 - <6 Bulan P",
-        "6 - 11 Bulan L",
-        "6 - 11 Bulan P",
-        "1 - 4 Tahun L",
-        "1 - 4 Tahun P",
-        "5 - 9 Tahun L",
-        "5 - 9 Tahun P",
-        "10 - 14 Tahun L",
-        "10 - 14 Tahun P",
-        "15 - 19 Tahun L",
-        "15 - 19 Tahun P",
-        "20 - 24 Tahun L",
-        "20 - 24 Tahun P",
-        "25 - 29 Tahun L",
-        "25 - 29 Tahun P",
-        "30 - 34 Tahun L",
-        "30 - 34 Tahun P",
-        "35 - 39 Tahun L",
-        "35 - 39 Tahun P",
-        "40 - 44 Tahun L",
-        "40 - 44 Tahun P",
-        "45 - 49 Tahun L",
-        "45 - 49 Tahun P",
-        "50 - 54 Tahun L",
-        "50 - 54 Tahun P",
-        "55 - 59 Tahun L",
-        "55 - 59 Tahun P",
-        "60 - 64 Tahun L",
-        "60 - 64 Tahun P",
-        "65 - 69 Tahun L",
-        "65 - 69 Tahun P",
-        "70 - 74 Tahun L",
-        "70 - 74 Tahun P",
-        "75 - 79 Tahun L",
-        "75 - 79 Tahun P",
-        "80 - 84 Tahun L",
-        "80 - 84 Tahun P",
-        "≥ 85 Tahun L",
-        "≥ 85 Tahun P",
-        "Hidup & Mati L",
-        "Hidup & Mati P",
-        "Total Hidup & Mati",
-        "Keluar Mati L",
-        "Keluar Mati P",
-        "Total Keluar Mati",
-      ];
-
-      const body = allData.map((value, index) => [
-        index + 1,
-        value.icd.icd_code,
-        value.icd.description_code,
-        value.jmlh_pas_hidup_mati_umur_gen_0_1jam_l,
-        value.jmlh_pas_hidup_mati_umur_gen_0_1jam_p,
-        value.jmlh_pas_hidup_mati_umur_gen_1_23jam_l,
-        value.jmlh_pas_hidup_mati_umur_gen_1_23jam_p,
-        value.jmlh_pas_hidup_mati_umur_gen_1_7hr_l,
-        value.jmlh_pas_hidup_mati_umur_gen_1_7hr_p,
-        value.jmlh_pas_hidup_mati_umur_gen_8_28hr_l,
-        value.jmlh_pas_hidup_mati_umur_gen_8_28hr_p,
-        value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_l,
-        value.jmlh_pas_hidup_mati_umur_gen_29hr_3bln_p,
-        value.jmlh_pas_hidup_mati_umur_gen_3_6bln_l,
-        value.jmlh_pas_hidup_mati_umur_gen_3_6bln_p,
-        value.jmlh_pas_hidup_mati_umur_gen_6_11bln_l,
-        value.jmlh_pas_hidup_mati_umur_gen_6_11bln_p,
-        value.jmlh_pas_hidup_mati_umur_gen_1_4th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_1_4th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_5_9th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_5_9th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_10_14th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_10_14th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_15_19th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_15_19th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_20_24th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_20_24th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_25_29th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_25_29th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_30_34th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_30_34th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_35_39th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_35_39th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_40_44th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_40_44th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_45_49th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_45_49th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_50_54th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_50_54th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_55_59th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_55_59th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_60_64th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_60_64th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_65_69th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_65_69th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_70_74th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_70_74th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_75_79th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_75_79th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_80_84th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_80_84th_p,
-        value.jmlh_pas_hidup_mati_umur_gen_lebih85th_l,
-        value.jmlh_pas_hidup_mati_umur_gen_lebih85th_p,
-        value.jmlh_pas_hidup_mati_gen_l,
-        value.jmlh_pas_hidup_mati_gen_p,
-        value.total_pas_hidup_mati,
-        value.jmlh_pas_keluar_mati_gen_l,
-        value.jmlh_pas_keluar_mati_gen_p,
-        value.total_pas_keluar_mati,
-      ]);
-
-      downloadExcel({
-        fileName: namafile,
-        sheet: "RL 4.1",
-        tablePayload: {
-          header,
-          body,
-        },
+    // Role 1/2/3: wajib pilih RS dulu lewat filter (modal), sama seperti validasi sebelumnya
+    if (!selectedRsID) {
+      toast.warn("Rumah sakit harus dipilih", {
+        position: "top-right",
+        autoClose: 3000,
       });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSpinner(false);
+      return;
+    }
+
+    if (selectedRsID === "999999") {
+      // RS = ALL -> kirim provId/kabId (bukan rsId), sama seperti logic di getRL untuk mode ALL
+      const params = { periode };
+      if (selectedProvId && selectedProvId !== "99" && selectedProvId !== 99) {
+        params.provId = selectedProvId;
+      }
+      if (selectedKabId && selectedKabId !== "9999") {
+        params.kabId = selectedKabId;
+      }
+      await downloadAllExcel(params);
+    } else {
+      // RS spesifik -> kirim rsId
+      await downloadAllExcel({
+        rsId: selectedRsID,
+        periode,
+      });
     }
   };
-
   const [activeTab, setActiveTab] = useState("tab1");
 
   const handleTabClick = (tab) => {
@@ -1012,6 +888,17 @@ function TabOne() {
     user.jenisUserId === 4
       ? { no: "0px", aksi: "35px", icd: "100px", diag: "190px" }
       : { no: "0px", icd: "40px", diag: "140px" };
+
+  const isDownloadDisabled = () => {
+    // if (!bulan || !tahun) return true;
+
+    // if (user.jenisUserId === 4) {
+    //   return false;
+    // }
+
+    // Lebih strict: filter harus benar-benar sudah "Terapkan"
+    return !isFilterApplied;
+  };
 
   return (
     <div
@@ -1034,6 +921,8 @@ function TabOne() {
           <Spinner animation="border" variant="primary" />
         </div>
       )}
+
+      <ToastContainer />
 
       <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
         <Modal.Header closeButton>
@@ -1283,7 +1172,15 @@ function TabOne() {
             <button className={style.btnPrimary} onClick={handleShow}>
               Filter
             </button>
-            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
+            <button
+              className={style.btnPrimary}
+              onClick={handleDownloadExcel}
+              disabled={isDownloadDisabled()}
+              style={{
+                opacity: isDownloadDisabled() ? 0.5 : 1,
+                cursor: isDownloadDisabled() ? "not-allowed" : "pointer",
+              }}
+            >
               Download
             </button>
           </div>
