@@ -5,14 +5,15 @@ import { useNavigate, Link } from "react-router-dom";
 import style from "./FormTambahRL32.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
-
-if (!toast.POSITION) {
-  toast.POSITION = { TOP_RIGHT: "top-right" };
-}
 import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
 // import Table from 'react-bootstrap/Table'
+
+// ✅ Semua import di atas, baru kode executable di bawah ini
+if (!toast.POSITION) {
+  toast.POSITION = { TOP_RIGHT: "top-right" };
+}
 
 const FormTambahRL32 = () => {
   const [namaRS, setNamaRS] = useState("");
