@@ -14,6 +14,11 @@ if (!toast.POSITION) {
 }
 // import Table from 'react-bootstrap/Table'
 
+// ✅ Semua import di atas, baru kode executable di bawah ini
+if (!toast.POSITION) {
+  toast.POSITION = { TOP_RIGHT: "top-right" };
+}
+
 const FormTambahRL32 = () => {
   const [namaRS, setNamaRS] = useState("");
   const [alamatRS, setAlamatRS] = useState("");
