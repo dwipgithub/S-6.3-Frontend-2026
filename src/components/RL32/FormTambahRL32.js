@@ -6,13 +6,14 @@ import style from "./FormTambahRL32.module.css";
 import { HiSaveAs } from "react-icons/hi";
 import { ToastContainer, toast } from "react-toastify";
 
-if (!toast.POSITION) {
-  toast.POSITION = { TOP_RIGHT: "top-right" };
-}
 import "react-toastify/dist/ReactToastify.css";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
 // import Table from 'react-bootstrap/Table'
+
+if (!toast.POSITION) {
+  toast.POSITION = { TOP_RIGHT: "top-right" };
+}
 
 const FormTambahRL32 = () => {
   const [namaRS, setNamaRS] = useState("");
@@ -96,7 +97,7 @@ const FormTambahRL32 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getBulan = async () => {
@@ -175,7 +176,7 @@ const FormTambahRL32 = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const rlTemplate = response.data.data.map((value, index) => {
@@ -231,11 +232,11 @@ const FormTambahRL32 = () => {
         parseInt(newDataRL[index].pasienKeluarHidup) +
         parseInt(newDataRL[index].pasienKeluarMatiKurangDari48Jam) +
         parseInt(
-          newDataRL[index].pasienKeluarMatiLebihDariAtauSamaDengan48Jam
+          newDataRL[index].pasienKeluarMatiLebihDariAtauSamaDengan48Jam,
         ) +
         parseInt(newDataRL[index].pasienWanitaKeluarMatiKurangDari48Jam) +
         parseInt(
-          newDataRL[index].pasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam
+          newDataRL[index].pasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam,
         ));
   };
 
@@ -458,7 +459,7 @@ const FormTambahRL32 = () => {
           periodeTahun: parseInt(tahun),
           data: dataRLArray,
         },
-        customConfig
+        customConfig,
       );
 
       toast("Data Berhasil Disimpan", {
