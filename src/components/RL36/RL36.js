@@ -26,6 +26,8 @@ import { saveAs } from "file-saver";
 import { downloadExcel, DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
+import { formatNamaBulan } from "../../utils/formatNamaBulan";
+import { getNamaRumahSakit } from "../../utils/getNamaRumahSakit";
 
 const RL36 = () => {
   const [bulan, setBulan] = useState(1);
@@ -1335,11 +1337,48 @@ async function handleDownloadExcelSatusehat() {
 
   try {
     // 1. Format Metadata
-    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
-    const selectedBulanObj = daftarBulan?.find(
-      (b) => String(b.value) === String(bulan)
+    const rsId = getSelectedRsId();
+    const namaRSFiltered = filterLabelSatusehat
+      .find((label) => label.startsWith("Rumah Sakit:"))
+      ?.replace("Rumah Sakit:", "")
+      .trim();
+    const rumahSakitTerpilih = (Array.isArray(daftarRumahSakit) ? daftarRumahSakit : []).find(
+      (item) => String(item.id) === String(rsId)
     );
-    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+    const namaRS = getNamaRumahSakit(
+      namaRSFiltered,
+      rumahSakit?.nama,
+      rumahSakit?.nama_rumah_sakit,
+      rumahSakitTerpilih?.nama,
+      user?.satKerNama
+    );
+    const kodeRS =
+      rumahSakitTerpilih?.kode_rs ??
+      rumahSakit?.kode_rs ??
+      rumahSakitTerpilih?.kodeRS ??
+      rumahSakit?.kodeRS ??
+      rumahSakitTerpilih?.kode_rumah_sakit ??
+      rumahSakit?.kode_rumah_sakit ??
+      rumahSakitTerpilih?.kode ??
+      rumahSakit?.kode ??
+      "-";
+    const namaProvinsi =
+      rumahSakitTerpilih?.provinsi_nama ??
+      rumahSakit?.provinsi_nama ??
+      rumahSakitTerpilih?.provinsi?.nama ??
+      rumahSakit?.provinsi?.nama ??
+      "-";
+    const namaKabKota =
+      rumahSakitTerpilih?.kab_kota_nama ??
+      rumahSakit?.kab_kota_nama ??
+      rumahSakitTerpilih?.kabupaten_kota_nama ??
+      rumahSakit?.kabupaten_kota_nama ??
+      rumahSakitTerpilih?.kab_kota?.nama ??
+      rumahSakit?.kab_kota?.nama ??
+      rumahSakitTerpilih?.kabupaten_kota?.nama ??
+      rumahSakit?.kabupaten_kota?.nama ??
+      "-";
+    const namaBulan = formatNamaBulan(bulan);
     const tahunData = tahun || "-";
 
     // 2. Buat Workbook & Worksheet ExcelJS
@@ -1360,6 +1399,10 @@ async function handleDownloadExcelSatusehat() {
     const tableHeader = [
       [
         "No",
+        "Kode RS",
+        "Rumah Sakit",
+        "Provinsi",
+        "Kabupaten/Kota",
         "Jenis Kegiatan",
         "Nama Kegiatan",
         "Rujukan RS",
@@ -1374,37 +1417,23 @@ async function handleDownloadExcelSatusehat() {
       ],
     ];
 
-    // 5. Data Body Tabel & Hitung Total
+    // 5. Data Body Tabel
     const listData = Array.isArray(dataRLSatusehat) ? dataRLSatusehat : [];
-
-    const totals = listData.reduce(
-      (acc, val) => {
-        acc.rujukan_rs += Number(val?.rujukan_rs || 0);
-        acc.rujukan_bidan += Number(val?.rujukan_bidan || 0);
-        acc.rujukan_puskesmas += Number(val?.rujukan_puskesmas || 0);
-        acc.rujukan_faskes_lain += Number(val?.rujukan_faskes_lain || 0);
-        acc.non_medis += Number(val?.non_medis || 0);
-        acc.non_rujukan += Number(val?.non_rujukan || 0);
-        acc.dirujuk += Number(val?.dirujuk || 0);
-        acc.hidup += Number(val?.hidup || 0);
-        acc.mati += Number(val?.mati || 0);
-        return acc;
-      },
-      {
-        rujukan_rs: 0,
-        rujukan_bidan: 0,
-        rujukan_puskesmas: 0,
-        rujukan_faskes_lain: 0,
-        non_medis: 0,
-        non_rujukan: 0,
-        dirujuk: 0,
-        hidup: 0,
-        mati: 0,
-      }
-    );
 
     const tableBody = listData.map((value, index) => [
       index + 1,
+      kodeRS,
+      getNamaRumahSakit(
+        namaRS,
+        value?.nama_rumah_sakit,
+        value?.nama_rs,
+        value?.namaRs,
+        typeof value?.rumah_sakit === "string"
+          ? value.rumah_sakit
+          : value?.rumah_sakit?.nama
+      ),
+      namaProvinsi,
+      namaKabKota,
       value?.jenis_kegiatan ?? "-",
       value?.nama_kegiatan ?? "-",
       Number(value?.rujukan_rs || 0),
@@ -1418,63 +1447,50 @@ async function handleDownloadExcelSatusehat() {
       Number(value?.mati || 0),
     ]);
 
-    // Baris TOTAL (Label di indeks 0 agar tidak terhapus saat merge A-C)
-    const totalRow = [
-      "TOTAL",
-      "",
-      "",
-      totals.rujukan_rs,
-      totals.rujukan_bidan,
-      totals.rujukan_puskesmas,
-      totals.rujukan_faskes_lain,
-      totals.non_medis,
-      totals.non_rujukan,
-      totals.dirujuk,
-      totals.hidup,
-      totals.mati,
-    ];
+    const lastDataRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length;
 
     // 6. Masukkan semua baris ke worksheet
     const fullRows = [
       ...titleAndMetadata,
       ...tableHeader,
       ...tableBody,
-      totalRow,
     ];
     fullRows.forEach((row) => worksheet.addRow(row));
 
     // 7. Penggabungan Sel (Merge Cells)
-    const totalRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length + 1;
     const mergeRanges = [
-      "A1:L1",
-      "A3:L3",
-      "A4:L4",
-      "A5:L5",
-      `A${totalRowIndex}:C${totalRowIndex}`, // Merge A-C untuk label TOTAL
+      "A1:P1",
+      "A3:P3",
+      "A4:P4",
+      "A5:P5",
     ];
     mergeRanges.forEach((range) => worksheet.mergeCells(range));
 
-    // 8. Pengaturan Lebar Kolom (A - L)
+    // 8. Pengaturan Lebar Kolom (A - P)
     worksheet.columns = [
       { width: 8 },  // A (No)
-      { width: 25 }, // B (Jenis Kegiatan)
-      { width: 30 }, // C (Nama Kegiatan)
-      { width: 18 }, // D (Rujukan RS)
-      { width: 18 }, // E (Rujukan Bidan)
-      { width: 20 }, // F (Rujukan Puskesmas)
-      { width: 22 }, // G (Rujukan Faskes Lain)
-      { width: 16 }, // H (Non Medis)
-      { width: 18 }, // I (Non Rujukan)
-      { width: 16 }, // J (Dirujuk)
-      { width: 14 }, // K (Hidup)
-      { width: 14 }, // L (Mati)
+      { width: 16 }, // B (Kode RS)
+      { width: 30 }, // C (Rumah Sakit)
+      { width: 22 }, // D (Provinsi)
+      { width: 24 }, // E (Kabupaten/Kota)
+      { width: 25 }, // F (Jenis Kegiatan)
+      { width: 30 }, // G (Nama Kegiatan)
+      { width: 18 }, // H (Rujukan RS)
+      { width: 18 }, // I (Rujukan Bidan)
+      { width: 20 }, // J (Rujukan Puskesmas)
+      { width: 22 }, // K (Rujukan Faskes Lain)
+      { width: 16 }, // L (Non Medis)
+      { width: 18 }, // M (Non Rujukan)
+      { width: 16 }, // N (Dirujuk)
+      { width: 14 }, // O (Hidup)
+      { width: 14 }, // P (Mati)
     ];
 
     // 9. Formatting: Alignment Tengah & Border
     const headerStartRow = titleAndMetadata.length + 1;
 
     worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber >= headerStartRow && rowNumber <= totalRowIndex) {
+      if (rowNumber >= headerStartRow && rowNumber <= lastDataRowIndex) {
         row.eachCell({ includeEmpty: true }, (cell) => {
           // Rata tengah vertikal & horizontal
           cell.alignment = {
@@ -1494,9 +1510,8 @@ async function handleDownloadExcelSatusehat() {
       }
     });
 
-    // Bold untuk Header dan Baris Total
+    // Bold untuk Header
     worksheet.getRow(headerStartRow).font = { bold: true };
-    worksheet.getRow(totalRowIndex).font = { bold: true };
 
     // 10. Generate File Excel dan Download
     const buffer = await workbook.xlsx.writeBuffer();

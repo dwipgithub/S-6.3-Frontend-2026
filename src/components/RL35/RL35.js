@@ -26,12 +26,13 @@ import { Spinner } from "react-bootstrap";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
+import { formatNamaBulan } from "../../utils/formatNamaBulan";
+import { getInfoRumahSakitExport } from "../../utils/getInfoRumahSakitExport";
 
 const RL35 = () => {
   const [bulan, setBulan] = useState(1);
   const [tahun, setTahun] = useState(new Date().getFullYear());
   const [filterLabel, setFilterLabel] = useState([]);
-  const [daftarBulan, setDaftarBulan] = useState([]);
   const [rumahSakit, setRumahSakit] = useState("");
   const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
   const [daftarProvinsi, setDaftarProvinsi] = useState([]);
@@ -218,60 +219,6 @@ const RL35 = () => {
       return Promise.reject(error);
     }
   );
-
-  const getBulan = async () => {
-    const results = [];
-    results.push({
-      key: "Januari",
-      value: "1",
-    });
-    results.push({
-      key: "Febuari",
-      value: "2",
-    });
-    results.push({
-      key: "Maret",
-      value: "3",
-    });
-    results.push({
-      key: "April",
-      value: "4",
-    });
-    results.push({
-      key: "Mei",
-      value: "5",
-    });
-    results.push({
-      key: "Juni",
-      value: "6",
-    });
-    results.push({
-      key: "Juli",
-      value: "7",
-    });
-    results.push({
-      key: "Agustus",
-      value: "8",
-    });
-    results.push({
-      key: "September",
-      value: "9",
-    });
-    results.push({
-      key: "Oktober",
-      value: "10",
-    });
-    results.push({
-      key: "November",
-      value: "11",
-    });
-    results.push({
-      key: "Desember",
-      value: "12",
-    });
-
-    setDaftarBulan([...results]);
-  };
 
   const getRumahSakit = async (kabKotaId) => {
     try {
@@ -981,11 +928,15 @@ const handleDownloadExcelRLTigaTitikLimaSatusehat = async () => {
 
   try {
     // 2. Format Nama RS & Metadata
-    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
-    const selectedBulanObj = daftarBulan?.find(
-      (b) => String(b.value) === String(bulan)
-    );
-    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+    const { kodeRS, namaRS, provinsi, kabupatenKota } =
+      getInfoRumahSakitExport({
+        rumahSakit,
+        daftarRumahSakit,
+        rsId: getSelectedRsId(),
+        namaUser: user?.satKerNama,
+        filterLabels: filterLabelSatusehat,
+      });
+    const namaBulan = formatNamaBulan(bulan);
     const tahunData = tahun || "-";
 
     // 3. Buat Workbook & Worksheet ExcelJS
@@ -1006,7 +957,10 @@ const handleDownloadExcelRLTigaTitikLimaSatusehat = async () => {
     const tableHeader = [
       [
         "No",
+        "Kode RS",
         "Rumah Sakit",
+        "Provinsi",
+        "Kabupaten/Kota",
         "Jenis Kegiatan",
         "Kunjungan Dalam Kota (L)",
         "Kunjungan Dalam Kota (P)",
@@ -1020,22 +974,12 @@ const handleDownloadExcelRLTigaTitikLimaSatusehat = async () => {
     // 6. Data Body Tabel & Hitung Total
     const listData = Array.isArray(dataRLSatusehat) ? dataRLSatusehat : [];
 
-    const totals = listData.reduce(
-      (acc, val) => {
-        acc.dalamL += Number(val.kunjungan_dalam_kab_kota?.laki_laki ?? val.kunjungan_dalam_kab_kota_laki_laki ?? 0);
-        acc.dalamP += Number(val.kunjungan_dalam_kab_kota?.perempuan ?? val.kunjungan_dalam_kab_kota_perempuan ?? 0);
-        acc.luarL += Number(val.kunjungan_luar_kab_kota?.laki_laki ?? val.kunjungan_luar_kab_kota_laki_laki ?? 0);
-        acc.luarP += Number(val.kunjungan_luar_kab_kota?.perempuan ?? val.kunjungan_luar_kab_kota_perempuan ?? 0);
-        acc.totalKunjungan += Number(val.total_kunjungan ?? 0);
-        acc.rataRata += Number(val.rata_rata_kunjungan_perhari ?? 0);
-        return acc;
-      },
-      { dalamL: 0, dalamP: 0, luarL: 0, luarP: 0, totalKunjungan: 0, rataRata: 0 }
-    );
-
     const tableBody = listData.map((value, index) => [
       index + 1,
-      value.nama_rumah_sakit || value.rumah_sakit || namaRS,
+      kodeRS,
+      namaRS,
+      provinsi,
+      kabupatenKota,
       value.jenis_kegiatan || "-",
       Number(value.kunjungan_dalam_kab_kota?.laki_laki ?? value.kunjungan_dalam_kab_kota_laki_laki ?? 0),
       Number(value.kunjungan_dalam_kab_kota?.perempuan ?? value.kunjungan_dalam_kab_kota_perempuan ?? 0),
@@ -1045,57 +989,46 @@ const handleDownloadExcelRLTigaTitikLimaSatusehat = async () => {
       Number(value.rata_rata_kunjungan_perhari ?? 0),
     ]);
 
-    // Baris TOTAL (Label diletakkan di indeks 0 agar tidak hilang saat A:C di-merge)
-    const totalRow = [
-      "TOTAL",
-      "",
-      "",
-      totals.dalamL,
-      totals.dalamP,
-      totals.luarL,
-      totals.luarP,
-      totals.totalKunjungan,
-      totals.rataRata,
-    ];
+    const lastDataRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length;
 
     // 7. Masukkan semua baris ke worksheet
     const fullRows = [
       ...titleAndMetadata,
       ...tableHeader,
       ...tableBody,
-      totalRow,
     ];
     fullRows.forEach((row) => worksheet.addRow(row));
 
     // 8. Penggabungan Sel (Merge Cells)
-    const totalRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length + 1;
     const mergeRanges = [
-      "A1:I1",
-      "A3:I3",
-      "A4:I4",
-      "A5:I5",
-      `A${totalRowIndex}:C${totalRowIndex}`, // Merge A-C untuk label TOTAL
+      "A1:L1",
+      "A3:L3",
+      "A4:L4",
+      "A5:L5",
     ];
     mergeRanges.forEach((range) => worksheet.mergeCells(range));
 
     // 9. Pengaturan Lebar Kolom
     worksheet.columns = [
       { width: 8 },  // A (No)
-      { width: 30 }, // B (Rumah Sakit)
-      { width: 25 }, // C (Jenis Kegiatan)
-      { width: 22 }, // D
-      { width: 22 }, // E
-      { width: 22 }, // F
+      { width: 16 }, // B (Kode RS)
+      { width: 30 }, // C (Rumah Sakit)
+      { width: 22 }, // D (Provinsi)
+      { width: 24 }, // E (Kabupaten/Kota)
+      { width: 25 }, // F (Jenis Kegiatan)
       { width: 22 }, // G
-      { width: 20 }, // H
-      { width: 18 }, // I
+      { width: 22 }, // H
+      { width: 22 }, // I
+      { width: 22 }, // J
+      { width: 20 }, // K
+      { width: 18 }, // L
     ];
 
     // 10. Formatting: Alignment Tengah & Border Tabel
     const headerStartRow = titleAndMetadata.length + 1;
 
     worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber >= headerStartRow && rowNumber <= totalRowIndex) {
+      if (rowNumber >= headerStartRow && rowNumber <= lastDataRowIndex) {
         row.eachCell({ includeEmpty: true }, (cell) => {
           // Seluruh isi tabel rata tengah
           cell.alignment = {
@@ -1115,9 +1048,8 @@ const handleDownloadExcelRLTigaTitikLimaSatusehat = async () => {
       }
     });
 
-    // Bold untuk Header dan Baris Total
+    // Bold untuk Header
     worksheet.getRow(headerStartRow).font = { bold: true };
-    worksheet.getRow(totalRowIndex).font = { bold: true };
 
     // 11. Generate File Excel dan Download
     const buffer = await workbook.xlsx.writeBuffer();
