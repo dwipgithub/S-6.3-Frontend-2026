@@ -25,6 +25,8 @@ import { saveAs } from "file-saver";
 import { downloadExcel, DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
+import { formatNamaBulan } from "../../utils/formatNamaBulan";
+import { getNamaRumahSakit } from "../../utils/getNamaRumahSakit";
 
 const RL37 = () => {
   const [bulan, setBulan] = useState(1);
@@ -845,10 +847,43 @@ const handleDownloadExcelSatusehat = async () => {
 
   try {
     // 2. Format Metadata
-    const selectedBulanObj = daftarBulan?.find(
-      (b) => String(b.value) === String(bulan)
+    const rsId = getSelectedRsId();
+    const rumahSakitTerpilih = (Array.isArray(daftarRumahSakit) ? daftarRumahSakit : []).find(
+      (item) => String(item.id) === String(rsId)
     );
-    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+    const namaRS = getNamaRumahSakit(
+      rumahSakit?.nama,
+      rumahSakit?.nama_rumah_sakit,
+      rumahSakitTerpilih?.nama,
+      user?.satKerNama
+    );
+    const kodeRS =
+      rumahSakitTerpilih?.kode_rs ??
+      rumahSakit?.kode_rs ??
+      rumahSakitTerpilih?.kodeRS ??
+      rumahSakit?.kodeRS ??
+      rumahSakitTerpilih?.kode_rumah_sakit ??
+      rumahSakit?.kode_rumah_sakit ??
+      rumahSakitTerpilih?.kode ??
+      rumahSakit?.kode ??
+      "-";
+    const namaProvinsi =
+      rumahSakitTerpilih?.provinsi_nama ??
+      rumahSakit?.provinsi_nama ??
+      rumahSakitTerpilih?.provinsi?.nama ??
+      rumahSakit?.provinsi?.nama ??
+      "-";
+    const namaKabKota =
+      rumahSakitTerpilih?.kab_kota_nama ??
+      rumahSakit?.kab_kota_nama ??
+      rumahSakitTerpilih?.kabupaten_kota_nama ??
+      rumahSakit?.kabupaten_kota_nama ??
+      rumahSakitTerpilih?.kab_kota?.nama ??
+      rumahSakit?.kab_kota?.nama ??
+      rumahSakitTerpilih?.kabupaten_kota?.nama ??
+      rumahSakit?.kabupaten_kota?.nama ??
+      "-";
+    const namaBulan = formatNamaBulan(bulan);
     const tahunData = tahun || "-";
 
     const titleAndMetadata = [
@@ -860,9 +895,13 @@ const handleDownloadExcelSatusehat = async () => {
       [], // Baris kosong sebelum header tabel
     ];
 
-    // 3. Header Tabel RL 3.7 (16 Kolom)
+    // 3. Header Tabel RL 3.7
     const tableHeader = [
       "No",
+      "Kode RS",
+      "Rumah Sakit",
+      "Provinsi",
+      "Kabupaten/Kota",
       "Jenis Kegiatan",
       "Rujukan Medis RS",
       "Rujukan Medis Bidan",
@@ -885,6 +924,18 @@ const handleDownloadExcelSatusehat = async () => {
     // 4. Data Body Tabel RL 3.7
     const tableBody = safeDataList.map((value, index) => [
       index + 1,
+      kodeRS,
+      getNamaRumahSakit(
+        namaRS,
+        value?.nama_rumah_sakit,
+        value?.nama_rs,
+        value?.namaRs,
+        typeof value?.rumah_sakit === "string"
+          ? value.rumah_sakit
+          : value?.rumah_sakit?.nama
+      ),
+      namaProvinsi,
+      namaKabKota,
       value?.nama_kegiatan || "-",
       Number(value?.rujukan_medis_rumah_sakit || 0),
       Number(value?.rujukan_medis_bidan || 0),
@@ -902,79 +953,20 @@ const handleDownloadExcelSatusehat = async () => {
       Number(value?.dirujuk || 0),
     ]);
 
-    // 5. Hitung Total Angka RL 3.7
-    const totals = safeDataList.reduce(
-      (acc, val) => {
-        acc.rujukan_medis_rumah_sakit += Number(val?.rujukan_medis_rumah_sakit || 0);
-        acc.rujukan_medis_bidan += Number(val?.rujukan_medis_bidan || 0);
-        acc.rujukan_medis_puskesmas += Number(val?.rujukan_medis_puskesmas || 0);
-        acc.rujukan_medis_faskes_lainnya += Number(val?.rujukan_medis_faskes_lainnya || 0);
-        acc.rujukan_medis_jumlah_hidup += Number(val?.rujukan_medis_jumlah_hidup || 0);
-        acc.rujukan_medis_jumlah_mati += Number(val?.rujukan_medis_jumlah_mati || 0);
-        acc.rujukan_medis_total += Number(val?.rujukan_medis_total || 0);
-        acc.rujukan_non_medis_jumlah_hidup += Number(val?.rujukan_non_medis_jumlah_hidup || 0);
-        acc.rujukan_non_medis_jumlah_mati += Number(val?.rujukan_non_medis_jumlah_mati || 0);
-        acc.rujukan_non_medis_total += Number(val?.rujukan_non_medis_total || 0);
-        acc.non_rujukan_jumlah_hidup += Number(val?.non_rujukan_jumlah_hidup || 0);
-        acc.non_rujukan_jumlah_mati += Number(val?.non_rujukan_jumlah_mati || 0);
-        acc.non_rujukan_total += Number(val?.non_rujukan_total || 0);
-        acc.dirujuk += Number(val?.dirujuk || 0);
-        return acc;
-      },
-      {
-        rujukan_medis_rumah_sakit: 0,
-        rujukan_medis_bidan: 0,
-        rujukan_medis_puskesmas: 0,
-        rujukan_medis_faskes_lainnya: 0,
-        rujukan_medis_jumlah_hidup: 0,
-        rujukan_medis_jumlah_mati: 0,
-        rujukan_medis_total: 0,
-        rujukan_non_medis_jumlah_hidup: 0,
-        rujukan_non_medis_jumlah_mati: 0,
-        rujukan_non_medis_total: 0,
-        non_rujukan_jumlah_hidup: 0,
-        non_rujukan_jumlah_mati: 0,
-        non_rujukan_total: 0,
-        dirujuk: 0,
-      }
-    );
-
-    // 6. Buat Baris Total
-    const totalRow = [
-      "",
-      "TOTAL",
-      totals.rujukan_medis_rumah_sakit,
-      totals.rujukan_medis_bidan,
-      totals.rujukan_medis_puskesmas,
-      totals.rujukan_medis_faskes_lainnya,
-      totals.rujukan_medis_jumlah_hidup,
-      totals.rujukan_medis_jumlah_mati,
-      totals.rujukan_medis_total,
-      totals.rujukan_non_medis_jumlah_hidup,
-      totals.rujukan_non_medis_jumlah_mati,
-      totals.rujukan_non_medis_total,
-      totals.non_rujukan_jumlah_hidup,
-      totals.non_rujukan_jumlah_mati,
-      totals.non_rujukan_total,
-      totals.dirujuk,
-    ];
-
     const headerRowIndex = titleAndMetadata.length + 1; // Baris ke-7
-    const totalRowIndex = headerRowIndex + tableBody.length + 1;
 
-    // 7. Gabungkan Semua Baris
+    // 6. Gabungkan Semua Baris
     const fullBody = [
       ...titleAndMetadata,
       tableHeader,
       ...tableBody,
-      totalRow,
     ];
 
     const mergeRanges = [
-      "A1:P1",
-      "A3:P3",
-      "A4:P4",
-      "A5:P5",
+      "A1:T1",
+      "A3:T3",
+      "A4:T4",
+      "A5:T5",
     ];
 
     await exportRowsToExcel({
@@ -986,14 +978,22 @@ const handleDownloadExcelSatusehat = async () => {
       mergeRanges: mergeRanges,
       columnWidths: [
         6,
+        16,
+        30,
+        22,
+        24,
         35,
         ...Array(14).fill(18),
       ],
-      // Penataan Alignment per Kolom (Kolom 1 & Kolom 3-16 rata tengah)
+      // Penataan Alignment per Kolom
       columnAlignments: [
         "center", // Kolom 1 (No)
-        "left",   // Kolom 2 (Jenis Kegiatan)
-        ...Array(14).fill("center"), // Kolom 3-16 (Seluruh Angka)
+        "center", // Kolom 2 (Kode RS)
+        "left",   // Kolom 3 (Rumah Sakit)
+        "left",   // Kolom 4 (Provinsi)
+        "left",   // Kolom 5 (Kabupaten/Kota)
+        "left",   // Kolom 6 (Jenis Kegiatan)
+        ...Array(14).fill("center"), // Kolom 7-20 (Seluruh Angka)
       ],
     });
   } catch (error) {

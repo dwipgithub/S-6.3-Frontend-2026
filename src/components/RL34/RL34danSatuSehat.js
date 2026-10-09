@@ -25,6 +25,8 @@ import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import { getStatusSatset } from "../../api/status_satset.js";
 import { getJenisPengunjungName, getSafeDataRL } from "./rl34Helpers";
+import { formatNamaBulan } from "../../utils/formatNamaBulan";
+import { getInfoRumahSakitExport } from "../../utils/getInfoRumahSakitExport";
 
 if (!toast.POSITION) {
   toast.POSITION = { TOP_RIGHT: "top-right" };
@@ -767,23 +769,18 @@ const handleShow = () => {
   };
 
   function handleDownloadExcel() {
+    const namaBulan = formatNamaBulan(bulan);
     const titleAndMetadata = [
       ["SIRS ONLINE RL 3.4 - SATUSEHAT"],
       [], // Baris kosong
       ["Periode Data"],
-      [`Bulan : ${bulan}`],
+      [`Bulan : ${namaBulan}`],
       [`Tahun : ${tahun}`],
       [], // Baris kosong sebelum header tabel
     ];
     const header = ["No","Jenis Kunjungan", "Jumlah"];
     const safeData = getSafeDataRL(dataRL);
   
-    // hitung total jumlah
-    const totalJumlah = safeData.reduce((acc, item) => {
-      return acc + Number(item.jumlah || 0);
-    }, 0);
-  
-    // isi body data
     const body = safeData.map((value, index) => {
       return [
         index + 1,
@@ -791,18 +788,11 @@ const handleShow = () => {
         value.jumlah,
       ];
     });
-  
-    // tambahkan baris TOTAL di bawah
-    body.push([
-      "",          // kolom No kosong
-      "TOTAL",     // tulisan TOTAL
-      totalJumlah  // total jumlah
-    ]);
-  
+
     exportRowsToExcel({
       fileName: "RL_Pengunjung",
       sheetName: "RL 3.4",
-      rows: [...titleAndMetadata,header, ...body],
+      rows: [...titleAndMetadata, header, ...body],
       columnWidths: [8, 30, 14],
     });
   }
@@ -1691,19 +1681,29 @@ const handleDownloadExcel = async () => {
   setIsDownloading(true);
 
   try {
-    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
+    const { kodeRS, namaRS, provinsi, kabupatenKota } =
+      getInfoRumahSakitExport({
+        rumahSakit,
+        rsId: getSelectedRsId(),
+        namaUser: user?.satKerNama,
+        filterLabels: filterLabel,
+      });
+    const namaBulan = formatNamaBulan(bulan);
     const titleAndMetadata = [
       ["SIRS ONLINE RL 3.4 - SATUSEHAT"],
       [],
       ["Periode Data"],
-      [`Bulan : ${bulan}`],
+      [`Bulan : ${namaBulan}`],
       [`Tahun : ${tahun}`],
       [],
     ];
 
     const header = [
       "No.",
+      "Kode RS",
       "Rumah Sakit",
+      "Provinsi",
+      "Kabupaten/Kota",
       "Pengunjung Baru",
       "Pengunjung Lama",
       "Total",
@@ -1711,7 +1711,10 @@ const handleDownloadExcel = async () => {
 
     const body = dataRL.map((item, idx) => [
       idx + 1,
+      kodeRS,
       namaRS,
+      provinsi,
+      kabupatenKota,
       item.new_visitors ?? 0,
       item.returning_visitors ?? 0,
       item.total_visitors ?? 0,
@@ -1732,16 +1735,20 @@ const handleDownloadExcel = async () => {
       headerRowStart: titleAndMetadata.length + 1,
       // Merge title dan metadata dari kolom A sampai D
       mergeRanges: [
-        "A1:D1", // Judul utama di baris 1
-        "A3:D3", // "Periode Data" di baris 3
-        `A4:D4`, // Bulan di baris 4
-        `A5:D5`, // Tahun di baris 5
+        "A1:H1", // Judul utama di baris 1
+        "A3:H3", // "Periode Data" di baris 3
+        "A4:H4", // Bulan di baris 4
+        "A5:H5", // Tahun di baris 5
       ],
       
       borderlessRows: [1, 2, 3, 4, 5, 6],
 
       columnWidths: [
         8,
+        16,
+        18,
+        22,
+        24,
         18,
         18,
         18,

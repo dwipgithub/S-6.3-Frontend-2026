@@ -25,6 +25,8 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
+import { formatNamaBulan } from "../../utils/formatNamaBulan";
+import { getInfoRumahSakitExport } from "../../utils/getInfoRumahSakitExport";
 
 if (!toast.POSITION) {
   toast.POSITION = { TOP_RIGHT: "top-right" };
@@ -1017,11 +1019,15 @@ const handleDownloadExcelSatusehat = async () => {
 
   try {
     // 2. Format Nama RS & Metadata
-    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
-    const selectedBulanObj = daftarBulan?.find(
-      (b) => String(b.value) === String(bulan)
-    );
-    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+    const { kodeRS, namaRS, provinsi, kabupatenKota } =
+      getInfoRumahSakitExport({
+        rumahSakit,
+        daftarRumahSakit,
+        rsId: getSelectedRsId(),
+        namaUser: user?.satKerNama,
+        filterLabels: filterLabelSatusehat,
+      });
+    const namaBulan = formatNamaBulan(bulan);
     const tahunData = tahun || "-";
 
     const titleAndMetadata = [
@@ -1036,7 +1042,10 @@ const handleDownloadExcelSatusehat = async () => {
     // 3. Header Tabel (Menambahkan kolom "Rumah Sakit")
     const tableHeader = [
       "No",
+      "Kode RS",
       "Rumah Sakit",
+      "Provinsi",
+      "Kabupaten/Kota",
       "Kategori",
       "Jenis Pelayanan",
       "Total Pasien Rujukan",
@@ -1058,7 +1067,10 @@ const handleDownloadExcelSatusehat = async () => {
     // 4. Data Body Tabel (Memasukkan nilai namaRS)
     const tableBody = safeDataList.map((value, index) => [
       index + 1,
-      value.nama_rumah_sakit || value.rumah_sakit || namaRS,
+      kodeRS,
+      namaRS,
+      provinsi,
+      kabupatenKota,
       value.kategori || "-",
       value.jenis_pelayanan || "-",
       Number(value.total_pasien_rujukan || 0),
@@ -1075,78 +1087,22 @@ const handleDownloadExcelSatusehat = async () => {
       Number(value.false_emergency || 0),
     ]);
 
-    // 5. Hitung Total Angka
-    const totals = safeDataList.reduce(
-      (acc, val) => {
-        acc.total_pasien_rujukan += Number(val.total_pasien_rujukan || 0);
-        acc.total_pasien_non_rujukan += Number(val.total_pasien_non_rujukan || 0);
-        acc.tindak_lanjut_dirawat += Number(val.tindak_lanjut_dirawat || 0);
-        acc.tindak_lanjut_dirujuk += Number(val.tindak_lanjut_dirujuk || 0);
-        acc.tindak_lanjut_pulang += Number(val.tindak_lanjut_pulang || 0);
-        acc.mati_di_igd_laki_laki += Number(val.mati_di_igd_laki_laki || 0);
-        acc.mati_di_igd_perempuan += Number(val.mati_di_igd_perempuan || 0);
-        acc.doa_laki_laki += Number(val.doa_laki_laki || 0);
-        acc.doa_perempuan += Number(val.doa_perempuan || 0);
-        acc.luka_luka_laki_laki += Number(val.luka_luka_laki_laki || 0);
-        acc.luka_luka_perempuan += Number(val.luka_luka_perempuan || 0);
-        acc.false_emergency += Number(val.false_emergency || 0);
-        return acc;
-      },
-      {
-        total_pasien_rujukan: 0,
-        total_pasien_non_rujukan: 0,
-        tindak_lanjut_dirawat: 0,
-        tindak_lanjut_dirujuk: 0,
-        tindak_lanjut_pulang: 0,
-        mati_di_igd_laki_laki: 0,
-        mati_di_igd_perempuan: 0,
-        doa_laki_laki: 0,
-        doa_perempuan: 0,
-        luka_luka_laki_laki: 0,
-        luka_luka_perempuan: 0,
-        false_emergency: 0,
-      }
-    );
-
-    // 6. Buat Baris Total
-    const totalRow = [
-      "",
-      "TOTAL",
-      "", // Di-merge dengan kolom B & C
-      "",
-      totals.total_pasien_rujukan,
-      totals.total_pasien_non_rujukan,
-      totals.tindak_lanjut_dirawat,
-      totals.tindak_lanjut_dirujuk,
-      totals.tindak_lanjut_pulang,
-      totals.mati_di_igd_laki_laki,
-      totals.mati_di_igd_perempuan,
-      totals.doa_laki_laki,
-      totals.doa_perempuan,
-      totals.luka_luka_laki_laki,
-      totals.luka_luka_perempuan,
-      totals.false_emergency,
-    ];
-
-    // Hitung posisi nomor baris Total secara dinamis
     const headerRowIndex = titleAndMetadata.length + 1; // Baris ke-7
-    const totalRowIndex = headerRowIndex + tableBody.length + 1;
+    const lastDataRowIndex = headerRowIndex + tableBody.length;
 
-    // 7. Gabungkan Semua Baris
+    // 6. Gabungkan Semua Baris
     const fullBody = [
       ...titleAndMetadata,
       tableHeader,
       ...tableBody,
-      totalRow,
     ];
 
-    // Merge ranges bawaan + merge baris total (B:D)
+    // Merge ranges bawaan
     const mergeRanges = [
-      "A1:P1",
-      "A3:P3",
-      "A4:P4",
-      "A5:P5",
-      `B${totalRowIndex}:D${totalRowIndex}`, // Merge Rumah Sakit, Kategori, & Jenis Pelayanan pada baris Total
+      "A1:S1",
+      "A3:S3",
+      "A4:S4",
+      "A5:S5",
     ];
 
     await exportRowsToExcel({
@@ -1158,11 +1114,13 @@ const handleDownloadExcelSatusehat = async () => {
       mergeRanges: mergeRanges,
       columnWidths: [
         6,
+        16,
         30,
+        22,
+        24,
         18,
         30,
-        14,
-        ...Array(11).fill(18),
+        ...Array(12).fill(18),
       ],
     });
   } catch (error) {

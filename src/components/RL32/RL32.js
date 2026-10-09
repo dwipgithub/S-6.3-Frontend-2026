@@ -24,6 +24,8 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
+import { formatNamaBulan } from "../../utils/formatNamaBulan";
+import { getInfoRumahSakitExport } from "../../utils/getInfoRumahSakitExport";
 
 if (!toast.POSITION) {
   toast.POSITION = { TOP_RIGHT: "top-right" };
@@ -972,11 +974,15 @@ const RL32 = () => {
 const handleDownloadExcelSatusehat = async () => {
     setIsDownloading(true);
     try {
-      const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
-      const selectedBulanObj = daftarBulan.find(
-        (b) => String(b.value) === String(bulan)
-      );
-      const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+      const { kodeRS, namaRS, provinsi, kabupatenKota } =
+        getInfoRumahSakitExport({
+          rumahSakit,
+          daftarRumahSakit,
+          rsId: getSelectedRsId(),
+          namaUser: user?.satKerNama,
+          filterLabels: filterLabelSatusehat,
+        });
+      const namaBulan = formatNamaBulan(bulan);
       const tahunData = tahun || "-";
 
       // 1. Buat Workbook & Worksheet ExcelJS
@@ -997,7 +1003,10 @@ const handleDownloadExcelSatusehat = async () => {
       const tableHeader = [
         [
           "No",
+          "Kode RS",
           "Rumah Sakit",
+          "Provinsi",
+          "Kabupaten/Kota",
           "Jenis Pelayanan",
           "Pasien Awal Bulan",
           "Pasien Masuk",
@@ -1028,6 +1037,9 @@ const handleDownloadExcelSatusehat = async () => {
           "",
           "",
           "",
+          "",
+          "",
+          "",
           "<48 jam",
           ">=48 jam",
           "<48 jam",
@@ -1048,7 +1060,10 @@ const handleDownloadExcelSatusehat = async () => {
       // 4. Data Body Tabel
       const tableBody = dataRL32Satusehat.map((value, index) => [
         index + 1,
-        value.nama_rumah_sakit || value.rumah_sakit || namaRS,
+        kodeRS,
+        namaRS,
+        provinsi,
+        kabupatenKota,
         value.nama_jenis_pelayanan || value.jenis_pelayanan || "-",
         value.pasien_awal_bulan || 0,
         value.pasien_masuk || 0,
@@ -1071,95 +1086,22 @@ const handleDownloadExcelSatusehat = async () => {
         value.alokasi_tempat_tidur_awal_bulan || 0,
       ]);
 
-      // 5. Kalkulasi Nilai Total
-      const totals = dataRL32Satusehat.reduce(
-        (acc, val) => {
-          acc.pasien_awal_bulan += Number(val.pasien_awal_bulan || 0);
-          acc.pasien_masuk += Number(val.pasien_masuk || 0);
-          acc.pasien_pindahan += Number(val.pasien_pindahan || 0);
-          acc.pasien_dipindahkan += Number(val.pasien_dipindahkan || 0);
-          acc.pasien_keluar_hidup += Number(val.pasien_keluar_hidup || 0);
-          acc.mati_lk_kurang_48_jam += Number(val.mati_lk_kurang_48_jam || 0);
-          acc.mati_lk_lebih_sama_48_jam += Number(val.mati_lk_lebih_sama_48_jam || 0);
-          acc.mati_pr_kurang_48_jam += Number(val.mati_pr_kurang_48_jam || 0);
-          acc.mati_pr_lebih_sama_48_jam += Number(val.mati_pr_lebih_sama_48_jam || 0);
-          acc.jumlah_lama_dirawat += Number(val.jumlah_lama_dirawat || 0);
-          acc.pasien_akhir_bulan += Number(val.pasien_akhir_bulan || 0);
-          acc.jumlah_hari_perawatan += Number(val.jumlah_hari_perawatan || 0);
-          acc.hari_vvip += Number(val.hari_vvip || 0);
-          acc.hari_vip += Number(val.hari_vip || 0);
-          acc.hari_kelas_1 += Number(val.hari_kelas_1 || 0);
-          acc.hari_kelas_2 += Number(val.hari_kelas_2 || 0);
-          acc.hari_kelas_3 += Number(val.hari_kelas_3 || 0);
-          acc.hari_kelas_khusus += Number(val.hari_kelas_khusus || 0);
-          acc.alokasi_tempat_tidur_awal_bulan += Number(val.alokasi_tempat_tidur_awal_bulan || 0);
-          return acc;
-        },
-        {
-          pasien_awal_bulan: 0,
-          pasien_masuk: 0,
-          pasien_pindahan: 0,
-          pasien_dipindahkan: 0,
-          pasien_keluar_hidup: 0,
-          mati_lk_kurang_48_jam: 0,
-          mati_lk_lebih_sama_48_jam: 0,
-          mati_pr_kurang_48_jam: 0,
-          mati_pr_lebih_sama_48_jam: 0,
-          jumlah_lama_dirawat: 0,
-          pasien_akhir_bulan: 0,
-          jumlah_hari_perawatan: 0,
-          hari_vvip: 0,
-          hari_vip: 0,
-          hari_kelas_1: 0,
-          hari_kelas_2: 0,
-          hari_kelas_3: 0,
-          hari_kelas_khusus: 0,
-          alokasi_tempat_tidur_awal_bulan: 0,
-        }
-      );
+      const lastDataRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length;
 
-      // Label "TOTAL" diletakkan di indeks 0 (Kolom A) agar tidak hilang saat A:C di-merge
-      const totalRow = [
-        "TOTAL",
-        "",
-        "",
-        totals.pasien_awal_bulan,
-        totals.pasien_masuk,
-        totals.pasien_pindahan,
-        totals.pasien_dipindahkan,
-        totals.pasien_keluar_hidup,
-        totals.mati_lk_kurang_48_jam,
-        totals.mati_lk_lebih_sama_48_jam,
-        totals.mati_pr_kurang_48_jam,
-        totals.mati_pr_lebih_sama_48_jam,
-        totals.jumlah_lama_dirawat,
-        totals.pasien_akhir_bulan,
-        totals.jumlah_hari_perawatan,
-        totals.hari_vvip,
-        totals.hari_vip,
-        totals.hari_kelas_1,
-        totals.hari_kelas_2,
-        totals.hari_kelas_3,
-        totals.hari_kelas_khusus,
-        totals.alokasi_tempat_tidur_awal_bulan,
-      ];
-
-      // 6. Masukkan semua baris ke worksheet
+      // 5. Masukkan semua baris ke worksheet
       const fullRows = [
         ...titleAndMetadata,
         ...tableHeader,
         ...tableBody,
-        totalRow,
       ];
       fullRows.forEach((row) => worksheet.addRow(row));
 
-      // 7. Penggabungan Sel (Merge Cells)
-      const totalRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length + 1;
+      // 6. Penggabungan Sel (Merge Cells)
       const mergeRanges = [
-        "A1:V1",
-        "A3:V3",
-        "A4:V4",
-        "A5:V5",
+        "A1:Y1",
+        "A3:Y3",
+        "A4:Y4",
+        "A5:Y5",
         "A7:A8",
         "B7:B8",
         "C7:C8",
@@ -1168,30 +1110,35 @@ const handleDownloadExcelSatusehat = async () => {
         "F7:F8",
         "G7:G8",
         "H7:H8",
-        "I7:J7",
-        "K7:L7",
-        "M7:M8",
-        "N7:N8",
-        "O7:O8",
-        "P7:U7",
-        "V7:V8",
-        `A${totalRowIndex}:C${totalRowIndex}`, // Merge A-C pada baris Total
+        "I7:I8",
+        "J7:J8",
+        "K7:K8",
+        "L7:M7",
+        "N7:O7",
+        "P7:P8",
+        "Q7:Q8",
+        "R7:R8",
+        "S7:X7",
+        "Y7:Y8",
       ];
       mergeRanges.forEach((range) => worksheet.mergeCells(range));
 
-      // 8. Pengaturan Lebar Kolom
+      // 7. Pengaturan Lebar Kolom
       worksheet.columns = [
         { width: 8 },  // A
-        { width: 30 }, // B
-        { width: 25 }, // C
-        ...Array(19).fill({ width: 18 }), // D - V
+        { width: 16 }, // B (Kode RS)
+        { width: 30 }, // C (Rumah Sakit)
+        { width: 22 }, // D (Provinsi)
+        { width: 24 }, // E (Kabupaten/Kota)
+        { width: 25 }, // F (Jenis Pelayanan)
+        ...Array(19).fill({ width: 18 }), // G - Y
       ];
 
-      // 9. Formatting: Garis Border & Rata Tengah (Center Alignment)
+      // 8. Formatting: Garis Border & Rata Tengah (Center Alignment)
       const headerStartRow = titleAndMetadata.length + 1;
 
       worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber >= headerStartRow && rowNumber <= totalRowIndex) {
+        if (rowNumber >= headerStartRow && rowNumber <= lastDataRowIndex) {
           row.eachCell({ includeEmpty: true }, (cell) => {
             // Posisi teks/angka persis di tengah sel
             cell.alignment = {
@@ -1211,10 +1158,9 @@ const handleDownloadExcelSatusehat = async () => {
         }
       });
 
-      // Bolding Header dan Baris Total
+      // Bolding Header
       worksheet.getRow(7).font = { bold: true };
       worksheet.getRow(8).font = { bold: true };
-      worksheet.getRow(totalRowIndex).font = { bold: true };
 
       // 10. Generate file dan unduh menggunakan file-saver (saveAs)
       const buffer = await workbook.xlsx.writeBuffer();
