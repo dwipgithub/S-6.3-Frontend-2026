@@ -136,7 +136,7 @@ export default function TabMenu() {
               <li className="nav-item">
                 <button
                   style={{ color: activeTab === "tab2" ? "#00b9ad" : "black" }}
-                  className={`nav-link ${activeTab === "tab1" ? "active" : ""}`}
+                  className={`nav-link ${activeTab === "tab2" ? "active" : ""}`}
                   onClick={() => setActiveTab("tab2")}
                 >
                   SATUSEHAT
@@ -357,23 +357,6 @@ function TabOne() {
     const rsId = e.target.value;
     showRumahSakit(rsId);
   };
-
-  // const getRumahSakit = async (kabKotaId) => {
-  //   setLoadingRS(true);
-  //   setDaftarRumahSakit([]);
-  //   try {
-  //     const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
-  //       headers: {
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //       params: {
-  //         kabKotaId: kabKotaId,
-  //       },
-  //     });
-  //     setDaftarRumahSakit(response.data.data);
-  //   } catch (error) {}
-  //   setLoadingRS(false);
-  // };
 
   const getRumahSakit = async (id, type = "kabkota") => {
     setLoadingRS(true);
@@ -996,6 +979,17 @@ function TabOne() {
       ? { no: "0px", aksi: "40px", icd: "202px", diag: "307px" }
       : { no: "0px", icd: "52px", diag: "180px" };
 
+  const isDownloadDisabled = () => {
+    // if (!bulan || !tahun) return true;
+
+    // if (user.jenisUserId === 4) {
+    //   return false;
+    // }
+
+    // Lebih strict: filter harus benar-benar sudah "Terapkan"
+    return !isFilterApplied;
+  };
+
   return (
     <div className="container-fluid">
       {spinner && (
@@ -1269,20 +1263,15 @@ function TabOne() {
               Filter
             </button>
 
-            {/* <DownloadTableExcel
-              filename={namafile}
-              sheet="data RL 51"
-              currentTableRef={tableRef.current}
+            <button
+              className={style.btnPrimary}
+              onClick={handleDownloadExcel}
+              disabled={isDownloadDisabled()}
+              style={{
+                opacity: isDownloadDisabled() ? 0.5 : 1,
+                cursor: isDownloadDisabled() ? "not-allowed" : "pointer",
+              }}
             >
-              <button className={style.btnPrimary}>
-                {" "}
-                <FaDownload />
-                Download
-              </button>
-            </DownloadTableExcel> */}
-
-            <button className={style.btnPrimary} onClick={handleDownloadExcel}>
-              {/* <FaDownload /> */}
               Download
             </button>
           </div>
@@ -2662,45 +2651,43 @@ function TabOne() {
 }
 
 function TabTwo() {
-  const [bulan, setBulan] = useState("01");
   const [tahun, setTahun] = useState(new Date().getFullYear());
-  const [daftarBulan, setDaftarBulan] = useState([]);
-  const [filterLabel, setFilterLabel] = useState([]);
-  const [rumahSakit, setRumahSakit] = useState("");
-  const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
-  const [daftarProvinsi, setDaftarProvinsi] = useState([]);
-  const [daftarKabKota, setDaftarKabKota] = useState([]);
+  const [bulan, setBulan] = useState("01");
   const [dataRL, setDataRL] = useState([]);
   const [token, setToken] = useState("");
   const [expire, setExpire] = useState("");
   const [user, setUser] = useState({});
-  const navigate = useNavigate();
-  const tableRef = useRef(null);
-  const { CSRFToken } = useCSRFTokenContext();
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
-  const [totalPages, setTotalPages] = useState(1);
-  const [masterUmur, setMasterUmur] = useState([]);
-  const [sync, setSync] = useState({});
-  const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [loadingTable, setLoadingTable] = useState(false);
+  const [show, setShow] = useState(false);
+  const [filterLabel, setFilterLabel] = useState([]);
+  const [daftarBulan, setDaftarBulan] = useState([]);
+  const [daftarRumahSakit, setDaftarRumahSakit] = useState([]);
+  const [daftarProvinsi, setDaftarProvinsi] = useState([]);
+  const [daftarKabKota, setDaftarKabKota] = useState([]);
+  const [rumahSakit, setRumahSakit] = useState("");
+  const [sync, setSync] = useState({});
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+  const [limit] = useState(20);
+  const navigate = useNavigate();
+  const { CSRFToken } = useCSRFTokenContext();
   const pollingRef = useRef(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [selectedRsID, setSelectedRsID] = useState(null);
   const [loadingRS, setLoadingRS] = useState(false);
   const [namafile, setNamaFile] = useState("");
+  const [selectedProvId, setSelectedProvId] = useState(null);
+  const [selectedKabId, setSelectedKabId] = useState(null);
+
+  const tableRef = useRef(null);
+  const [masterUmur, setMasterUmur] = useState([]);
 
   useEffect(() => {
     refreshToken();
     getBulan();
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-      isPollingActiveRef.current = false;
-    };
+    return () => clearInterval(pollingRef.current);
   }, []);
 
   useEffect(() => {
@@ -2711,9 +2698,11 @@ function TabTwo() {
         getProvinsi();
         break;
       case 2:
+        setSelectedProvId(satKerId);
         getKabKota(satKerId);
         break;
       case 3:
+        setSelectedKabId(satKerId);
         getRumahSakit(satKerId);
         break;
       case 4:
@@ -2727,20 +2716,24 @@ function TabTwo() {
 
   useEffect(() => {
     if (token) getMasterUmur();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
+    if (!sync.lastSync) return;
+
+    const lastSyncMs = new Date(sync.lastSync).getTime();
     setNow(Date.now());
-    if (!sync.lastSync || sync.isUpdating) return;
 
-    const elapsed = (Date.now() - new Date(sync.lastSync).getTime()) / 60000;
-    if (elapsed >= MANUAL_SYNC_COOLDOWN) return;
+    const interval = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if ((current - lastSyncMs) / 60000 >= MANUAL_SYNC_COOLDOWN) {
+        clearInterval(interval); // cooldown selesai, berhenti
+      }
+    }, 1000);
 
-    const remainingMs = (MANUAL_SYNC_COOLDOWN - elapsed) * 60 * 1000;
-    const timeout = setTimeout(() => setNow(Date.now()), remainingMs);
-    return () => clearTimeout(timeout);
-  }, [sync.lastSync, sync.isUpdating]);
+    return () => clearInterval(interval);
+  }, [sync.lastSync]);
 
   useEffect(() => {
     setIsManualSyncing(false);
@@ -2821,41 +2814,54 @@ function TabTwo() {
   const bulanChangeHandler = (e) => setBulan(e.target.value);
   const tahunChangeHandler = (e) => setTahun(e.target.value);
 
-  const provinsiChangeHandler = (e) => {
+  const provinsiChangeHandler = async (e) => {
     const provinsiId = e.target.value;
-    getKabKota(provinsiId);
-  };
 
-  const kabKotaChangeHandler = (e) => {
-    const kabKotaId = e.target.value;
-    getRumahSakit(kabKotaId);
-  };
+    // 1. Update State Provinsi
+    setSelectedProvId(provinsiId);
 
-  const rumahSakitChangeHandler = (e) => {
-    const rsId = e.target.value;
-    showRumahSakit(rsId);
-  };
+    // 2. Reset State Kab/Kota dan RS
+    setSelectedKabId(0);
+    setSelectedRsID(0);
+    setDaftarRumahSakit([]);
 
-  const getRumahSakit = async (kabKotaId) => {
-    try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/", {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { kabKotaId },
-      });
-      setDaftarRumahSakit(response.data.data);
-    } catch (error) {
-      console.error(error);
+    // 3. Skenario Opsi
+    if (provinsiId === "0" || provinsiId === 0 || provinsiId === "") {
+      // Skenario 1: Pilih "Pilih" (0) -> Kosongkan dropdown turunan
+      setDaftarKabKota([]);
+    } else if (provinsiId === "99" || provinsiId === 99) {
+      // Skenario 2: Pilih "Semua Provinsi" (99) -> Otomatis set "Semua Kab/Kota" & "ALL RS"
+      setDaftarKabKota([{ id: "9999", nama: "Semua Kab/Kota" }]);
+      setSelectedKabId("9999");
+
+      setDaftarRumahSakit([{ id: "999999", nama: "Semua Rumah Sakit" }]);
+      setSelectedRsID("999999");
+    } else {
+      // Skenario 3: Pilih Provinsi Spesifik -> Fetch Kab/Kota
+      await getKabKota(provinsiId);
     }
   };
 
-  const showRumahSakit = async (id) => {
-    try {
-      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setRumahSakit(response.data.data);
-    } catch (error) {
-      console.error(error);
+  const kabKotaChangeHandler = async (e) => {
+    const kabKotaId = e.target.value;
+
+    // 1. Update State Kab/Kota
+    setSelectedKabId(kabKotaId);
+
+    // 2. Reset State Rumah Sakit
+    setSelectedRsID(0);
+
+    // 3. Skenario Opsi
+    if (kabKotaId === "0" || kabKotaId === 0 || kabKotaId === "") {
+      // Skenario Pilih "Pilih" (0)
+      setDaftarRumahSakit([]);
+    } else if (kabKotaId === "9999" || kabKotaId === 9999) {
+      // Skenario "Semua Kab/Kota"
+      setDaftarRumahSakit([{ id: "999999", nama: "Semua Rumah Sakit" }]);
+      setSelectedRsID("999999");
+    } else {
+      // Skenario Kab/Kota Spesifik
+      await getRumahSakit(kabKotaId);
     }
   };
 
@@ -2872,11 +2878,80 @@ function TabTwo() {
 
   const getKabKota = async (provinsiId) => {
     try {
+      if (provinsiId === "99" || provinsiId === 99) {
+        setDaftarKabKota([{ id: "9999", nama: "ALL" }]);
+        return;
+      }
       const response = await axiosJWT.get("/apisirs6v2/kabkota", {
         headers: { Authorization: `Bearer ${token}` },
         params: { provinsiId },
       });
-      setDaftarKabKota(response.data.data);
+      const dataApi = response.data.data ?? [];
+      setDaftarKabKota([
+        { id: "9999", nama: "Select ALL Kabkota" },
+        ...dataApi,
+      ]);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getRumahSakit = async (id, type = "kabkota") => {
+    setLoadingRS(true);
+    setDaftarRumahSakit([]);
+    try {
+      if (id === 99999 || id === "9999") {
+        setLoadingRS(false);
+        setDaftarRumahSakit([{ id: "999999", nama: "ALL" }]);
+        return;
+      }
+
+      let params = {};
+      if (type === "provinsi") {
+        params.provinsiId = id;
+      } else {
+        params.kabKotaId = id;
+      }
+
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit", {
+        headers: { Authorization: `Bearer ${token}` },
+        params,
+      });
+
+      setDaftarRumahSakit([
+        { id: "999999", nama: "ALL Rumah Sakit" },
+        ...(response.data.data ?? []),
+      ]);
+    } catch (error) {
+      console.error(error);
+    }
+    setLoadingRS(false);
+  };
+
+  const handleSelectRumahSakit = (e) => {
+    const id = e.target.value;
+    const selected = daftarRumahSakit.find((item) => item.id == id);
+
+    if (selected) {
+      setSelectedRsID(selected.id);
+      setRumahSakit(selected);
+    } else {
+      setSelectedRsID(null);
+      setRumahSakit(null);
+    }
+  };
+
+  const rumahSakitChangeHandler = (e) => {
+    const rsId = e.target.value;
+    showRumahSakit(rsId);
+  };
+
+  const showRumahSakit = async (id) => {
+    try {
+      const response = await axiosJWT.get("/apisirs6v2/rumahsakit/" + id, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRumahSakit(response.data.data);
     } catch (error) {
       console.error(error);
     }
@@ -3046,13 +3121,6 @@ function TabTwo() {
   const getRLSatusehat = async (e) => {
     if (e) e.preventDefault();
 
-    if (!rumahSakit?.id) {
-      toast("Rumah sakit harus dipilih", {
-        type: "error",
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
     if (!tahun || !bulan) {
       toast("Pilih Bulan & Tahun", {
         type: "error",
@@ -3062,12 +3130,62 @@ function TabTwo() {
     }
 
     const periode = `${tahun}-${bulan}`;
+    const jenisUserId = user.jenisUserId;
+
+    // Role 4: selalu RS sendiri, seperti sebelumnya
+    if (jenisUserId === 4) {
+      setFilterLabel([
+        `Rumah Sakit: ${rumahSakit.nama}`,
+        `Periode: ${periode}`,
+      ]);
+      setIsFilterApplied(true);
+      setDataRL([]);
+      setLoadingTable(true);
+      handleClose();
+      await fetchData(1, false, token);
+      return;
+    }
+
+    // Role 1/2/3: RS wajib dipilih (termasuk opsi ALL)
+    if (!selectedRsID) {
+      toast("Rumah sakit harus dipilih", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
+
+    handleClose();
+
+    if (isRsAll(selectedRsID)) {
+      // ALL di level manapun -> langsung download, tidak tampil tabel
+      setIsFilterApplied(false);
+      setDataRL([]);
+      await downloadAllExcelSatuSehat({
+        provId:
+          selectedProvId && selectedProvId !== "99" && selectedProvId !== 99
+            ? selectedProvId
+            : undefined,
+        kabId:
+          selectedKabId && selectedKabId !== "9999" ? selectedKabId : undefined,
+        periode,
+      });
+      return;
+    }
+
+    // RS spesifik dipilih -> tampil tabel seperti RS, TANPA tombol sync
     setFilterLabel([`Rumah Sakit: ${rumahSakit.nama}`, `Periode: ${periode}`]);
     setIsFilterApplied(true);
     setDataRL([]);
     setLoadingTable(true);
-
     await fetchData(1, false, token);
+
+    // setFilterLabel([`Rumah Sakit: ${rumahSakit.nama}`, `Periode: ${periode}`]);
+    // setIsFilterApplied(true);
+    // setDataRL([]);
+    // setLoadingTable(true);
+
+    // await fetchData(1, false, token);
 
     // setSync((prevSync) => {
     //   if (
@@ -3082,6 +3200,39 @@ function TabTwo() {
     // });
   };
 
+  const handleClose = () => setShow(false);
+
+  const handleShow = () => {
+    const jenisUserId = user.jenisUserId;
+    const satKerId = user.satKerId;
+    switch (jenisUserId) {
+      case 1:
+        getProvinsi();
+        setBulan("01");
+        setShow(true);
+        break;
+      case 2:
+        setSelectedProvId(satKerId); // provinsi user sudah tetap, set manual
+        getKabKota(satKerId);
+        setBulan("01");
+        setShow(true);
+        break;
+      case 3:
+        // setSelectedProvId(user.provinsiId); // kalau ada di token
+        setSelectedKabId(satKerId); // kabkota user sudah tetap, set manual
+        getRumahSakit(satKerId);
+        setBulan("01");
+        setShow(true);
+        break;
+      case 4:
+        showRumahSakit(satKerId);
+        setBulan("01");
+        setShow(true);
+        break;
+      default:
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     return (
@@ -3094,14 +3245,22 @@ function TabTwo() {
 
   const [now, setNow] = useState(Date.now());
 
-  // Timer update setiap 100ms untuk real-time countdown
   useEffect(() => {
+    if (!sync.lastSync) return;
+
+    const lastSyncMs = new Date(sync.lastSync).getTime();
+    setNow(Date.now());
+
     const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 100); // Update setiap 100ms untuk smoothness
+      const current = Date.now();
+      setNow(current);
+      if ((current - lastSyncMs) / 60000 >= MANUAL_SYNC_COOLDOWN) {
+        clearInterval(interval); // cooldown selesai, berhenti
+      }
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [sync.lastSync]);
 
   // Ganti Date.now() → now
   const minutesSinceSync = sync.lastSync
@@ -3161,7 +3320,7 @@ function TabTwo() {
   };
 
   const handleDownloadExcel = async () => {
-    if (!isFilterApplied || !rumahSakit?.id) {
+    if (!isFilterApplied) {
       toast("Terapkan filter terlebih dahulu", {
         type: "error",
         position: toast.POSITION.TOP_RIGHT,
@@ -3169,146 +3328,108 @@ function TabTwo() {
       return;
     }
 
-    setIsDownloading(true);
+    const rsIdToUse = user.jenisUserId === 4 ? user.satKerId : selectedRsID;
+    const periode = `${tahun}-${bulan}`;
 
+    setIsDownloading(true);
     try {
-      const firstRes = await axiosJWT.get(
-        "/apisirs6v2/rllimatitiksatusatusehat",
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rllimatitiksatusatusehatdownload",
         {
           headers: { Authorization: `Bearer ${token}` },
           params: {
-            rsId: rumahSakit.id,
+            rsId: rsIdToUse,
             periode: `${tahun}-${bulan}`,
-            page: 1,
-            limit,
           },
+          responseType: "blob",
         },
       );
 
-      const { pages: tp } = firstRes.data.pagination || {};
-      let allRaw = [...(firstRes.data.data ?? [])];
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 
-      // ── Step 2: Fetch sisa halaman secara paralel ──
-      if (tp > 1) {
-        const remainingPages = Array.from({ length: tp - 1 }, (_, i) => i + 2);
-        const results = await Promise.all(
-          remainingPages.map((p) =>
-            axiosJWT.get("/apisirs6v2/rllimatitiksatusatusehat", {
-              headers: { Authorization: `Bearer ${token}` },
-              params: {
-                rsId: rumahSakit.id,
-                periode: `${tahun}-${bulan}`,
-                page: p,
-                limit,
-              },
-            }),
-          ),
-        );
-        results.forEach((r) => allRaw.push(...(r.data.data ?? [])));
+      let fileName = `RL_51_SatuSehat_${tahun}-${bulan}_${timestamp}.xlsx`;
+      const disposition = response.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
       }
 
-      // ── Step 3: Group per ICD-10 (sama seperti tampilan tabel) ──
-      const groupedData = groupByICD(allRaw);
-      const finalData = transformDataWithMasterUmur(groupedData, masterUmur);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
 
-      // ── Step 4: Susun header (kolom umur dinamis dari masterUmur) ──
-      const headers = [
-        "No",
-        "Rumah Sakit",
-        "Kode ICD-10",
-        "Diagnosis Penyakit",
-        "Periode",
-      ];
-      masterUmur.forEach((umur) => {
-        headers.push(`${umur.name} L`, `${umur.name} P`, `${umur.name} Total`);
-      });
-      headers.push(
-        "Total Kunjungan L",
-        "Total Kunjungan P",
-        "Total Kunjungan Total",
-      );
-
-      // ── Step 5: Susun baris data ──
-      const rows = finalData.map((item, i) => {
-        const row = [
-          i + 1,
-          rumahSakit.nama,
-          item.icd_10,
-          item.diagnosis,
-          `${tahun}-${bulan}`,
-        ];
-        masterUmur.forEach((umur) => {
-          const umurData = item.umur.find((u) => u.age_group === umur.name);
-          row.push(
-            umurData?.kunjungan_baru?.male ?? 0,
-            umurData?.kunjungan_baru?.female ?? 0,
-            umurData?.kunjungan_baru?.total ?? 0,
-          );
-        });
-        row.push(
-          item.total_kunjungan?.male ?? 0,
-          item.total_kunjungan?.female ?? 0,
-          item.total_kunjungan?.total ?? 0,
-        );
-        return row;
-      });
-
-      const bulanName =
-        daftarBulan?.find((b) => b.value == bulan)?.key || `Bulan ${bulan}`;
-
-      const headerInfo = [
-        ["SIRS ONLINE RL 5.1 - SATUSEHAT"], // Row 1: Judul (akan di-merge)
-        [], // Row 2: Kosong (skip)
-        ["Periode Data"], // Row 3: Label
-        [`Bulan:`, `${bulanName}`], // Row 4: Data periode
-        [`Tahun:`, `${tahun}`],
-        [], // Row 5: Kosong (spacer)
-      ];
-
-      const allRows = [...headerInfo, headers, ...rows];
-
-      // ── Step 6: Generate & trigger download ──
-      const ws = XLSX.utils.aoa_to_sheet(allRows);
-      ws["!cols"] = headers.map((h, i) =>
-        i === 2 ? { wch: 35 } : { wch: Math.max(h.length + 2, 8) },
-      );
-
-      ws["!rows"] = [
-        { hpt: 25, hidden: false }, // Row 1: Judul (tinggi)
-        { hpt: 8, hidden: false }, // Row 2: Kosong
-        { hpt: 18, hidden: false }, // Row 3: Periode Data
-        { hpt: 18, hidden: false }, // Row 4: Data periode
-        { hpt: 18, hidden: false }, // Row 4: Data periode
-        { hpt: 8, hidden: false }, // Row 5: Kosong
-        { hpt: 30, hidden: false }, // Row 6: Headers tabel (lebih tinggi)
-      ];
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `RL5.1 ${tahun}-${bulan}`);
-      // XLSX.writeFile(wb, `RL5.1_${tahun}-${bulan}.xlsx`);
-
-      const currentDate = new Date();
-
-      // Mengambil komponen waktu
-      const jam = String(currentDate.getHours()).padStart(2, "0");
-      const menit = String(currentDate.getMinutes()).padStart(2, "0");
-      const detik = String(currentDate.getSeconds()).padStart(2, "0");
-      const fileName = `RL5.1_${tahun}-${bulan}_${jam}${menit}${detik}.xlsx`;
-      XLSX.writeFile(wb, fileName);
-
-      toast("Download berhasil!", {
+      toast("File berhasil diunduh", {
         type: "success",
         position: toast.POSITION.TOP_RIGHT,
       });
-    } catch (err) {
-      console.error(err);
-      toast("Gagal download Excel", {
+    } catch (error) {
+      console.error(error);
+      toast("Gagal mengunduh file", {
         type: "error",
         position: toast.POSITION.TOP_RIGHT,
       });
-    } finally {
-      setIsDownloading(false);
     }
+    setIsDownloading(false);
+  };
+
+  // --- Helper: cek apakah RS yang dipilih adalah opsi "ALL" ---
+  const isRsAll = (id) => id === "999999";
+  const pad = (n) => String(n).padStart(2, "0");
+
+  // --- Download Excel multi-RS/wilayah lewat endpoint backend (streaming) ---
+  const downloadAllExcelSatuSehat = async (params) => {
+    setIsDownloading(true);
+    try {
+      const response = await axiosJWT.get(
+        "/apisirs6v2/rllimatitiksatusatusehatdownload",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+          responseType: "blob",
+        },
+      );
+
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+      let fileName = `RL_51_SatuSehat_${params.periode}_${timestamp}.xlsx`;
+      const disposition = response.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast("File berhasil diunduh", {
+        type: "success",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    } catch (error) {
+      console.error(error);
+      toast("Gagal mengunduh file", {
+        type: "error",
+        position: toast.POSITION.TOP_RIGHT,
+      });
+    }
+    setIsDownloading(false);
   };
 
   // Komponen loading di dalam tabel (samakan dengan RL41)
@@ -3508,142 +3629,276 @@ function TabTwo() {
     </div>
   );
 
+  const showSyncButton = user.jenisUserId === 4;
+
   return (
     <div
       className="container"
       style={{ marginTop: "0px", marginBottom: "70px" }}
     >
-      <ToastContainer />
-
-      <div className="row">
-        <div className="col-md-12">
+      {isDownloading && (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            zIndex: 9999,
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+          }}
+        >
           <div
             style={{
-              background: "var(--color-background-primary, #fff)",
-              border: "1px solid #e2e8f0",
-              borderRadius: 10,
-              padding: "16px 20px",
-              marginBottom: 14,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 12,
             }}
           >
-            <p
-              style={{
-                fontWeight: 700,
-                fontSize: 13,
-                color: "#1e293b",
-                margin: "0 0 14px 0",
-                letterSpacing: 0.2,
-              }}
-            >
-              Periode Data
+            <Spinner animation="border" variant="primary" />
+            <p style={{ margin: 0, color: "#555", fontSize: 14 }}>
+              Sedang menyiapkan file Excel, mohon tunggu...
             </p>
+          </div>
+        </div>
+      )}
+      <ToastContainer />
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-end",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              {/* Provinsi - hanya jenisUserId 1 */}
-              {user.jenisUserId === 1 && (
-                <div>
-                  <label
-                    style={{
-                      fontSize: 12,
-                      color: "#64748b",
-                      display: "block",
-                      marginBottom: 5,
-                      fontWeight: 500,
-                    }}
-                  >
-                    Provinsi
-                  </label>
+      {user.jenisUserId !== 4 && (
+        <Modal show={show} onHide={handleClose} style={{ position: "fixed" }}>
+          <Modal.Header closeButton>
+            <Modal.Title>Filter</Modal.Title>
+          </Modal.Header>
+          <form onSubmit={getRLSatusehat}>
+            <Modal.Body>
+              {(user.jenisUserId === 1 || user.jenisUserId === 99) && (
+                <>
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: 7,
-                      padding: "7px 10px",
-                      background: "#f8fafc",
-                      minWidth: 170,
-                    }}
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
                   >
                     <select
-                      onChange={provinsiChangeHandler}
-                      style={{
-                        border: "none",
-                        outline: "none",
-                        background: "transparent",
-                        flex: 1,
-                        fontSize: 13,
-                        color: "#334155",
-                      }}
+                      name="provinsi"
+                      id="provinsi"
+                      className="form-select"
+                      value={selectedProvId || ""}
+                      onChange={(e) => provinsiChangeHandler(e)}
                     >
-                      <option value={0}>Pilih</option>
+                      <option key={0} value="">
+                        Pilih
+                      </option>
+                      <option key={99} value={99}>
+                        Pilih Semua Provinsi
+                      </option>
                       {daftarProvinsi.map((nilai) => (
                         <option key={nilai.id} value={nilai.id}>
                           {nilai.nama}
                         </option>
                       ))}
                     </select>
+                    <label htmlFor="provinsi">Provinsi</label>
                   </div>
-                </div>
-              )}
 
-              {/* Kab/Kota - jenisUserId 1 & 2 */}
-              {(user.jenisUserId === 1 || user.jenisUserId === 2) && (
-                <div>
-                  <label
-                    style={{
-                      fontSize: 12,
-                      color: "#64748b",
-                      display: "block",
-                      marginBottom: 5,
-                      fontWeight: 500,
-                    }}
-                  >
-                    Kab/Kota
-                  </label>
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: 7,
-                      padding: "7px 10px",
-                      background: "#f8fafc",
-                      minWidth: 170,
-                    }}
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
                   >
                     <select
-                      onChange={kabKotaChangeHandler}
-                      style={{
-                        border: "none",
-                        outline: "none",
-                        background: "transparent",
-                        flex: 1,
-                        fontSize: 13,
-                        color: "#334155",
-                      }}
+                      name="kabKota"
+                      id="kabKota"
+                      className="form-select"
+                      value={selectedKabId || ""}
+                      onChange={(e) => kabKotaChangeHandler(e)}
                     >
-                      <option value={0}>Pilih</option>
+                      <option key={0} value="">
+                        Pilih
+                      </option>
                       {daftarKabKota.map((nilai) => (
                         <option key={nilai.id} value={nilai.id}>
                           {nilai.nama}
                         </option>
                       ))}
                     </select>
+                    <label htmlFor="kabKota">Kab/Kota</label>
                   </div>
+
+                  <div
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
+                  >
+                    <select
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={selectedRsID || ""}
+                      onChange={(e) => handleSelectRumahSakit(e)}
+                    >
+                      <option key={0} value={0}>
+                        {loadingRS ? "Loading..." : "Pilih"}
+                      </option>
+                      {daftarRumahSakit.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="rumahSakit">Rumah Sakit</label>
+                  </div>
+                </>
+              )}
+
+              {user.jenisUserId === 2 && (
+                <>
+                  <div
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
+                  >
+                    <select
+                      name="kabKota"
+                      id="kabKota"
+                      className="form-select"
+                      value={selectedKabId || ""}
+                      onChange={(e) => kabKotaChangeHandler(e)}
+                    >
+                      <option key={0} value="">
+                        Pilih
+                      </option>
+                      {daftarKabKota.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="kabKota">Kab/Kota</label>
+                  </div>
+
+                  <div
+                    className="form-floating"
+                    style={{ width: "100%", paddingBottom: "5px" }}
+                  >
+                    <select
+                      name="rumahSakit"
+                      id="rumahSakit"
+                      className="form-select"
+                      value={selectedRsID || ""}
+                      onChange={(e) => handleSelectRumahSakit(e)}
+                    >
+                      <option key={0} value={0}>
+                        {loadingRS ? "Loading..." : "Pilih"}
+                      </option>
+                      {daftarRumahSakit.map((nilai) => (
+                        <option key={nilai.id} value={nilai.id}>
+                          {nilai.nama}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="rumahSakit">Rumah Sakit</label>
+                  </div>
+                </>
+              )}
+
+              {user.jenisUserId === 3 && (
+                <div
+                  className="form-floating"
+                  style={{ width: "100%", paddingBottom: "5px" }}
+                >
+                  <select
+                    name="rumahSakit"
+                    id="rumahSakit"
+                    className="form-select"
+                    value={selectedRsID || ""}
+                    onChange={(e) => handleSelectRumahSakit(e)}
+                  >
+                    <option key={0} value={0}>
+                      {loadingRS ? "Loading..." : "Pilih"}
+                    </option>
+                    {daftarRumahSakit.map((nilai) => (
+                      <option key={nilai.id} value={nilai.id}>
+                        {nilai.nama}
+                      </option>
+                    ))}
+                  </select>
+                  <label htmlFor="rumahSakit">Rumah Sakit</label>
                 </div>
               )}
 
-              {/* Rumah Sakit - jenisUserId 1, 2 & 3 */}
-              {(user.jenisUserId === 1 ||
-                user.jenisUserId === 2 ||
-                user.jenisUserId === 3) && (
+              <div
+                className="form-floating"
+                style={{ width: "70%", display: "inline-block" }}
+              >
+                <select
+                  className="form-control"
+                  value={bulan}
+                  onChange={(e) => setBulan(e.target.value)}
+                >
+                  {daftarBulan.map((b) => (
+                    <option key={b.value} value={b.value}>
+                      {b.key}
+                    </option>
+                  ))}
+                </select>
+                <label>Bulan</label>
+              </div>
+              <div
+                className="form-floating"
+                style={{ width: "30%", display: "inline-block" }}
+              >
+                <input
+                  name="tahun"
+                  type="number"
+                  className="form-control"
+                  value={tahun}
+                  onChange={(e) => setTahun(e.target.value)}
+                />
+                <label htmlFor="tahun">Tahun</label>
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <div className="mt-3 mb-3">
+                <button type="submit" className={style.btnPrimary}>
+                  <HiSaveAs size={20} /> Terapkan
+                </button>
+              </div>
+            </Modal.Footer>
+          </form>
+        </Modal>
+      )}
+
+      <div className="row">
+        <div className="col-md-12">
+          {user.jenisUserId === 4 && (
+            <div
+              style={{
+                background: "var(--color-background-primary, #fff)",
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                padding: "16px 20px",
+                marginBottom: 14,
+              }}
+            >
+              <p
+                style={{
+                  fontWeight: 700,
+                  fontSize: 13,
+                  color: "#1e293b",
+                  margin: "0 0 14px 0",
+                  letterSpacing: 0.2,
+                }}
+              >
+                Periode Data
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                {/* Bulan */}
                 <div>
                   <label
                     style={{
@@ -3654,7 +3909,7 @@ function TabTwo() {
                       fontWeight: 500,
                     }}
                   >
-                    Rumah Sakit
+                    Bulan
                   </label>
                   <div
                     style={{
@@ -3664,11 +3919,17 @@ function TabTwo() {
                       borderRadius: 7,
                       padding: "7px 10px",
                       background: "#f8fafc",
-                      minWidth: 200,
+                      minWidth: 155,
                     }}
                   >
+                    <FaCalendarAlt
+                      size={13}
+                      color="#94a3b8"
+                      style={{ marginRight: 7, flexShrink: 0 }}
+                    />
                     <select
-                      onChange={rumahSakitChangeHandler}
+                      value={bulan}
+                      onChange={bulanChangeHandler}
                       style={{
                         border: "none",
                         outline: "none",
@@ -3678,160 +3939,181 @@ function TabTwo() {
                         color: "#334155",
                       }}
                     >
-                      <option value={0}>Pilih</option>
-                      {daftarRumahSakit.map((nilai) => (
-                        <option key={nilai.id} value={nilai.id}>
-                          {nilai.nama}
+                      {daftarBulan.map((b) => (
+                        <option key={b.value} value={b.value}>
+                          {b.key}
                         </option>
                       ))}
                     </select>
                   </div>
                 </div>
-              )}
 
-              {/* Bulan */}
-              <div>
-                <label
-                  style={{
-                    fontSize: 12,
-                    color: "#64748b",
-                    display: "block",
-                    marginBottom: 5,
-                    fontWeight: 500,
-                  }}
-                >
-                  Bulan
-                </label>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: 7,
-                    padding: "7px 10px",
-                    background: "#f8fafc",
-                    minWidth: 155,
-                  }}
-                >
-                  <FaCalendarAlt
-                    size={13}
-                    color="#94a3b8"
-                    style={{ marginRight: 7, flexShrink: 0 }}
-                  />
-                  <select
-                    value={bulan}
-                    onChange={bulanChangeHandler}
+                {/* Tahun */}
+                <div>
+                  <label
                     style={{
-                      border: "none",
-                      outline: "none",
-                      background: "transparent",
-                      flex: 1,
-                      fontSize: 13,
-                      color: "#334155",
+                      fontSize: 12,
+                      color: "#64748b",
+                      display: "block",
+                      marginBottom: 5,
+                      fontWeight: 500,
                     }}
                   >
-                    {daftarBulan.map((b) => (
-                      <option key={b.value} value={b.value}>
-                        {b.key}
-                      </option>
-                    ))}
-                  </select>
+                    Tahun
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 7,
+                      padding: "7px 10px",
+                      background: "#f8fafc",
+                      width: 125,
+                    }}
+                  >
+                    <FaCalendarAlt
+                      size={13}
+                      color="#94a3b8"
+                      style={{ marginRight: 7, flexShrink: 0 }}
+                    />
+                    <input
+                      type="number"
+                      value={tahun}
+                      onChange={tahunChangeHandler}
+                      style={{
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        width: "100%",
+                        fontSize: 13,
+                        color: "#334155",
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Tahun */}
-              <div>
-                <label
-                  style={{
-                    fontSize: 12,
-                    color: "#64748b",
-                    display: "block",
-                    marginBottom: 5,
-                    fontWeight: 500,
-                  }}
-                >
-                  Tahun
-                </label>
+                {/* Tombol */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: 7,
-                    padding: "7px 10px",
-                    background: "#f8fafc",
-                    width: 125,
+                    gap: 10,
+                    flexWrap: "wrap",
                   }}
                 >
-                  <FaCalendarAlt
-                    size={13}
-                    color="#94a3b8"
-                    style={{ marginRight: 7, flexShrink: 0 }}
-                  />
-                  <input
-                    type="number"
-                    value={tahun}
-                    onChange={tahunChangeHandler}
+                  <button
+                    onClick={getRLSatusehat}
                     style={{
+                      background: "#1d4ed8",
+                      color: "#fff",
                       border: "none",
-                      outline: "none",
-                      background: "transparent",
-                      width: "100%",
+                      borderRadius: 7,
+                      padding: "9px 18px",
+                      fontWeight: 700,
                       fontSize: 13,
-                      color: "#334155",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      whiteSpace: "nowrap",
+                      height: 42,
                     }}
+                  >
+                    <FaFilter size={14} /> FILTER
+                  </button>
+
+                  <SyncButton
+                    canSync={canSync}
+                    isSyncing={isManualSyncing || sync.isUpdating}
+                    isFilterApplied={isFilterApplied}
+                    cooldownDisplay={cooldownDisplay}
+                    onSync={handleManualSync}
                   />
+
+                  <button
+                    onClick={handleDownloadExcel}
+                    disabled={
+                      !isFilterApplied || isDownloading || dataRL.length === 0
+                    }
+                    title={
+                      !isFilterApplied
+                        ? "Terapkan filter terlebih dahulu"
+                        : "Download semua data ke Excel"
+                    }
+                    style={{
+                      background: "#059669",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 7,
+                      padding: "9px 18px",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor:
+                        isFilterApplied && !isDownloading
+                          ? "pointer"
+                          : "not-allowed",
+                      opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Spinner animation="border" size="sm" /> Mengunduh...
+                      </>
+                    ) : (
+                      <>
+                        <SiMicrosoftexcel size={15} /> DOWNLOAD EXCEL
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Tombol */}
-              <div
+          {user.jenisUserId !== 4 && (
+            <div
+              style={{
+                background: "var(--color-background-primary, #fff)",
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                padding: "16px 20px",
+                marginBottom: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                onClick={handleShow}
                 style={{
+                  background: "#1d4ed8",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 7,
+                  padding: "9px 18px",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  flexWrap: "wrap",
+                  justifyContent: "center",
+                  gap: 7,
+                  height: 42,
                 }}
               >
-                <button
-                  onClick={getRLSatusehat}
-                  style={{
-                    background: "#1d4ed8",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 7,
-                    padding: "9px 18px",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 7,
-                    whiteSpace: "nowrap",
-                    height: 42,
-                  }}
-                >
-                  <FaFilter size={14} /> FILTER
-                </button>
+                <FaFilter size={14} /> FILTER
+              </button>
 
-                <SyncButton
-                  canSync={canSync}
-                  isSyncing={isManualSyncing || sync.isUpdating}
-                  isFilterApplied={isFilterApplied}
-                  cooldownDisplay={cooldownDisplay}
-                  onSync={handleManualSync}
-                />
-
+              {isFilterApplied && !isRsAll(selectedRsID) && (
                 <button
                   onClick={handleDownloadExcel}
-                  disabled={
-                    !isFilterApplied || isDownloading || dataRL.length === 0
-                  }
-                  title={
-                    !isFilterApplied
-                      ? "Terapkan filter terlebih dahulu"
-                      : "Download semua data ke Excel"
-                  }
+                  disabled={isDownloading || dataRL.length === 0}
                   style={{
                     background: "#059669",
                     color: "#fff",
@@ -3840,15 +4122,13 @@ function TabTwo() {
                     padding: "9px 18px",
                     fontWeight: 700,
                     fontSize: 13,
-                    cursor:
-                      isFilterApplied && !isDownloading
-                        ? "pointer"
-                        : "not-allowed",
-                    opacity: isFilterApplied && !isDownloading ? 1 : 0.55,
+                    cursor: !isDownloading ? "pointer" : "not-allowed",
+                    opacity: !isDownloading ? 1 : 0.55,
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: 7,
-                    whiteSpace: "nowrap",
+                    height: 42,
                   }}
                 >
                   {isDownloading ? (
@@ -3861,9 +4141,9 @@ function TabTwo() {
                     </>
                   )}
                 </button>
-              </div>
+              )}
             </div>
-          </div>
+          )}
 
           <div
             style={{
@@ -3922,14 +4202,20 @@ function TabTwo() {
                   icon: <FaFilter size={11} />,
                   bg: "#1d4ed8",
                   label: "FILTER",
-                  desc: "Menampilkan data dari database SIRS Online",
+                  desc: showSyncButton
+                    ? "Menampilkan data dari database SIRS Online"
+                    : "Pilih Provinsi/Kab-Kota/RS. Pilih RS spesifik untuk melihat tabel, atau ALL untuk mengunduh langsung",
                 },
-                {
-                  icon: <FaSyncAlt size={11} />,
-                  bg: "#059669",
-                  label: "SYNC SATUSEHAT",
-                  desc: "Mengambil data terbaru dari SATUSEHAT",
-                },
+                ...(showSyncButton
+                  ? [
+                      {
+                        icon: <FaSyncAlt size={11} />,
+                        bg: "#059669",
+                        label: "SYNC SATUSEHAT",
+                        desc: "Mengambil data terbaru dari SATUSEHAT",
+                      },
+                    ]
+                  : []),
                 {
                   icon: <SiMicrosoftexcel size={15} />,
                   bg: "#059669",
@@ -3972,88 +4258,98 @@ function TabTwo() {
               ))}
             </div>
 
-            {/* Card 2: Status Sinkronisasi */}
-            <div
-              style={{
-                flex: "1 1 210px",
-                border: "1.5px solid #e2e8f0",
-                borderRadius: 10,
-                padding: "14px 16px",
-                background: "#fff",
-              }}
-            >
+            {/* Card 2: Status Sinkronisasi — hanya relevan untuk role 4 */}
+            {showSyncButton && (
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 7,
-                  marginBottom: 14,
+                  flex: "1 1 210px",
+                  border: "1.5px solid #e2e8f0",
+                  borderRadius: 10,
+                  padding: "14px 16px",
+                  background: "#fff",
                 }}
               >
-                <FaSyncAlt size={15} color="#059669" />
-                <span
+                <div
                   style={{
-                    fontWeight: 700,
-                    fontSize: 13,
-                    color: "#059669",
-                    letterSpacing: 0.3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    marginBottom: 14,
                   }}
                 >
-                  STATUS SINKRONISASI
-                </span>
-              </div>
-
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 11 }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                  <div
+                  <FaSyncAlt size={15} color="#059669" />
+                  <span
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 6,
-                      background: "#f1f5f9",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      color: "#059669",
+                      letterSpacing: 0.3,
                     }}
                   >
-                    <FaCalendarAlt size={13} color="#64748b" />
-                  </div>
-                  <span style={{ fontSize: 12, color: "#475569" }}>
-                    Terakhir Sync&nbsp;:&nbsp;
-                    <strong>
-                      {sync.lastSync ? formatDate(sync.lastSync) : "-"}
-                    </strong>
+                    STATUS SINKRONISASI
                   </span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 11 }}
+                >
                   <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 6,
-                      background: "#f1f5f9",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
+                    style={{ display: "flex", alignItems: "center", gap: 9 }}
                   >
-                    <span
-                      style={{ fontSize: 15, lineHeight: 1, color: "#64748b" }}
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        background: "#f1f5f9",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
                     >
-                      ⏱
+                      <FaCalendarAlt size={13} color="#64748b" />
+                    </div>
+                    <span style={{ fontSize: 12, color: "#475569" }}>
+                      Terakhir Sync&nbsp;:&nbsp;
+                      <strong>
+                        {sync.lastSync ? formatDate(sync.lastSync) : "-"}
+                      </strong>
                     </span>
                   </div>
-                  <span style={{ fontSize: 12, color: "#475569" }}>
-                    Interval Sync&nbsp;:&nbsp;
-                    <strong>{MANUAL_SYNC_COOLDOWN} Menit</strong>
-                  </span>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 9 }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        background: "#f1f5f9",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 15,
+                          lineHeight: 1,
+                          color: "#64748b",
+                        }}
+                      >
+                        ⏱
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 12, color: "#475569" }}>
+                      Interval Sync&nbsp;:&nbsp;
+                      <strong>{MANUAL_SYNC_COOLDOWN} Menit</strong>
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Card 3: Sumber Data */}
             <div
@@ -4104,7 +4400,7 @@ function TabTwo() {
                     lineHeight: 1.6,
                   }}
                 >
-                  Data yang ditampilkan bersumber dari database{" "}
+                  Data yang ditampilkan bersumber dari{" "}
                   <strong>SATUSEHAT</strong> yang sudah tersimpan dalam database{" "}
                   <strong>SIRS</strong>.
                 </p>

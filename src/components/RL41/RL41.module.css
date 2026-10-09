@@ -364,3 +364,18 @@
   color: gray;
   font-size: 16px;
 }
+
+.spinnerSlow {
+  width: 2rem;
+  height: 2rem;
+  border: 0.25em solid #0d6efd;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinSlow 1.5s linear infinite;
+}
+
+@keyframes spinSlow {
+  to {
+    transform: rotate(360deg);
+  }
+}

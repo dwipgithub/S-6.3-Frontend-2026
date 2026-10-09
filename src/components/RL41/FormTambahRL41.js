@@ -29,27 +29,7 @@ const FormTambahRL41 = () => {
   const [spinner, setSpinner] = useState(false);
   const navigate = useNavigate();
   const { CSRFToken } = useCSRFTokenContext();
-
-  // const startYear = 2025;
-
-  // const today = new Date();
-  // const currentYear = today.getFullYear();
-
-  // // batas: 31 Maret
-  // const batasTanggal = new Date(currentYear, 2, 31); // bulan 0-based → 2 = Maret
-
-  // // kalau hari ini lewat 31 Maret → hanya boleh current year
-  // const maxYear = today > batasTanggal ? currentYear : currentYear;
-
-  // const minYear = today > batasTanggal ? currentYear : currentYear - 1;
-
-  // // generate list tahun
-  // const years = [];
-  // for (let y = startYear; y <= maxYear; y++) {
-  //   if (y >= minYear) {
-  //     years.push(y);
-  //   }
-  // }
+  const [total, setTotal] = useState({ hidup: 0, mati: 0 });
 
   const startYear = 2025;
 
@@ -392,10 +372,35 @@ const FormTambahRL41 = () => {
         };
       });
       setDataInput(DetailPenyakitTemplate);
+      setTotal({ hidup: 0, mati: 0 });
       setSpinner(false);
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const hitungTotal = (form) => {
+    const labels = datainput[0].label;
+    const toNum = (name) => parseInt(form.elements[name]?.value, 10) || 0;
+
+    let hidup = 0;
+    labels.slice(0, -1).forEach((item) => {
+      hidup += toNum(item.namaL) + toNum(item.namaP);
+    });
+
+    const last = labels[labels.length - 1];
+    setTotal({ hidup, mati: toNum(last.namaL) + toNum(last.namaP) });
+  };
+
+  const handleEnterNext = (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault(); // sekalian cegah submit tidak sengaja
+    const form = e.target.form;
+    const inputs = Array.from(
+      form.querySelectorAll('input[name^="jmlh"]:not(:disabled)'),
+    );
+    const idx = inputs.indexOf(e.target);
+    inputs[idx + 1]?.focus(); // onFocus sudah otomatis select() isinya
   };
 
   const changeHandlerCariPenyakit = (event) => {
@@ -507,6 +512,7 @@ const FormTambahRL41 = () => {
       className="container"
       style={{ marginTop: "20px", marginBottom: "70px" }}
     >
+      <ToastContainer />
       <div className="row">
         <div className="col-md-6">
           <div className="card">
@@ -631,38 +637,53 @@ const FormTambahRL41 = () => {
                   <Spinner animation="grow" variant="success"></Spinner>
                 )}
               </div>
-              <div className={style["table-container"]}>
-                <table className={style["table"]} style={{ width: "100%" }}>
+              <div
+                style={{ width: "100%", maxHeight: "400px", overflowY: "auto" }}
+              >
+                <table
+                  className={style["table"]}
+                  style={{
+                    width: "100%",
+                    minWidth: 0, // batalkan min-width dari CSS module
+                    tableLayout: "fixed",
+                    fontSize: "0.9rem",
+                  }}
+                >
                   <thead className={style["thead"]}>
                     <tr className="main-header-row">
                       <th style={{ width: "10%" }}>No.</th>
-                      <th style={{ width: "15%" }}>Code ICD 10</th>
-                      <th style={{ width: "40%" }}>Deskripsi ICD 10</th>
-                      <th style={{ width: "15%" }}>Action</th>
+                      <th style={{ width: "20%" }}>Kode</th>
+                      <th style={{ width: "50%" }}>Deskripsi</th>
+                      <th style={{ width: "20%" }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dataPenyakit.map((value, index) => {
-                      return (
-                        <tr key={value.id}>
-                          <td style={{ textAlign: "center" }}>{index + 1}</td>
-                          <td style={{ textAlign: "center" }}>
-                            {value.icd_code}
-                          </td>
-                          <td style={{ textAlign: "left" }}>
-                            {value.description_code}
-                          </td>
-                          <td>
-                            <button
-                              className="btn btn-outline-success"
-                              onClick={() => DetailPenyakit(value.id)}
-                            >
-                              Tambah
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {dataPenyakit.map((value, index) => (
+                      <tr key={value.id}>
+                        <td style={{ textAlign: "center" }}>{index + 1}</td>
+                        <td style={{ textAlign: "center" }}>
+                          {value.icd_code}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "left",
+                            whiteSpace: "normal", // batalkan nowrap dari CSS module
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {value.description_code}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-success"
+                            onClick={() => DetailPenyakit(value.id)}
+                          >
+                            Tambah
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -673,7 +694,11 @@ const FormTambahRL41 = () => {
           <div className="col-md-6">
             <div className="card">
               <div className="card-body">
-                <form onSubmit={Simpan}>
+                <form
+                  onSubmit={Simpan}
+                  onChange={(e) => hitungTotal(e.currentTarget)}
+                >
+                  {" "}
                   <div className="container">
                     <h5 className="card-title h5">
                       Tambah Data Penyakit {datainput[0].namaPenyakit}
@@ -684,18 +709,6 @@ const FormTambahRL41 = () => {
                       className="form-floating"
                       style={{ width: "100%", display: "inline-block" }}
                     >
-                      {/* <input
-                        name="tahun"
-                        type="number"
-                        className="form-control"
-                        id="floatingInput"
-                        placeholder="Tahun"
-                        value={tahun}
-                        onChange={(e) => changeHandlerSingle(e)}
-                        disabled={true}
-                      />
-                      <label htmlFor="floatingInput">Tahun</label> */}
-
                       <select
                         name="tahun"
                         className="form-select"
@@ -771,75 +784,142 @@ const FormTambahRL41 = () => {
                         <Spinner animation="grow" variant="success"></Spinner>
                       )}
                     </div>
-                    <div className={style["table-container"]}>
+                    <div
+                      style={{
+                        maxHeight: "60vh",
+                        overflowY: "auto",
+                        border: "1px solid #dee2e6",
+                        borderRadius: "6px",
+                      }}
+                    >
                       <table
                         className={style["table"]}
-                        style={{ width: "100%" }}
+                        style={{
+                          width: "100%",
+                          minWidth: 0,
+                          tableLayout: "fixed",
+                          marginBottom: 0,
+                        }}
                       >
                         <thead className={style["thead"]}>
                           <tr className="main-header-row">
-                            <th>No.</th>
-                            <th>Golongan Berdasarkan Umur</th>
-                            <th>Laki Laki</th>
-                            <th>Perempuan</th>
+                            {[
+                              "No.",
+                              "Golongan Berdasarkan Umur",
+                              "Laki Laki",
+                              "Perempuan",
+                            ].map((h, i) => (
+                              <th
+                                key={h}
+                                style={{
+                                  position: "sticky",
+                                  top: 0,
+                                  zIndex: 2,
+                                  background: "#fff",
+                                  width: ["8%", "44%", "24%", "24%"][i],
+                                }}
+                              >
+                                {h}
+                              </th>
+                            ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {datainput.map((value) => {
-                            return value.label.map((test, no) => {
-                              const isPerempuanDisabled =
-                                value.statusPerempuan === 0;
-                              const isLakiDisabled = value.statusLaki === 0;
+                          {datainput.map((value) =>
+                            value.label.map((test, no) => {
+                              const isLast = no === value.label.length - 1;
                               return (
-                                <tr key={no}>
+                                <tr
+                                  key={no}
+                                  style={
+                                    isLast
+                                      ? {
+                                          background: "#fff3cd",
+                                          fontWeight: 600,
+                                        }
+                                      : undefined
+                                  }
+                                >
                                   <td style={{ textAlign: "center" }}>
                                     {no + 1}
                                   </td>
-                                  <td style={{ textAlign: "left" }}>
-                                    <label>{test.label}</label>
+                                  <td
+                                    style={{
+                                      textAlign: "left",
+                                      whiteSpace: "normal",
+                                    }}
+                                  >
+                                    {test.label}
                                   </td>
-                                  <td>
-                                    <input
-                                      type="number"
-                                      name={test.namaL}
-                                      className="input is-primary is-small form-control"
-                                      defaultValue={0}
-                                      min={0}
-                                      maxLength={7}
-                                      onInput={(e) => maxLengthCheck(e)}
-                                      onPaste={preventPasteNegative}
-                                      onKeyPress={preventMinus}
-                                      onChange={(e) => changeHandler(e, no)}
-                                      onFocus={handleFocus}
-                                      disabled={isLakiDisabled}
-                                    />
-                                  </td>
-                                  <td>
-                                    <input
-                                      type="number"
-                                      name={test.namaP}
-                                      className="input is-primary is-small form-control"
-                                      defaultValue={0}
-                                      min={0}
-                                      maxLength={7}
-                                      onInput={(e) => maxLengthCheck(e)}
-                                      onPaste={preventPasteNegative}
-                                      onKeyPress={preventMinus}
-                                      onChange={(e) => changeHandler(e, no)}
-                                      onFocus={handleFocus}
-                                      disabled={isPerempuanDisabled}
-                                    />
-                                  </td>
+                                  {[
+                                    {
+                                      name: test.namaL,
+                                      off: value.statusLaki === 0,
+                                    },
+                                    {
+                                      name: test.namaP,
+                                      off: value.statusPerempuan === 0,
+                                    },
+                                  ].map(({ name, off }) => (
+                                    <td
+                                      key={name}
+                                      style={{
+                                        background: off ? "#f1f1f1" : undefined,
+                                      }}
+                                    >
+                                      <input
+                                        type="number"
+                                        name={name}
+                                        className="form-control form-control-sm text-center"
+                                        defaultValue={0}
+                                        min={0}
+                                        maxLength={7}
+                                        inputMode="numeric"
+                                        onInput={maxLengthCheck}
+                                        onPaste={preventPasteNegative}
+                                        onKeyPress={preventMinus}
+                                        onKeyDown={handleEnterNext}
+                                        onChange={(e) => changeHandler(e, no)}
+                                        onFocus={handleFocus}
+                                        disabled={off}
+                                      />
+                                    </td>
+                                  ))}
                                 </tr>
                               );
-                            });
-                          })}
+                            }),
+                          )}
                         </tbody>
                       </table>
                     </div>
+
+                    {/* Ringkasan total, teks biasa (bukan input) */}
+                    <div
+                      className="mt-2 p-2 rounded"
+                      style={{
+                        background:
+                          total.mati > total.hidup ? "#f8d7da" : "#e9f7ef",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Total Pasien Hidup + Mati: <b>{total.hidup}</b>{" "}
+                      &nbsp;|&nbsp; Keluar Mati: <b>{total.mati}</b>
+                      {total.mati > total.hidup && (
+                        <div style={{ color: "#842029" }}>
+                          Jumlah Keluar Mati melebihi total pasien di atas.
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="mt-3 mb-3">
-                    <ToastContainer />
+                  <div
+                    className="mt-3 mb-3"
+                    style={{
+                      position: "sticky",
+                      bottom: 0,
+                      background: "#fff",
+                      padding: "8px 0",
+                    }}
+                  >
                     <button
                       type="submit"
                       className={style.btnPrimary}

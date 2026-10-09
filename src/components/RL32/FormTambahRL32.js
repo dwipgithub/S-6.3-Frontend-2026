@@ -101,7 +101,7 @@ const FormTambahRL32 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getBulan = async () => {
@@ -180,7 +180,7 @@ const FormTambahRL32 = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const rlTemplate = response.data.data.map((value, index) => {
@@ -236,11 +236,11 @@ const FormTambahRL32 = () => {
         parseInt(newDataRL[index].pasienKeluarHidup) +
         parseInt(newDataRL[index].pasienKeluarMatiKurangDari48Jam) +
         parseInt(
-          newDataRL[index].pasienKeluarMatiLebihDariAtauSamaDengan48Jam
+          newDataRL[index].pasienKeluarMatiLebihDariAtauSamaDengan48Jam,
         ) +
         parseInt(newDataRL[index].pasienWanitaKeluarMatiKurangDari48Jam) +
         parseInt(
-          newDataRL[index].pasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam
+          newDataRL[index].pasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam,
         ));
   };
 
@@ -463,7 +463,7 @@ const FormTambahRL32 = () => {
           periodeTahun: parseInt(tahun),
           data: dataRLArray,
         },
-        customConfig
+        customConfig,
       );
 
       toast("Data Berhasil Disimpan", {

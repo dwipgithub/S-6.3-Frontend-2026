@@ -126,7 +126,7 @@ const FormUbahRL32 = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   const getRumahSakit = async (id) => {
@@ -159,7 +159,7 @@ const FormUbahRL32 = () => {
             response.data.data.pasien_keluar_hidup +
             response.data.data.pasien_keluar_mati_kurang_dari_48_jam +
             response.data.data
-              .pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam)
+              .pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam),
       );
 
       setJenisPelayanan(response.data.data.nama_jenis_pelayanan);
@@ -169,17 +169,18 @@ const FormUbahRL32 = () => {
       setPasienDipindahkan(response.data.data.pasien_dipindahkan);
       setPasienKeluarHidup(response.data.data.pasien_keluar_hidup);
       setPasienKeluarMatiKurangDari48Jam(
-        response.data.data.pasien_keluar_mati_kurang_dari_48_jam
+        response.data.data.pasien_keluar_mati_kurang_dari_48_jam,
       );
       setPasienKeluarMatiLebihDariAtauSamaDengan48Jam(
-        response.data.data.pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam
+        response.data.data
+          .pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam,
       );
       setPasienWanitaKeluarMatiKurangDari48Jam(
-        response.data.data.pasien_wanita_keluar_mati_kurang_dari_48_jam
+        response.data.data.pasien_wanita_keluar_mati_kurang_dari_48_jam,
       );
       setPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam(
         response.data.data
-          .pasien_wanita_keluar_mati_lebih_dari_atau_sama_dengan_48_jam
+          .pasien_wanita_keluar_mati_lebih_dari_atau_sama_dengan_48_jam,
       );
       setJumlahLamaDirawat(response.data.data.jumlah_lama_dirawat);
       setPasienAkhirBulan(
@@ -190,7 +191,7 @@ const FormUbahRL32 = () => {
             response.data.data.pasien_keluar_hidup +
             response.data.data.pasien_keluar_mati_kurang_dari_48_jam +
             response.data.data
-              .pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam)
+              .pasien_keluar_mati_lebih_dari_atau_sama_dengan_48_jam),
       );
       setJumlahHariPerawatan(
         response.data.data.rincian_hari_perawatan_kelas_VVIP +
@@ -198,28 +199,28 @@ const FormUbahRL32 = () => {
           response.data.data.rincian_hari_perawatan_kelas_1 +
           response.data.data.rincian_hari_perawatan_kelas_2 +
           response.data.data.rincian_hari_perawatan_kelas_3 +
-          response.data.data.rincian_hari_perawatan_kelas_khusus
+          response.data.data.rincian_hari_perawatan_kelas_khusus,
       );
       setRincianHariPerawatanKelasVVIP(
-        response.data.data.rincian_hari_perawatan_kelas_VVIP
+        response.data.data.rincian_hari_perawatan_kelas_VVIP,
       );
       setRincianHariPerawatanKelasVIP(
-        response.data.data.rincian_hari_perawatan_kelas_VIP
+        response.data.data.rincian_hari_perawatan_kelas_VIP,
       );
       setRincianHariPerawatanKelas1(
-        response.data.data.rincian_hari_perawatan_kelas_1
+        response.data.data.rincian_hari_perawatan_kelas_1,
       );
       setRincianHariPerawatanKelas2(
-        response.data.data.rincian_hari_perawatan_kelas_2
+        response.data.data.rincian_hari_perawatan_kelas_2,
       );
       setRincianHariPerawatanKelas3(
-        response.data.data.rincian_hari_perawatan_kelas_3
+        response.data.data.rincian_hari_perawatan_kelas_3,
       );
       setRincianHariPerawatanKelasKhusus(
-        response.data.data.rincian_hari_perawatan_kelas_khusus
+        response.data.data.rincian_hari_perawatan_kelas_khusus,
       );
       setJumlahAlokasiTempatTidurAwalBulan(
-        response.data.data.jumlah_alokasi_tempat_tidur_awal_bulan
+        response.data.data.jumlah_alokasi_tempat_tidur_awal_bulan,
       );
       // setPasienAkhirBulan(hitungPasienAkhirBulan())
       // setJumlahHariPerawatan(hitungJumlahHariPerawatan())
@@ -248,7 +249,7 @@ const FormUbahRL32 = () => {
             (parseInt(pasienDipindahkan) +
               parseInt(pasienKeluarHidup) +
               parseInt(pasienKeluarMatiKurangDari48Jam) +
-              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam))
+              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam)),
         );
         break;
       case "pasienMasuk":
@@ -264,7 +265,7 @@ const FormUbahRL32 = () => {
             (parseInt(pasienDipindahkan) +
               parseInt(pasienKeluarHidup) +
               parseInt(pasienKeluarMatiKurangDari48Jam) +
-              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam))
+              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam)),
         );
         break;
       case "pasienPindahan":
@@ -280,7 +281,7 @@ const FormUbahRL32 = () => {
             (parseInt(pasienDipindahkan) +
               parseInt(pasienKeluarHidup) +
               parseInt(pasienKeluarMatiKurangDari48Jam) +
-              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam))
+              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam)),
         );
         break;
       case "pasienDipindahkan":
@@ -296,7 +297,7 @@ const FormUbahRL32 = () => {
             (parseInt(event.target.value) +
               parseInt(pasienKeluarHidup) +
               parseInt(pasienKeluarMatiKurangDari48Jam) +
-              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam))
+              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam)),
         );
         break;
       case "pasienKeluarHidup":
@@ -312,7 +313,7 @@ const FormUbahRL32 = () => {
             (parseInt(pasienDipindahkan) +
               parseInt(event.target.value) +
               parseInt(pasienKeluarMatiKurangDari48Jam) +
-              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam))
+              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam)),
         );
         break;
       case "pasienKeluarMatiKurangDari48Jam":
@@ -328,7 +329,7 @@ const FormUbahRL32 = () => {
             (parseInt(pasienDipindahkan) +
               parseInt(pasienKeluarHidup) +
               parseInt(event.target.value) +
-              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam))
+              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam)),
         );
         break;
       case "pasienKeluarMatiLebihDariAtauSamaDengan48Jam":
@@ -344,7 +345,7 @@ const FormUbahRL32 = () => {
             (parseInt(pasienDipindahkan) +
               parseInt(pasienKeluarHidup) +
               parseInt(pasienKeluarMatiKurangDari48Jam) +
-              parseInt(event.target.value))
+              parseInt(event.target.value)),
         );
         break;
       case "pasienWanitaKeluarMatiKurangDari48Jam":
@@ -360,7 +361,7 @@ const FormUbahRL32 = () => {
             (parseInt(pasienDipindahkan) +
               parseInt(pasienKeluarHidup) +
               parseInt(event.target.value) +
-              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam))
+              parseInt(pasienKeluarMatiLebihDariAtauSamaDengan48Jam)),
         );
         break;
       case "pasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam":
@@ -369,7 +370,7 @@ const FormUbahRL32 = () => {
           event.target.select(event.target.value);
         }
         setPasienWanitaKeluarMatiLebihDariAtauSamaDengan48Jam(
-          event.target.value
+          event.target.value,
         );
         setPasienAkhirBulan(
           parseInt(pasienAwalBulan) +
@@ -378,7 +379,7 @@ const FormUbahRL32 = () => {
             (parseInt(pasienDipindahkan) +
               parseInt(pasienKeluarHidup) +
               parseInt(pasienKeluarMatiKurangDari48Jam) +
-              parseInt(event.target.value))
+              parseInt(event.target.value)),
         );
         break;
       case "jumlahLamaDirawat":
@@ -414,7 +415,7 @@ const FormUbahRL32 = () => {
             parseInt(rincianHariPerawatanKelas1) +
             parseInt(rincianHariPerawatanKelas2) +
             parseInt(rincianHariPerawatanKelas3) +
-            parseInt(rincianHariPerawatanKelasKhusus)
+            parseInt(rincianHariPerawatanKelasKhusus),
         );
         break;
       case "rincianHariPerawatanKelasVIP":
@@ -429,7 +430,7 @@ const FormUbahRL32 = () => {
             parseInt(rincianHariPerawatanKelas1) +
             parseInt(rincianHariPerawatanKelas2) +
             parseInt(rincianHariPerawatanKelas3) +
-            parseInt(rincianHariPerawatanKelasKhusus)
+            parseInt(rincianHariPerawatanKelasKhusus),
         );
         break;
       case "rincianHariPerawatanKelas1":
@@ -444,7 +445,7 @@ const FormUbahRL32 = () => {
             parseInt(event.target.value) +
             parseInt(rincianHariPerawatanKelas2) +
             parseInt(rincianHariPerawatanKelas3) +
-            parseInt(rincianHariPerawatanKelasKhusus)
+            parseInt(rincianHariPerawatanKelasKhusus),
         );
         break;
       case "rincianHariPerawatanKelas2":
@@ -459,7 +460,7 @@ const FormUbahRL32 = () => {
             parseInt(rincianHariPerawatanKelas1) +
             parseInt(event.target.value) +
             parseInt(rincianHariPerawatanKelas3) +
-            parseInt(rincianHariPerawatanKelasKhusus)
+            parseInt(rincianHariPerawatanKelasKhusus),
         );
         break;
       case "rincianHariPerawatanKelas3":
@@ -474,7 +475,7 @@ const FormUbahRL32 = () => {
             parseInt(rincianHariPerawatanKelas1) +
             parseInt(rincianHariPerawatanKelas2) +
             parseInt(event.target.value) +
-            parseInt(rincianHariPerawatanKelasKhusus)
+            parseInt(rincianHariPerawatanKelasKhusus),
         );
         break;
       case "rincianHariPerawatanKelasKhusus":
@@ -489,7 +490,7 @@ const FormUbahRL32 = () => {
             parseInt(rincianHariPerawatanKelas1) +
             parseInt(rincianHariPerawatanKelas2) +
             parseInt(rincianHariPerawatanKelas3) +
-            parseInt(event.target.value)
+            parseInt(event.target.value),
         );
         break;
       case "jumlahAlokasiTempatTidurAwalBulan":
@@ -549,7 +550,7 @@ const FormUbahRL32 = () => {
       await axiosJWT.patch(
         "/apisirs6v2/rltigatitikdua/" + id,
         data,
-        customConfig
+        customConfig,
       );
 
       toast("Data Berhasil Diubah", {
