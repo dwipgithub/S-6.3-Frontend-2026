@@ -969,115 +969,193 @@ const RL32 = () => {
     });
   };
 
-  const handleDownloadExcelSatusehat = async () => {
-  setIsDownloading(true);
-  try {
-    const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
-    const selectedBulanObj = daftarBulan.find(
-      (b) => String(b.value) === String(bulan)
-    );
-    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
-    const tahunData = tahun || "-";
+const handleDownloadExcelSatusehat = async () => {
+    setIsDownloading(true);
+    try {
+      const namaRS = rumahSakit?.nama ?? user?.satKerNama ?? "-";
+      const selectedBulanObj = daftarBulan.find(
+        (b) => String(b.value) === String(bulan)
+      );
+      const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+      const tahunData = tahun || "-";
 
-    const titleAndMetadata = [
-      ["SIRS ONLINE RL 3.2 - SATUSEHAT"],
-      [], // Baris kosong
-      ["Periode Data"],
-      [`Bulan : ${namaBulan}`],
-      [`Tahun: ${tahunData}`],
-      [], 
-    ];
+      // 1. Buat Workbook & Worksheet ExcelJS
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("data RL 32 Satusehat");
 
-    const tableHeader = [
-      [
-        "No",
-        "Rumah Sakit",
-        "Jenis Pelayanan",
-        "Pasien Awal Bulan",
-        "Pasien Masuk",
-        "Pasien Pindahan",
-        "Pasien Dipindahkan",
-        "Pasien Keluar Hidup",
-        "Pasien Pria Keluar Mati",
-        "",
-        "Pasien Wanita Keluar Mati",
-        "",
-        "Jumlah Lama Dirawat",
-        "Pasien Akhir Bulan",
-        "Jumlah Hari Perawatan",
-        "Rincian Hari Perawatan",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "TT Awal",
-      ],
-      [
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "<48 jam",
-        ">=48 jam",
-        "<48 jam",
-        ">=48 jam",
-        "",
-        "",
-        "",
-        "VVIP",
-        "VIP",
-        "1",
-        "2",
-        "3",
-        "Khusus",
-        "",
-      ],
-    ];
+      // 2. Baris Judul & Metadata
+      const titleAndMetadata = [
+        ["SIRS ONLINE RL 3.2 - SATUSEHAT"],
+        [], 
+        ["Periode Data"],
+        [`Bulan : ${namaBulan}`],
+        [`Tahun: ${tahunData}`],
+        [], 
+      ];
 
-    const tableBody = dataRL32Satusehat.map((value, index) => [
-      index + 1,
-      value.nama_rumah_sakit || value.rumah_sakit || namaRS,
-      value.nama_jenis_pelayanan || value.jenis_pelayanan || "-",
-      value.pasien_awal_bulan || 0,
-      value.pasien_masuk || 0,
-      value.pasien_pindahan || 0,
-      value.pasien_dipindahkan || 0,
-      value.pasien_keluar_hidup || 0,
-      value.mati_lk_kurang_48_jam || 0,
-      value.mati_lk_lebih_sama_48_jam || 0,
-      value.mati_pr_kurang_48_jam || 0,
-      value.mati_pr_lebih_sama_48_jam || 0,
-      value.jumlah_lama_dirawat || 0,
-      value.pasien_akhir_bulan || 0,
-      value.jumlah_hari_perawatan || 0,
-      value.hari_vvip || 0,
-      value.hari_vip || 0,
-      value.hari_kelas_1 || 0,
-      value.hari_kelas_2 || 0,
-      value.hari_kelas_3 || 0,
-      value.hari_kelas_khusus || 0,
-      value.alokasi_tempat_tidur_awal_bulan || 0,
-    ]);
+      // 3. Header Tabel Multi-baris
+      const tableHeader = [
+        [
+          "No",
+          "Rumah Sakit",
+          "Jenis Pelayanan",
+          "Pasien Awal Bulan",
+          "Pasien Masuk",
+          "Pasien Pindahan",
+          "Pasien Dipindahkan",
+          "Pasien Keluar Hidup",
+          "Pasien Pria Keluar Mati",
+          "",
+          "Pasien Wanita Keluar Mati",
+          "",
+          "Jumlah Lama Dirawat",
+          "Pasien Akhir Bulan",
+          "Jumlah Hari Perawatan",
+          "Rincian Hari Perawatan",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "TT Awal",
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "<48 jam",
+          ">=48 jam",
+          "<48 jam",
+          ">=48 jam",
+          "",
+          "",
+          "",
+          "VVIP",
+          "VIP",
+          "1",
+          "2",
+          "3",
+          "Khusus",
+          "",
+        ],
+      ];
 
-    const fullBody = [
-      ...titleAndMetadata,
-      ...tableHeader,
-      ...tableBody,
-    ];
+      // 4. Data Body Tabel
+      const tableBody = dataRL32Satusehat.map((value, index) => [
+        index + 1,
+        value.nama_rumah_sakit || value.rumah_sakit || namaRS,
+        value.nama_jenis_pelayanan || value.jenis_pelayanan || "-",
+        value.pasien_awal_bulan || 0,
+        value.pasien_masuk || 0,
+        value.pasien_pindahan || 0,
+        value.pasien_dipindahkan || 0,
+        value.pasien_keluar_hidup || 0,
+        value.mati_lk_kurang_48_jam || 0,
+        value.mati_lk_lebih_sama_48_jam || 0,
+        value.mati_pr_kurang_48_jam || 0,
+        value.mati_pr_lebih_sama_48_jam || 0,
+        value.jumlah_lama_dirawat || 0,
+        value.pasien_akhir_bulan || 0,
+        value.jumlah_hari_perawatan || 0,
+        value.hari_vvip || 0,
+        value.hari_vip || 0,
+        value.hari_kelas_1 || 0,
+        value.hari_kelas_2 || 0,
+        value.hari_kelas_3 || 0,
+        value.hari_kelas_khusus || 0,
+        value.alokasi_tempat_tidur_awal_bulan || 0,
+      ]);
 
-    await exportRowsToExcel({
-      fileName: namafileSatusehat || `rl32_satusehat_${tahunData}_${bulan}`,
-      sheetName: "data RL 32 Satusehat",
-      rows: fullBody,
-      headerRowStart: titleAndMetadata.length + 1,
-      headerRowEnd: titleAndMetadata.length + tableHeader.length,
-      borderlessRows: [1, 3, 4, 5],
-      mergeRanges: [
+      // 5. Kalkulasi Nilai Total
+      const totals = dataRL32Satusehat.reduce(
+        (acc, val) => {
+          acc.pasien_awal_bulan += Number(val.pasien_awal_bulan || 0);
+          acc.pasien_masuk += Number(val.pasien_masuk || 0);
+          acc.pasien_pindahan += Number(val.pasien_pindahan || 0);
+          acc.pasien_dipindahkan += Number(val.pasien_dipindahkan || 0);
+          acc.pasien_keluar_hidup += Number(val.pasien_keluar_hidup || 0);
+          acc.mati_lk_kurang_48_jam += Number(val.mati_lk_kurang_48_jam || 0);
+          acc.mati_lk_lebih_sama_48_jam += Number(val.mati_lk_lebih_sama_48_jam || 0);
+          acc.mati_pr_kurang_48_jam += Number(val.mati_pr_kurang_48_jam || 0);
+          acc.mati_pr_lebih_sama_48_jam += Number(val.mati_pr_lebih_sama_48_jam || 0);
+          acc.jumlah_lama_dirawat += Number(val.jumlah_lama_dirawat || 0);
+          acc.pasien_akhir_bulan += Number(val.pasien_akhir_bulan || 0);
+          acc.jumlah_hari_perawatan += Number(val.jumlah_hari_perawatan || 0);
+          acc.hari_vvip += Number(val.hari_vvip || 0);
+          acc.hari_vip += Number(val.hari_vip || 0);
+          acc.hari_kelas_1 += Number(val.hari_kelas_1 || 0);
+          acc.hari_kelas_2 += Number(val.hari_kelas_2 || 0);
+          acc.hari_kelas_3 += Number(val.hari_kelas_3 || 0);
+          acc.hari_kelas_khusus += Number(val.hari_kelas_khusus || 0);
+          acc.alokasi_tempat_tidur_awal_bulan += Number(val.alokasi_tempat_tidur_awal_bulan || 0);
+          return acc;
+        },
+        {
+          pasien_awal_bulan: 0,
+          pasien_masuk: 0,
+          pasien_pindahan: 0,
+          pasien_dipindahkan: 0,
+          pasien_keluar_hidup: 0,
+          mati_lk_kurang_48_jam: 0,
+          mati_lk_lebih_sama_48_jam: 0,
+          mati_pr_kurang_48_jam: 0,
+          mati_pr_lebih_sama_48_jam: 0,
+          jumlah_lama_dirawat: 0,
+          pasien_akhir_bulan: 0,
+          jumlah_hari_perawatan: 0,
+          hari_vvip: 0,
+          hari_vip: 0,
+          hari_kelas_1: 0,
+          hari_kelas_2: 0,
+          hari_kelas_3: 0,
+          hari_kelas_khusus: 0,
+          alokasi_tempat_tidur_awal_bulan: 0,
+        }
+      );
+
+      // Label "TOTAL" diletakkan di indeks 0 (Kolom A) agar tidak hilang saat A:C di-merge
+      const totalRow = [
+        "TOTAL",
+        "",
+        "",
+        totals.pasien_awal_bulan,
+        totals.pasien_masuk,
+        totals.pasien_pindahan,
+        totals.pasien_dipindahkan,
+        totals.pasien_keluar_hidup,
+        totals.mati_lk_kurang_48_jam,
+        totals.mati_lk_lebih_sama_48_jam,
+        totals.mati_pr_kurang_48_jam,
+        totals.mati_pr_lebih_sama_48_jam,
+        totals.jumlah_lama_dirawat,
+        totals.pasien_akhir_bulan,
+        totals.jumlah_hari_perawatan,
+        totals.hari_vvip,
+        totals.hari_vip,
+        totals.hari_kelas_1,
+        totals.hari_kelas_2,
+        totals.hari_kelas_3,
+        totals.hari_kelas_khusus,
+        totals.alokasi_tempat_tidur_awal_bulan,
+      ];
+
+      // 6. Masukkan semua baris ke worksheet
+      const fullRows = [
+        ...titleAndMetadata,
+        ...tableHeader,
+        ...tableBody,
+        totalRow,
+      ];
+      fullRows.forEach((row) => worksheet.addRow(row));
+
+      // 7. Penggabungan Sel (Merge Cells)
+      const totalRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length + 1;
+      const mergeRanges = [
         "A1:V1",
         "A3:V3",
         "A4:V4",
@@ -1097,20 +1175,58 @@ const RL32 = () => {
         "O7:O8",
         "P7:U7",
         "V7:V8",
-      ],
-      columnWidths: [
-        6,
-        30,
-        25,
-        ...Array(19).fill(18),
-      ],
-    });
-  } catch (error) {
-    console.error("Gagal mendownload Excel Satusehat:", error);
-  } finally {
-    setIsDownloading(false);
-  }
-};
+        `A${totalRowIndex}:C${totalRowIndex}`, // Merge A-C pada baris Total
+      ];
+      mergeRanges.forEach((range) => worksheet.mergeCells(range));
+
+      // 8. Pengaturan Lebar Kolom
+      worksheet.columns = [
+        { width: 8 },  // A
+        { width: 30 }, // B
+        { width: 25 }, // C
+        ...Array(19).fill({ width: 18 }), // D - V
+      ];
+
+      // 9. Formatting: Garis Border & Rata Tengah (Center Alignment)
+      const headerStartRow = titleAndMetadata.length + 1;
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber >= headerStartRow && rowNumber <= totalRowIndex) {
+          row.eachCell({ includeEmpty: true }, (cell) => {
+            // Posisi teks/angka persis di tengah sel
+            cell.alignment = {
+              vertical: "middle",
+              horizontal: "center",
+              wrapText: true,
+            };
+
+            // Border seluruh sel tabel
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+          });
+        }
+      });
+
+      // Bolding Header dan Baris Total
+      worksheet.getRow(7).font = { bold: true };
+      worksheet.getRow(8).font = { bold: true };
+      worksheet.getRow(totalRowIndex).font = { bold: true };
+
+      // 10. Generate file dan unduh menggunakan file-saver (saveAs)
+      const buffer = await workbook.xlsx.writeBuffer();
+      const fileName = `${namafileSatusehat || `rl32_satusehat_${tahunData}_${bulan}`}.xlsx`;
+      saveAs(new Blob([buffer]), fileName);
+
+    } catch (error) {
+      console.error("Gagal mendownload Excel Satusehat:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
   const calculateTotalPasienAwalBulan = (data) => {
     return data.reduce((sum, item) => sum + item.pasien_awal_bulan, 0);
   };

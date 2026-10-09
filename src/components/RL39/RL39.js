@@ -673,14 +673,14 @@ function TabOne() {
           <div className={`tab-content ${style.tabContent}`}>
             {/* TAB DATA */}
             <div className={`tab-pane fade ${activeTabInner === "tab1" ? "show active" : ""}`}>
-              <div className={style["outer-wrapper"]} style={{ width: "100%", overflowX: "auto" }}>
+              <div className={style["outer-wrapper"]}>
                 <div className={style["inner-content"]}>
                   <div className={style["table-container"]}>
-                    <table className={style["table"]} ref={tableRef}>
+                    <table className={style["table"]} ref={tableRef} style={{ width: "100%"}}>
                       <thead className={style["thead"]}>
                         <tr>
-                          <th style={{ width: "5%" }}>No.</th>
-                          {user.jenisUserId === 4 && <th style={{ width: "10%" }}>Aksi</th>}
+                          <th style={{ width: "7%" }}>No.</th>
+                          {user.jenisUserId === 4 && <th style={{ width: "15%" }}>Aksi</th>}
                           <th style={{ textAlign: "left", width: "50%" }}>Jenis Kegiatan</th>
                           <th style={{ textAlign: "center", width: "15%" }}>Jumlah</th>
                         </tr>
@@ -735,7 +735,7 @@ function TabOne() {
                                             <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
                                               <button
                                                 className="btn btn-danger"
-                                                style={{ backgroundColor: "#FF6663", padding: "4px 10px", fontSize: "12px" }}
+                                                style={{ backgroundColor: "#FF6663", border: "1px solid #FF6663", padding: "4px 10px", fontSize: "12px" }}
                                                 type="button"
                                                 onClick={() => Delete(val.id)}
                                               >
@@ -744,7 +744,7 @@ function TabOne() {
                                               <Link
                                                 to={`/rl39/ubah/${val.id}`}
                                                 className="btn btn-warning"
-                                                style={{ backgroundColor: "#CFD35E", color: "#FFF", padding: "4px 10px", fontSize: "12px" }}
+                                                style={{ backgroundColor: "#CFD35E", border:"1px solid #CFD35E" ,color: "#FFF", padding: "4px 10px", fontSize: "12px" }}
                                               >
                                                 Ubah
                                               </Link>
@@ -1685,12 +1685,12 @@ function TabTwo() {
               }}
             >
               <div style={{ overflowX: "auto" }}>
-                <table className={style["table"]} style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <table className={style["table"]} style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead className={style["thead"]}>
                     <tr>
-                      <th style={{ padding: "12px 16px", width: "8%", textAlign: "center" }}>No.</th>
-                      <th style={{ padding: "12px 16px", textAlign: "left" }}>Jenis Kegiatan</th>
-                      <th style={{ padding: "12px 16px", width: "18%", textAlign: "center" }}>Jumlah Capaian</th>
+                      <th style={{ width: "7%", textAlign: "center" }}>No.</th>
+                      <th style={{ textAlign: "left"}}>Jenis Kegiatan</th>
+                      <th style={{ width: "18%", textAlign: "center", width: "20%" }}>Jumlah Capaian</th>
                     </tr>
                   </thead>
                   <tbody>

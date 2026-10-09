@@ -771,6 +771,7 @@ const RL37 = () => {
 
       await axiosJWT.get("/apisirs6v2/rltigatitiktujuhsatusehat", {
         headers,
+        timeout: 90000,
         params: {
           rsId: rsId,
           periode,
@@ -830,27 +831,177 @@ const RL37 = () => {
     syncDataRLTigaTitikTujuhSatusehat();
   };
 
-  async function handleDownloadExcelSatusehat() {
-    if (!hasFilteredSatusehat) {
-      toast.info("Filter data terlebih dahulu", {
-        position: toast.POSITION.TOP_RIGHT,
-      });
-      return;
-    }
-    setIsDownloading(true);
-    try {
-      downloadExcel(
-        { currentTableRef: tableSatusehatRef },
-        {
-          fileName: namafileSatusehat,
-          sheet: "Sheet1",
-          tableRow: "tr, li, img, input, select",
-        }
-      );
-    } finally {
-      setTimeout(() => setIsDownloading(false), 800);
-    }
+const handleDownloadExcelSatusehat = async () => {
+  // 1. Validasi filter
+  if (!hasFilteredSatusehat) {
+    toast("Terapkan filter terlebih dahulu", {
+      type: "error",
+      position: toast.POSITION.TOP_RIGHT,
+    });
+    return;
   }
+
+  setIsDownloading(true);
+
+  try {
+    // 2. Format Metadata
+    const selectedBulanObj = daftarBulan?.find(
+      (b) => String(b.value) === String(bulan)
+    );
+    const namaBulan = selectedBulanObj ? selectedBulanObj.key : "-";
+    const tahunData = tahun || "-";
+
+    const titleAndMetadata = [
+      ["SIRS ONLINE RL 3.7 - SATUSEHAT"],
+      [], // Baris kosong
+      ["Periode Data"],
+      [`Bulan : ${namaBulan}`],
+      [`Tahun : ${tahunData}`],
+      [], // Baris kosong sebelum header tabel
+    ];
+
+    // 3. Header Tabel RL 3.7 (16 Kolom)
+    const tableHeader = [
+      "No",
+      "Jenis Kegiatan",
+      "Rujukan Medis RS",
+      "Rujukan Medis Bidan",
+      "Rujukan Medis Puskesmas",
+      "Rujukan Medis Faskes Lainnya",
+      "Rujukan Medis Hidup",
+      "Rujukan Medis Mati",
+      "Rujukan Medis Total",
+      "Rujukan Non Medis Hidup",
+      "Rujukan Non Medis Mati",
+      "Rujukan Non Medis Total",
+      "Non Rujukan Hidup",
+      "Non Rujukan Mati",
+      "Non Rujukan Total",
+      "Dirujuk",
+    ];
+
+    const safeDataList = Array.isArray(dataRLSatusehat) ? dataRLSatusehat : [];
+
+    // 4. Data Body Tabel RL 3.7
+    const tableBody = safeDataList.map((value, index) => [
+      index + 1,
+      value?.nama_kegiatan || "-",
+      Number(value?.rujukan_medis_rumah_sakit || 0),
+      Number(value?.rujukan_medis_bidan || 0),
+      Number(value?.rujukan_medis_puskesmas || 0),
+      Number(value?.rujukan_medis_faskes_lainnya || 0),
+      Number(value?.rujukan_medis_jumlah_hidup || 0),
+      Number(value?.rujukan_medis_jumlah_mati || 0),
+      Number(value?.rujukan_medis_total || 0),
+      Number(value?.rujukan_non_medis_jumlah_hidup || 0),
+      Number(value?.rujukan_non_medis_jumlah_mati || 0),
+      Number(value?.rujukan_non_medis_total || 0),
+      Number(value?.non_rujukan_jumlah_hidup || 0),
+      Number(value?.non_rujukan_jumlah_mati || 0),
+      Number(value?.non_rujukan_total || 0),
+      Number(value?.dirujuk || 0),
+    ]);
+
+    // 5. Hitung Total Angka RL 3.7
+    const totals = safeDataList.reduce(
+      (acc, val) => {
+        acc.rujukan_medis_rumah_sakit += Number(val?.rujukan_medis_rumah_sakit || 0);
+        acc.rujukan_medis_bidan += Number(val?.rujukan_medis_bidan || 0);
+        acc.rujukan_medis_puskesmas += Number(val?.rujukan_medis_puskesmas || 0);
+        acc.rujukan_medis_faskes_lainnya += Number(val?.rujukan_medis_faskes_lainnya || 0);
+        acc.rujukan_medis_jumlah_hidup += Number(val?.rujukan_medis_jumlah_hidup || 0);
+        acc.rujukan_medis_jumlah_mati += Number(val?.rujukan_medis_jumlah_mati || 0);
+        acc.rujukan_medis_total += Number(val?.rujukan_medis_total || 0);
+        acc.rujukan_non_medis_jumlah_hidup += Number(val?.rujukan_non_medis_jumlah_hidup || 0);
+        acc.rujukan_non_medis_jumlah_mati += Number(val?.rujukan_non_medis_jumlah_mati || 0);
+        acc.rujukan_non_medis_total += Number(val?.rujukan_non_medis_total || 0);
+        acc.non_rujukan_jumlah_hidup += Number(val?.non_rujukan_jumlah_hidup || 0);
+        acc.non_rujukan_jumlah_mati += Number(val?.non_rujukan_jumlah_mati || 0);
+        acc.non_rujukan_total += Number(val?.non_rujukan_total || 0);
+        acc.dirujuk += Number(val?.dirujuk || 0);
+        return acc;
+      },
+      {
+        rujukan_medis_rumah_sakit: 0,
+        rujukan_medis_bidan: 0,
+        rujukan_medis_puskesmas: 0,
+        rujukan_medis_faskes_lainnya: 0,
+        rujukan_medis_jumlah_hidup: 0,
+        rujukan_medis_jumlah_mati: 0,
+        rujukan_medis_total: 0,
+        rujukan_non_medis_jumlah_hidup: 0,
+        rujukan_non_medis_jumlah_mati: 0,
+        rujukan_non_medis_total: 0,
+        non_rujukan_jumlah_hidup: 0,
+        non_rujukan_jumlah_mati: 0,
+        non_rujukan_total: 0,
+        dirujuk: 0,
+      }
+    );
+
+    // 6. Buat Baris Total
+    const totalRow = [
+      "",
+      "TOTAL",
+      totals.rujukan_medis_rumah_sakit,
+      totals.rujukan_medis_bidan,
+      totals.rujukan_medis_puskesmas,
+      totals.rujukan_medis_faskes_lainnya,
+      totals.rujukan_medis_jumlah_hidup,
+      totals.rujukan_medis_jumlah_mati,
+      totals.rujukan_medis_total,
+      totals.rujukan_non_medis_jumlah_hidup,
+      totals.rujukan_non_medis_jumlah_mati,
+      totals.rujukan_non_medis_total,
+      totals.non_rujukan_jumlah_hidup,
+      totals.non_rujukan_jumlah_mati,
+      totals.non_rujukan_total,
+      totals.dirujuk,
+    ];
+
+    const headerRowIndex = titleAndMetadata.length + 1; // Baris ke-7
+    const totalRowIndex = headerRowIndex + tableBody.length + 1;
+
+    // 7. Gabungkan Semua Baris
+    const fullBody = [
+      ...titleAndMetadata,
+      tableHeader,
+      ...tableBody,
+      totalRow,
+    ];
+
+    const mergeRanges = [
+      "A1:P1",
+      "A3:P3",
+      "A4:P4",
+      "A5:P5",
+    ];
+
+    await exportRowsToExcel({
+      fileName: `rl37_satusehat_${tahunData}_${bulan}`,
+      sheetName: "RL 3.7 SatuSehat",
+      rows: fullBody,
+      headerRowStart: headerRowIndex,
+      borderlessRows: [1, 3, 4, 5],
+      mergeRanges: mergeRanges,
+      columnWidths: [
+        6,
+        35,
+        ...Array(14).fill(18),
+      ],
+      // Penataan Alignment per Kolom (Kolom 1 & Kolom 3-16 rata tengah)
+      columnAlignments: [
+        "center", // Kolom 1 (No)
+        "left",   // Kolom 2 (Jenis Kegiatan)
+        ...Array(14).fill("center"), // Kolom 3-16 (Seluruh Angka)
+      ],
+    });
+  } catch (error) {
+    console.error("Gagal mendownload Excel Satusehat RL 3.7:", error);
+  } finally {
+    setIsDownloading(false);
+  }
+};
 
   const getValidasi = async () => {
     try {
@@ -2339,123 +2490,81 @@ const RL37 = () => {
                 </div>
               </div>
 
-              {hasFilteredSatusehat && !isSyncingSatusehat && (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 7,
-                    padding: "9px 14px",
-                    marginBottom: 12,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "#334155",
-                  }}
-                >
-                  <div>Filtered By {filterLabelSatusehat.join(", ")}</div>
-                </div>
-              )}
-
-              {isSyncingSatusehat && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    borderRadius: 8,
-                    padding: "18px 16px",
-                    lineHeight: 1.6,
-                    marginBottom: 14,
-                    background: "#f8fafc",
-                    border: "1px solid #d9dee7",
-                    color: "#475569",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <Spinner animation="border" role="status" size="sm" />
-                  <div>Sedang mengambil data dari SatuSehat, mohon tunggu...</div>
-                </div>
-              )}
-
-              {!hasFilteredSatusehat && !isSyncingSatusehat && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    borderRadius: 8,
-                    padding: "12px 16px",
-                    lineHeight: 1.6,
-                    marginBottom: 14,
-                    backgroundColor: "#fff3cd",
-                    border: "1px solid #ffc107",
-                    color: "#856404",
-                  }}
-                >
-                  <strong style={{ fontWeight: 700 }}>Informasi:</strong> Silakan pilih filter terlebih dahulu.
-                </div>
-              )}
-
-              {hasFilteredSatusehat &&
-                !isSyncingSatusehat &&
-                dataRLSatusehat.length === 0 &&
-                lastSyncAt && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      borderRadius: 8,
-                      padding: "12px 16px",
-                      lineHeight: 1.6,
-                      marginBottom: 14,
-                      backgroundColor: "#d1ecf1",
-                      border: "1px solid #bee5eb",
-                      color: "#0c5460",
-                    }}
-                  >
-                    <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                      Filtered By {filterLabelSatusehat.join(", ")}
-                    </div>
-                    <div>
-                      <strong style={{ fontWeight: 700 }}>Info:</strong> Data tidak ditemukan untuk filter ini setelah dilakukan sinkronisasi.
-                    </div>
-                    <div style={{ marginTop: 6, fontSize: 12, color: "#0c5460" }}>
-                      Terakhir sinkronisasi: {formatLastSyncAt(lastSyncAt)}
-                    </div>
-                  </div>
-                )}
-
-              {hasFilteredSatusehat &&
-                !isSyncingSatusehat &&
-                dataRLSatusehat.length === 0 &&
-                !lastSyncAt && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      borderRadius: 8,
-                      padding: "12px 16px",
-                      lineHeight: 1.6,
-                      marginBottom: 14,
-                      backgroundColor: "#f8d7da",
-                      border: "1px solid #f5c6cb",
-                      color: "#721c24",
-                    }}
-                  >
-                    <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                      Filtered By {filterLabelSatusehat.join(", ")}
-                    </div>
-                    <div>
-                      <strong style={{ fontWeight: 700 }}>Peringatan:</strong> Belum dilakukan sinkronisasi SatuSehat untuk periode ini.
-                    </div>
-                    <div style={{ marginTop: 6 }}>
-                      Klik tombol <code>Sync SatuSehat</code> untuk mengambil data.
-                    </div>
-                    <div style={{ marginTop: 6, fontSize: 12, color: "#721c24" }}>
-                      Terakhir sinkronisasi: -
-                    </div>
-                  </div>
-                )}
+                              {hasFilteredSatusehat && !isSyncingSatusehat && (
+                                <div
+                                                  style={{
+                                                    marginBottom: 12,
+                                                    fontSize: 12,
+                                                    color: "#334155",
+                                                  }}
+                                                >
+                                  <div style={{ fontWeight: 600 }}>
+                                    Filtered By {filterLabelSatusehat.join(", ")}
+                                  </div>
+                                </div>
+                              )}
+              
+                              {isSyncingSatusehat && (
+                                <div
+                                  style={{
+                                    border: "1px solid #d9dee7",
+                                    borderRadius: 10,
+                                    padding: "18px 16px",
+                                    marginBottom: 14,
+                                    background: "#f8fafc",
+                                    textAlign: "center",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: 10,
+                                  }}
+                                >
+                                  <Spinner animation="border" role="status" size="sm" />
+                                  <div style={{ fontSize: 12, color: "#475569" }}>
+                                    Sedang mengambil data dari SatuSehat, mohon tunggu...
+                                  </div>
+                                </div>
+                              )}
+              
+                              {!hasFilteredSatusehat && !isSyncingSatusehat && (
+                                <div
+                                  style={{
+                                    backgroundColor: "#fff3cd",
+                                    border: "1px solid #ffc107",
+                                    color: "#856404",
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    padding: "12px 16px",
+                                    borderRadius: 8,
+                                    marginBottom: 14,
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  Silakan pilih filter terlebih dahulu.
+                                </div>
+                              )}
+              
+                              {hasFilteredSatusehat &&
+                                !isSyncingSatusehat &&
+                                dataRLSatusehat.length === 0 && (
+                                  <div
+                                                      style={{
+                                                        backgroundColor: "#d1ecf1",
+                                                        border: "1px solid #bee5eb",
+                                                        color: "#0c5460",
+                                                        fontSize: 12,
+                                                        fontWeight: 500,
+                                                        padding: "15px",
+                                                        borderRadius: 4,
+                                                        marginBottom: 14,
+                                                        textAlign: "center",
+                                                      }}
+                                                    >
+                                                      <div style={{ fontSize: 14, fontWeight: 700 }}>
+                                                        Data tidak ditemukan di SATUSEHAT untuk periode ini.
+                                                      </div>
+                                                    </div>
+                                )}
 
               {hasFilteredSatusehat && dataRLSatusehat.length > 0 && (
                 <div className={style["table-container"]}>

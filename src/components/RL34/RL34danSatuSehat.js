@@ -1711,7 +1711,7 @@ const handleDownloadExcel = async () => {
 
     const body = dataRL.map((item, idx) => [
       idx + 1,
-      item.namaRS,
+      namaRS,
       item.new_visitors ?? 0,
       item.returning_visitors ?? 0,
       item.total_visitors ?? 0,
