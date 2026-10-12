@@ -23,6 +23,7 @@ import Table from "react-bootstrap/Table";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 import { getStatusSatset } from "../../api/status_satset.js";
 import { getJenisPengunjungName, getSafeDataRL } from "./rl34Helpers";
 import { formatNamaBulan } from "../../utils/formatNamaBulan";
@@ -41,6 +42,8 @@ const exportRowsToExcel = async ({
     columnWidths = [],
     mergeRanges = [],
     borderlessRows = [],
+    formatLikeRL32 = false,
+    leftAlignedColumns = [],
   }) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(sheetName);
@@ -85,6 +88,36 @@ const exportRowsToExcel = async ({
       horizontal: "center",
       wrapText: true,
     };
+  }
+
+  if (formatLikeRL32) {
+    worksheet.getCell("A1").font = { name: "Calibri", size: 16, bold: true };
+    worksheet.getCell("A1").alignment = {
+      vertical: "middle",
+      horizontal: "left",
+    };
+    worksheet.getRow(1).height = 24;
+
+    ["A3", "A4", "A5"].forEach((address) => {
+      const cell = worksheet.getCell(address);
+      cell.font = { name: "Calibri", size: 12, bold: true };
+      cell.alignment = { vertical: "middle", horizontal: "left" };
+    });
+
+    for (let rowNumber = headerRowStart; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+      worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+        cell.alignment = {
+          vertical: "middle",
+          horizontal:
+            rowNumber === headerRowStart
+              ? "center"
+              : leftAlignedColumns.includes(columnNumber)
+                ? "left"
+                : "right",
+          wrapText: true,
+        };
+      });
+    }
   }
 
   // 6. Generate dan simpan file Excel
@@ -1025,7 +1058,7 @@ const handleShow = () => {
       </Modal>
       <div className="row">
         <div className="col-md-12">
-          <div style={{ marginBottom: "10px" }}>
+          <div style={{ marginTop: "15px", marginBottom: "10px" }}>
             {user.jenisUserId === 4 ? (
               <>
                 <Link
@@ -1465,6 +1498,22 @@ function TabTwo() {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase()
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET
+        ).toString();
+
+        config.headers = config.headers || {};
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+      }
       return config;
     },
     (error) => Promise.reject(error)
@@ -1681,84 +1730,51 @@ const handleDownloadExcel = async () => {
   setIsDownloading(true);
 
   try {
+    const rsId = getSelectedRsId();
+    if (!rsId || !tahun || !bulan) {
+      throw new Error("Rumah sakit dan periode wajib dipilih.");
+    }
     const { kodeRS, namaRS, provinsi, kabupatenKota } =
       getInfoRumahSakitExport({
         rumahSakit,
-        rsId: getSelectedRsId(),
+        rsId,
         namaUser: user?.satKerNama,
         filterLabels: filterLabel,
       });
-    const namaBulan = formatNamaBulan(bulan);
-    const titleAndMetadata = [
-      ["SIRS ONLINE RL 3.4 - SATUSEHAT"],
-      [],
-      ["Periode Data"],
-      [`Bulan : ${namaBulan}`],
-      [`Tahun : ${tahun}`],
-      [],
-    ];
-
-    const header = [
-      "No.",
-      "Kode RS",
-      "Rumah Sakit",
-      "Provinsi",
-      "Kabupaten/Kota",
-      "Pengunjung Baru",
-      "Pengunjung Lama",
-      "Total",
-    ];
-
-    const body = dataRL.map((item, idx) => [
-      idx + 1,
-      kodeRS,
-      namaRS,
-      provinsi,
-      kabupatenKota,
-      item.new_visitors ?? 0,
-      item.returning_visitors ?? 0,
-      item.total_visitors ?? 0,
-    ]);
-
-    const fullBody = [
-      ...titleAndMetadata,
-      header,
-      ...body,
-    ];
-
-    await exportRowsToExcel({
-      fileName: `RL_3_4_SatuSehat_${tahun}-${bulan}`,
-      sheetName: "RL 3.4 SatuSehat",
-      rows: fullBody,
-
-      // Header tabel berada pada baris ke-7
-      headerRowStart: titleAndMetadata.length + 1,
-      // Merge title dan metadata dari kolom A sampai D
-      mergeRanges: [
-        "A1:H1", // Judul utama di baris 1
-        "A3:H3", // "Periode Data" di baris 3
-        "A4:H4", // Bulan di baris 4
-        "A5:H5", // Tahun di baris 5
-      ],
-      
-      borderlessRows: [1, 2, 3, 4, 5, 6],
-
-      columnWidths: [
-        8,
-        16,
-        18,
-        22,
-        24,
-        18,
-        18,
-        18,
-      ],
-    });
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+    const response = await axiosJWT.post(
+      "/apisirs6v2/rltigatitikempat/satusehat/excel",
+      {
+        rsId: String(rsId),
+        periode,
+        kodeRS: kodeRS && kodeRS !== "-" ? kodeRS : rsId,
+        namaRS,
+        provinsi,
+        kabupatenKota,
+      },
+      {
+        responseType: "blob",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      }
+    );
+    saveAs(
+      new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `RL_3_4_SatuSehat_${tahun}_${Number(bulan)}.xlsx`
+    );
   } catch (error) {
     console.error(
       "Gagal mendownload Excel RL 3.4 Satusehat:",
       error
     );
+    toast.error("Gagal mendownload Excel RL 3.4 Satusehat.", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
   } finally {
     setIsDownloading(false);
   }

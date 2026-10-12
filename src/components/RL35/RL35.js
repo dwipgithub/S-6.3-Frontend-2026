@@ -26,7 +26,6 @@ import { Spinner } from "react-bootstrap";
 import { downloadExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
-import { formatNamaBulan } from "../../utils/formatNamaBulan";
 import { getInfoRumahSakitExport } from "../../utils/getInfoRumahSakitExport";
 
 const RL35 = () => {
@@ -72,6 +71,8 @@ const RL35 = () => {
       columnWidths = [],
       mergeRanges = [],
       borderlessRows = [],
+      formatLikeRL32 = false,
+      leftAlignedColumns = [],
     }) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet(sheetName);
@@ -108,7 +109,37 @@ const RL35 = () => {
           wrapText: true,
         };
       }
-  
+
+      if (formatLikeRL32) {
+        worksheet.getCell("A1").font = { name: "Calibri", size: 16, bold: true };
+        worksheet.getCell("A1").alignment = {
+          vertical: "middle",
+          horizontal: "left",
+        };
+        worksheet.getRow(1).height = 24;
+
+        ["A3", "A4", "A5"].forEach((address) => {
+          const cell = worksheet.getCell(address);
+          cell.font = { name: "Calibri", size: 12, bold: true };
+          cell.alignment = { vertical: "middle", horizontal: "left" };
+        });
+
+        for (let rowNumber = headerRowStart; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+          worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+            cell.alignment = {
+              vertical: "middle",
+              horizontal:
+                rowNumber === headerRowStart
+                  ? "center"
+                  : leftAlignedColumns.includes(columnNumber)
+                    ? "left"
+                    : "right",
+              wrapText: true,
+            };
+          });
+        }
+      }
+
       const buffer = await workbook.xlsx.writeBuffer();
       saveAs(
         new Blob([buffer], {
@@ -928,136 +959,57 @@ const handleDownloadExcelRLTigaTitikLimaSatusehat = async () => {
 
   try {
     // 2. Format Nama RS & Metadata
-    const { kodeRS, namaRS, provinsi, kabupatenKota } =
-      getInfoRumahSakitExport({
-        rumahSakit,
-        daftarRumahSakit,
-        rsId: getSelectedRsId(),
-        namaUser: user?.satKerNama,
-        filterLabels: filterLabelSatusehat,
-      });
-    const namaBulan = formatNamaBulan(bulan);
-    const tahunData = tahun || "-";
-
-    // 3. Buat Workbook & Worksheet ExcelJS
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("RL 3.5 SatuSehat");
-
-    // 4. Baris Judul & Metadata
-    const titleAndMetadata = [
-      ["SIRS ONLINE RL 3.5 - SATUSEHAT"],
-      [], 
-      ["Periode Data"],
-      [`Bulan : ${namaBulan}`],
-      [`Tahun : ${tahunData}`],
-      [], 
-    ];
-
-    // 5. Header Tabel
-    const tableHeader = [
-      [
-        "No",
-        "Kode RS",
-        "Rumah Sakit",
-        "Provinsi",
-        "Kabupaten/Kota",
-        "Jenis Kegiatan",
-        "Kunjungan Dalam Kota (L)",
-        "Kunjungan Dalam Kota (P)",
-        "Kunjungan Luar Kota (L)",
-        "Kunjungan Luar Kota (P)",
-        "Total Kunjungan",
-        "Rata-rata / hari",
-      ],
-    ];
-
-    // 6. Data Body Tabel & Hitung Total
-    const listData = Array.isArray(dataRLSatusehat) ? dataRLSatusehat : [];
-
-    const tableBody = listData.map((value, index) => [
-      index + 1,
-      kodeRS,
+    const rsId = getSelectedRsId();
+    if (!rsId || !tahun || !bulan) {
+      throw new Error("Rumah sakit dan periode wajib dipilih.");
+    }
+    const {
+      kodeRS: kodeRSHelper,
       namaRS,
       provinsi,
       kabupatenKota,
-      value.jenis_kegiatan || "-",
-      Number(value.kunjungan_dalam_kab_kota?.laki_laki ?? value.kunjungan_dalam_kab_kota_laki_laki ?? 0),
-      Number(value.kunjungan_dalam_kab_kota?.perempuan ?? value.kunjungan_dalam_kab_kota_perempuan ?? 0),
-      Number(value.kunjungan_luar_kab_kota?.laki_laki ?? value.kunjungan_luar_kab_kota_laki_laki ?? 0),
-      Number(value.kunjungan_luar_kab_kota?.perempuan ?? value.kunjungan_luar_kab_kota_perempuan ?? 0),
-      Number(value.total_kunjungan ?? 0),
-      Number(value.rata_rata_kunjungan_perhari ?? 0),
-    ]);
-
-    const lastDataRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length;
-
-    // 7. Masukkan semua baris ke worksheet
-    const fullRows = [
-      ...titleAndMetadata,
-      ...tableHeader,
-      ...tableBody,
-    ];
-    fullRows.forEach((row) => worksheet.addRow(row));
-
-    // 8. Penggabungan Sel (Merge Cells)
-    const mergeRanges = [
-      "A1:L1",
-      "A3:L3",
-      "A4:L4",
-      "A5:L5",
-    ];
-    mergeRanges.forEach((range) => worksheet.mergeCells(range));
-
-    // 9. Pengaturan Lebar Kolom
-    worksheet.columns = [
-      { width: 8 },  // A (No)
-      { width: 16 }, // B (Kode RS)
-      { width: 30 }, // C (Rumah Sakit)
-      { width: 22 }, // D (Provinsi)
-      { width: 24 }, // E (Kabupaten/Kota)
-      { width: 25 }, // F (Jenis Kegiatan)
-      { width: 22 }, // G
-      { width: 22 }, // H
-      { width: 22 }, // I
-      { width: 22 }, // J
-      { width: 20 }, // K
-      { width: 18 }, // L
-    ];
-
-    // 10. Formatting: Alignment Tengah & Border Tabel
-    const headerStartRow = titleAndMetadata.length + 1;
-
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber >= headerStartRow && rowNumber <= lastDataRowIndex) {
-        row.eachCell({ includeEmpty: true }, (cell) => {
-          // Seluruh isi tabel rata tengah
-          cell.alignment = {
-            vertical: "middle",
-            horizontal: "center",
-            wrapText: true,
-          };
-
-          // Border tipis di sekeliling tabel
-          cell.border = {
-            top: { style: "thin" },
-            left: { style: "thin" },
-            bottom: { style: "thin" },
-            right: { style: "thin" },
-          };
-        });
+    } =
+      getInfoRumahSakitExport({
+        rumahSakit,
+        daftarRumahSakit,
+        rsId,
+        namaUser: user?.satKerNama,
+        filterLabels: filterLabelSatusehat,
+      });
+    const kodeRS =
+      kodeRSHelper && kodeRSHelper !== "-" ? kodeRSHelper : rsId ?? "-";
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+    const response = await axiosJWT.post(
+      "/apisirs6v2/rltigatitiklima/satusehat/excel",
+      {
+        rsId: String(rsId),
+        periode,
+        kodeRS,
+        namaRS,
+        provinsi,
+        kabupatenKota,
+      },
+      {
+        responseType: "blob",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
       }
-    });
-
-    // Bold untuk Header
-    worksheet.getRow(headerStartRow).font = { bold: true };
-
-    // 11. Generate File Excel dan Download
-    const buffer = await workbook.xlsx.writeBuffer();
-    const fileName = `rl35_satusehat_${tahunData}_${bulan}.xlsx`;
-    saveAs(new Blob([buffer]), fileName);
+    );
+    saveAs(
+      new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `rl35_satusehat_${tahun}_${Number(bulan)}.xlsx`
+    );
 
   } catch (error) {
     console.error("Gagal mendownload Excel Satusehat RL 3.5:", error);
+    toast.error("Gagal mendownload Excel Satusehat RL 3.5.", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
   } finally {
     setTimeout(() => setIsDownloading(false), 800);
   }
@@ -1270,14 +1222,14 @@ const handleDownloadExcelRLTigaTitikLimaSatusehat = async () => {
                     className={style.btnPrimary}
                     style={{ textDecoration: "none" }}
                   >
-                    <HiPlus size={18} /> Tambah
+                   Tambah
                   </Link>
                 )}
                 <button type="button" className={style.btnPrimary} onClick={handleShow}>
-                  <HiFilter size={18} /> Filter
+                   Filter
                 </button>
                 <button type="button" className={style.btnPrimary} onClick={handleDownloadExcelRLTigaTitikLima}>
-                  <FaFileExcel size={18} /> Download Excel
+                   Download Excel
                 </button>
               </div>
                 <div>

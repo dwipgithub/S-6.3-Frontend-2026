@@ -24,7 +24,6 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
-import { formatNamaBulan } from "../../utils/formatNamaBulan";
 import { getInfoRumahSakitExport } from "../../utils/getInfoRumahSakitExport";
 
 if (!toast.POSITION) {
@@ -974,201 +973,55 @@ const RL32 = () => {
 const handleDownloadExcelSatusehat = async () => {
     setIsDownloading(true);
     try {
-      const { kodeRS, namaRS, provinsi, kabupatenKota } =
+      const rsId = getSelectedRsId();
+      const periode = getSelectedPeriode();
+      if (!rsId || !periode) {
+        throw new Error("Rumah sakit dan periode wajib dipilih.");
+      }
+      const { kodeRS: kodeRSHelper, namaRS, provinsi, kabupatenKota } =
         getInfoRumahSakitExport({
           rumahSakit,
           daftarRumahSakit,
-          rsId: getSelectedRsId(),
+          rsId,
           namaUser: user?.satKerNama,
           filterLabels: filterLabelSatusehat,
         });
-      const namaBulan = formatNamaBulan(bulan);
-      const tahunData = tahun || "-";
-
-      // 1. Buat Workbook & Worksheet ExcelJS
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("data RL 32 Satusehat");
-
-      // 2. Baris Judul & Metadata
-      const titleAndMetadata = [
-        ["SIRS ONLINE RL 3.2 - SATUSEHAT"],
-        [], 
-        ["Periode Data"],
-        [`Bulan : ${namaBulan}`],
-        [`Tahun: ${tahunData}`],
-        [], 
-      ];
-
-      // 3. Header Tabel Multi-baris
-      const tableHeader = [
-        [
-          "No",
-          "Kode RS",
-          "Rumah Sakit",
-          "Provinsi",
-          "Kabupaten/Kota",
-          "Jenis Pelayanan",
-          "Pasien Awal Bulan",
-          "Pasien Masuk",
-          "Pasien Pindahan",
-          "Pasien Dipindahkan",
-          "Pasien Keluar Hidup",
-          "Pasien Pria Keluar Mati",
-          "",
-          "Pasien Wanita Keluar Mati",
-          "",
-          "Jumlah Lama Dirawat",
-          "Pasien Akhir Bulan",
-          "Jumlah Hari Perawatan",
-          "Rincian Hari Perawatan",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "TT Awal",
-        ],
-        [
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "<48 jam",
-          ">=48 jam",
-          "<48 jam",
-          ">=48 jam",
-          "",
-          "",
-          "",
-          "VVIP",
-          "VIP",
-          "1",
-          "2",
-          "3",
-          "Khusus",
-          "",
-        ],
-      ];
-
-      // 4. Data Body Tabel
-      const tableBody = dataRL32Satusehat.map((value, index) => [
-        index + 1,
-        kodeRS,
-        namaRS,
-        provinsi,
-        kabupatenKota,
-        value.nama_jenis_pelayanan || value.jenis_pelayanan || "-",
-        value.pasien_awal_bulan || 0,
-        value.pasien_masuk || 0,
-        value.pasien_pindahan || 0,
-        value.pasien_dipindahkan || 0,
-        value.pasien_keluar_hidup || 0,
-        value.mati_lk_kurang_48_jam || 0,
-        value.mati_lk_lebih_sama_48_jam || 0,
-        value.mati_pr_kurang_48_jam || 0,
-        value.mati_pr_lebih_sama_48_jam || 0,
-        value.jumlah_lama_dirawat || 0,
-        value.pasien_akhir_bulan || 0,
-        value.jumlah_hari_perawatan || 0,
-        value.hari_vvip || 0,
-        value.hari_vip || 0,
-        value.hari_kelas_1 || 0,
-        value.hari_kelas_2 || 0,
-        value.hari_kelas_3 || 0,
-        value.hari_kelas_khusus || 0,
-        value.alokasi_tempat_tidur_awal_bulan || 0,
-      ]);
-
-      const lastDataRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length;
-
-      // 5. Masukkan semua baris ke worksheet
-      const fullRows = [
-        ...titleAndMetadata,
-        ...tableHeader,
-        ...tableBody,
-      ];
-      fullRows.forEach((row) => worksheet.addRow(row));
-
-      // 6. Penggabungan Sel (Merge Cells)
-      const mergeRanges = [
-        "A1:Y1",
-        "A3:Y3",
-        "A4:Y4",
-        "A5:Y5",
-        "A7:A8",
-        "B7:B8",
-        "C7:C8",
-        "D7:D8",
-        "E7:E8",
-        "F7:F8",
-        "G7:G8",
-        "H7:H8",
-        "I7:I8",
-        "J7:J8",
-        "K7:K8",
-        "L7:M7",
-        "N7:O7",
-        "P7:P8",
-        "Q7:Q8",
-        "R7:R8",
-        "S7:X7",
-        "Y7:Y8",
-      ];
-      mergeRanges.forEach((range) => worksheet.mergeCells(range));
-
-      // 7. Pengaturan Lebar Kolom
-      worksheet.columns = [
-        { width: 8 },  // A
-        { width: 16 }, // B (Kode RS)
-        { width: 30 }, // C (Rumah Sakit)
-        { width: 22 }, // D (Provinsi)
-        { width: 24 }, // E (Kabupaten/Kota)
-        { width: 25 }, // F (Jenis Pelayanan)
-        ...Array(19).fill({ width: 18 }), // G - Y
-      ];
-
-      // 8. Formatting: Garis Border & Rata Tengah (Center Alignment)
-      const headerStartRow = titleAndMetadata.length + 1;
-
-      worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber >= headerStartRow && rowNumber <= lastDataRowIndex) {
-          row.eachCell({ includeEmpty: true }, (cell) => {
-            // Posisi teks/angka persis di tengah sel
-            cell.alignment = {
-              vertical: "middle",
-              horizontal: "center",
-              wrapText: true,
-            };
-
-            // Border seluruh sel tabel
-            cell.border = {
-              top: { style: "thin" },
-              left: { style: "thin" },
-              bottom: { style: "thin" },
-              right: { style: "thin" },
-            };
-          });
+      // Helper mengembalikan "-" bila kode RS tidak ditemukan,
+      // jadi dalam kasus itu pakai rsId.
+      const kodeRS =
+        kodeRSHelper && kodeRSHelper !== "-" ? kodeRSHelper : rsId ?? "-";
+      const response = await axiosJWT.post(
+        "/apisirs6v2/rltigatitikduasatusehat/excel",
+        {
+          rsId: String(rsId),
+          periode,
+          kodeRS,
+          namaRS,
+          provinsi,
+          kabupatenKota,
+        },
+        {
+          responseType: "blob",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "XSRF-TOKEN": CSRFToken,
+          },
         }
-      });
-
-      // Bolding Header
-      worksheet.getRow(7).font = { bold: true };
-      worksheet.getRow(8).font = { bold: true };
-
-      // 10. Generate file dan unduh menggunakan file-saver (saveAs)
-      const buffer = await workbook.xlsx.writeBuffer();
-      const fileName = `${namafileSatusehat || `rl32_satusehat_${tahunData}_${bulan}`}.xlsx`;
-      saveAs(new Blob([buffer]), fileName);
-
+      );
+      const fileName =
+        namafileSatusehat || `rl32_satusehat_${rsId}_${periode}-01`;
+      saveAs(
+        new Blob([response.data], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+        `${fileName}.xlsx`
+      );
     } catch (error) {
       console.error("Gagal mendownload Excel Satusehat:", error);
+      toast.error("Gagal mendownload Excel Satusehat.", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
     } finally {
       setIsDownloading(false);
     }

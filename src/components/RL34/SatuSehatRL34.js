@@ -12,6 +12,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import { getSafeDataRL } from "./rl34Helpers";
+import { formatNamaBulan } from "../../utils/formatNamaBulan";
 
 const SatuSehatRL34 = () => {
   const [bulan, setBulan] = useState(1);
@@ -28,7 +29,17 @@ const SatuSehatRL34 = () => {
   const [spinner, setSpinner] = useState(false);
   const { CSRFToken } = useCSRFTokenContext();
 
-  const exportRowsToExcel = async ({ fileName, sheetName, rows, columnWidths = [] }) => {
+  const exportRowsToExcel = async ({
+    fileName,
+    sheetName,
+    rows,
+    headerRowStart = 1,
+    columnWidths = [],
+    mergeRanges = [],
+    borderlessRows = [],
+    formatLikeRL32 = false,
+    leftAlignedColumns = [],
+  }) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(sheetName);
 
@@ -36,6 +47,7 @@ const SatuSehatRL34 = () => {
     columnWidths.forEach((width, index) => {
       worksheet.getColumn(index + 1).width = width;
     });
+    mergeRanges.forEach((range) => worksheet.mergeCells(range));
 
     worksheet.eachRow({ includeEmpty: true }, (row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
@@ -49,12 +61,48 @@ const SatuSehatRL34 = () => {
       });
     });
 
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.getRow(1).alignment = {
+    borderlessRows.forEach((rowNumber) => {
+      worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {};
+      });
+    });
+
+    worksheet.getRow(headerRowStart).font = { bold: true };
+    worksheet.getRow(headerRowStart).alignment = {
       vertical: "middle",
       horizontal: "center",
       wrapText: true,
     };
+
+    if (formatLikeRL32) {
+      worksheet.getCell("A1").font = { name: "Calibri", size: 16, bold: true };
+      worksheet.getCell("A1").alignment = {
+        vertical: "middle",
+        horizontal: "left",
+      };
+      worksheet.getRow(1).height = 24;
+
+      ["A3", "A4", "A5"].forEach((address) => {
+        const cell = worksheet.getCell(address);
+        cell.font = { name: "Calibri", size: 12, bold: true };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+
+      for (let rowNumber = headerRowStart; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+        worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+          cell.alignment = {
+            vertical: "middle",
+            horizontal:
+              rowNumber === headerRowStart
+                ? "center"
+                : leftAlignedColumns.includes(columnNumber)
+                  ? "left"
+                  : "right",
+            wrapText: true,
+          };
+        });
+      }
+    }
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(
@@ -253,8 +301,8 @@ const SatuSehatRL34 = () => {
     setShow(true);
   };
 
-  function handleDownloadExcel() {
-    const header = [
+  async function handleDownloadExcel() {
+    const headers = [
       "No.",
       "Bulan",
       "Organization ID",
@@ -263,7 +311,7 @@ const SatuSehatRL34 = () => {
       "Total",
     ];
     const safeData = getSafeDataRL(dataRL);
-    const body = safeData.map((item, idx) => [
+    const rows = safeData.map((item, idx) => [
       idx + 1,
       item.month,
       item.organization_id,
@@ -271,12 +319,31 @@ const SatuSehatRL34 = () => {
       item.returning_visitors,
       item.total_visitors,
     ]);
-    exportRowsToExcel({
-      fileName: "RL_3_4_SatuSehat",
-      sheetName: "RL 3.4 SatuSehat",
-      rows: [header, ...body],
-      columnWidths: [8, 16, 24, 18, 18, 14],
-    });
+
+    try {
+      const titleAndMetadata = [
+        ["SIRS ONLINE RL 3.4 - SATUSEHAT"],
+        [],
+        ["Periode Data"],
+        [`Bulan : ${formatNamaBulan(bulan)}`],
+        [`Tahun : ${tahun || "-"}`],
+        [],
+      ];
+
+      await exportRowsToExcel({
+        fileName: `RL_3_4_SatuSehat_${tahun}_${bulan}`,
+        sheetName: "RL 3.4 SatuSehat",
+        rows: [...titleAndMetadata, headers, ...rows],
+        headerRowStart: titleAndMetadata.length + 1,
+        borderlessRows: [1, 2, 3, 4, 5, 6],
+        mergeRanges: ["A1:F1", "A3:F3", "A4:F4", "A5:F5"],
+        formatLikeRL32: true,
+        leftAlignedColumns: [2, 3],
+        columnWidths: [8, 16, 24, 18, 18, 14],
+      });
+    } catch (error) {
+      console.error("Gagal mendownload Excel RL 3.4 Satusehat:", error);
+    }
   }
 
   return (
