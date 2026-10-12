@@ -27,6 +27,7 @@ import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
 import { formatNamaBulan } from "../../utils/formatNamaBulan";
 import { getNamaRumahSakit } from "../../utils/getNamaRumahSakit";
+import { getInfoRumahSakitExport } from "../../utils/getInfoRumahSakitExport";
 
 const RL37 = () => {
   const [bulan, setBulan] = useState(1);
@@ -84,6 +85,8 @@ const RL37 = () => {
         columnWidths = [],
         mergeRanges = [],
         borderlessRows = [],
+        formatLikeRL32 = false,
+        leftAlignedColumns = [],
       }) => {
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet(sheetName);
@@ -119,6 +122,36 @@ const RL37 = () => {
             horizontal: "center",
             wrapText: true,
           };
+        }
+
+        if (formatLikeRL32) {
+          worksheet.getCell("A1").font = { name: "Calibri", size: 16, bold: true };
+          worksheet.getCell("A1").alignment = {
+            vertical: "middle",
+            horizontal: "left",
+          };
+          worksheet.getRow(1).height = 24;
+
+          ["A3", "A4", "A5"].forEach((address) => {
+            const cell = worksheet.getCell(address);
+            cell.font = { name: "Calibri", size: 12, bold: true };
+            cell.alignment = { vertical: "middle", horizontal: "left" };
+          });
+
+          for (let rowNumber = headerRowStart; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+            worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+              cell.alignment = {
+                vertical: "middle",
+                horizontal:
+                  rowNumber === headerRowStart
+                    ? "center"
+                    : leftAlignedColumns.includes(columnNumber)
+                      ? "left"
+                      : "right",
+                wrapText: true,
+              };
+            });
+          }
         }
     
         const buffer = await workbook.xlsx.writeBuffer();
@@ -846,57 +879,21 @@ const handleDownloadExcelSatusehat = async () => {
   setIsDownloading(true);
 
   try {
-    // 2. Format Metadata
     const rsId = getSelectedRsId();
-    const rumahSakitTerpilih = (Array.isArray(daftarRumahSakit) ? daftarRumahSakit : []).find(
-      (item) => String(item.id) === String(rsId)
-    );
-    const namaRS = getNamaRumahSakit(
-      rumahSakit?.nama,
-      rumahSakit?.nama_rumah_sakit,
-      rumahSakitTerpilih?.nama,
-      user?.satKerNama
-    );
+    const { kodeRS: kodeRSHelper, namaRS, provinsi, kabupatenKota } =
+      getInfoRumahSakitExport({
+        rumahSakit,
+        daftarRumahSakit,
+        rsId,
+        namaUser: user?.satKerNama,
+        filterLabels: filterLabelSatusehat,
+      });
     const kodeRS =
-      rumahSakitTerpilih?.kode_rs ??
-      rumahSakit?.kode_rs ??
-      rumahSakitTerpilih?.kodeRS ??
-      rumahSakit?.kodeRS ??
-      rumahSakitTerpilih?.kode_rumah_sakit ??
-      rumahSakit?.kode_rumah_sakit ??
-      rumahSakitTerpilih?.kode ??
-      rumahSakit?.kode ??
-      "-";
-    const namaProvinsi =
-      rumahSakitTerpilih?.provinsi_nama ??
-      rumahSakit?.provinsi_nama ??
-      rumahSakitTerpilih?.provinsi?.nama ??
-      rumahSakit?.provinsi?.nama ??
-      "-";
-    const namaKabKota =
-      rumahSakitTerpilih?.kab_kota_nama ??
-      rumahSakit?.kab_kota_nama ??
-      rumahSakitTerpilih?.kabupaten_kota_nama ??
-      rumahSakit?.kabupaten_kota_nama ??
-      rumahSakitTerpilih?.kab_kota?.nama ??
-      rumahSakit?.kab_kota?.nama ??
-      rumahSakitTerpilih?.kabupaten_kota?.nama ??
-      rumahSakit?.kabupaten_kota?.nama ??
-      "-";
+      kodeRSHelper && kodeRSHelper !== "-" ? kodeRSHelper : rsId ?? "-";
     const namaBulan = formatNamaBulan(bulan);
     const tahunData = tahun || "-";
 
-    const titleAndMetadata = [
-      ["SIRS ONLINE RL 3.7 - SATUSEHAT"],
-      [], // Baris kosong
-      ["Periode Data"],
-      [`Bulan : ${namaBulan}`],
-      [`Tahun : ${tahunData}`],
-      [], // Baris kosong sebelum header tabel
-    ];
-
-    // 3. Header Tabel RL 3.7
-    const tableHeader = [
+    const headers = [
       "No",
       "Kode RS",
       "Rumah Sakit",
@@ -921,8 +918,7 @@ const handleDownloadExcelSatusehat = async () => {
 
     const safeDataList = Array.isArray(dataRLSatusehat) ? dataRLSatusehat : [];
 
-    // 4. Data Body Tabel RL 3.7
-    const tableBody = safeDataList.map((value, index) => [
+    const rows = safeDataList.map((value, index) => [
       index + 1,
       kodeRS,
       getNamaRumahSakit(
@@ -934,8 +930,8 @@ const handleDownloadExcelSatusehat = async () => {
           ? value.rumah_sakit
           : value?.rumah_sakit?.nama
       ),
-      namaProvinsi,
-      namaKabKota,
+      provinsi,
+      kabupatenKota,
       value?.nama_kegiatan || "-",
       Number(value?.rujukan_medis_rumah_sakit || 0),
       Number(value?.rujukan_medis_bidan || 0),
@@ -953,29 +949,24 @@ const handleDownloadExcelSatusehat = async () => {
       Number(value?.dirujuk || 0),
     ]);
 
-    const headerRowIndex = titleAndMetadata.length + 1; // Baris ke-7
-
-    // 6. Gabungkan Semua Baris
-    const fullBody = [
-      ...titleAndMetadata,
-      tableHeader,
-      ...tableBody,
-    ];
-
-    const mergeRanges = [
-      "A1:T1",
-      "A3:T3",
-      "A4:T4",
-      "A5:T5",
+    const titleAndMetadata = [
+      ["RL 3.7 NEONATAL, BAYI, BALITA- SATUSEHAT"],
+      [],
+      ["Periode Data"],
+      [`Bulan : ${namaBulan}`],
+      [`Tahun : ${tahunData}`],
+      [],
     ];
 
     await exportRowsToExcel({
       fileName: `rl37_satusehat_${tahunData}_${bulan}`,
       sheetName: "RL 3.7 SatuSehat",
-      rows: fullBody,
-      headerRowStart: headerRowIndex,
-      borderlessRows: [1, 3, 4, 5],
-      mergeRanges: mergeRanges,
+      rows: [...titleAndMetadata, headers, ...rows],
+      headerRowStart: titleAndMetadata.length + 1,
+      borderlessRows: [1, 2, 3, 4, 5, 6],
+      mergeRanges: ["A1:T1", "A3:T3", "A4:T4", "A5:T5"],
+      formatLikeRL32: true,
+      leftAlignedColumns: [2, 3, 4, 5, 6],
       columnWidths: [
         6,
         16,
@@ -984,16 +975,6 @@ const handleDownloadExcelSatusehat = async () => {
         24,
         35,
         ...Array(14).fill(18),
-      ],
-      // Penataan Alignment per Kolom
-      columnAlignments: [
-        "center", // Kolom 1 (No)
-        "center", // Kolom 2 (Kode RS)
-        "left",   // Kolom 3 (Rumah Sakit)
-        "left",   // Kolom 4 (Provinsi)
-        "left",   // Kolom 5 (Kabupaten/Kota)
-        "left",   // Kolom 6 (Jenis Kegiatan)
-        ...Array(14).fill("center"), // Kolom 7-20 (Seluruh Angka)
       ],
     });
   } catch (error) {

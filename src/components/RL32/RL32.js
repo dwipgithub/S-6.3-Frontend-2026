@@ -974,14 +974,19 @@ const RL32 = () => {
 const handleDownloadExcelSatusehat = async () => {
     setIsDownloading(true);
     try {
-      const { kodeRS, namaRS, provinsi, kabupatenKota } =
+      const rsId = getSelectedRsId();
+      const { kodeRS: kodeRSHelper, namaRS, provinsi, kabupatenKota } =
         getInfoRumahSakitExport({
           rumahSakit,
           daftarRumahSakit,
-          rsId: getSelectedRsId(),
+          rsId,
           namaUser: user?.satKerNama,
           filterLabels: filterLabelSatusehat,
         });
+      // Helper mengembalikan "-" bila kode RS tidak ditemukan,
+      // jadi dalam kasus itu pakai rsId.
+      const kodeRS =
+        kodeRSHelper && kodeRSHelper !== "-" ? kodeRSHelper : rsId ?? "-";
       const namaBulan = formatNamaBulan(bulan);
       const tahunData = tahun || "-";
 
@@ -991,12 +996,12 @@ const handleDownloadExcelSatusehat = async () => {
 
       // 2. Baris Judul & Metadata
       const titleAndMetadata = [
-        ["SIRS ONLINE RL 3.2 - SATUSEHAT"],
-        [], 
+        ["RL 3.2 RAWAT INAP - SATUSEHAT"],
+        [],
         ["Periode Data"],
         [`Bulan : ${namaBulan}`],
         [`Tahun: ${tahunData}`],
-        [], 
+        [],
       ];
 
       // 3. Header Tabel Multi-baris
@@ -1029,17 +1034,7 @@ const handleDownloadExcelSatusehat = async () => {
           "TT Awal",
         ],
         [
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
+          "", "", "", "", "", "", "", "", "", "", "",
           "<48 jam",
           ">=48 jam",
           "<48 jam",
@@ -1060,7 +1055,7 @@ const handleDownloadExcelSatusehat = async () => {
       // 4. Data Body Tabel
       const tableBody = dataRL32Satusehat.map((value, index) => [
         index + 1,
-        kodeRS,
+        kodeRS, // dari helper: kode RS asli, fallback ke rsId
         namaRS,
         provinsi,
         kabupatenKota,
@@ -1086,38 +1081,20 @@ const handleDownloadExcelSatusehat = async () => {
         value.alokasi_tempat_tidur_awal_bulan || 0,
       ]);
 
-      const lastDataRowIndex = titleAndMetadata.length + tableHeader.length + tableBody.length;
+      const lastDataRowIndex =
+        titleAndMetadata.length + tableHeader.length + tableBody.length;
 
       // 5. Masukkan semua baris ke worksheet
-      const fullRows = [
-        ...titleAndMetadata,
-        ...tableHeader,
-        ...tableBody,
-      ];
+      const fullRows = [...titleAndMetadata, ...tableHeader, ...tableBody];
       fullRows.forEach((row) => worksheet.addRow(row));
 
       // 6. Penggabungan Sel (Merge Cells)
       const mergeRanges = [
-        "A1:Y1",
-        "A3:Y3",
-        "A4:Y4",
-        "A5:Y5",
-        "A7:A8",
-        "B7:B8",
-        "C7:C8",
-        "D7:D8",
-        "E7:E8",
-        "F7:F8",
-        "G7:G8",
-        "H7:H8",
-        "I7:I8",
-        "J7:J8",
-        "K7:K8",
-        "L7:M7",
-        "N7:O7",
-        "P7:P8",
-        "Q7:Q8",
-        "R7:R8",
+        "A1:Y1", "A3:Y3", "A4:Y4", "A5:Y5",
+        "A7:A8", "B7:B8", "C7:C8", "D7:D8", "E7:E8", "F7:F8",
+        "G7:G8", "H7:H8", "I7:I8", "J7:J8", "K7:K8",
+        "L7:M7", "N7:O7",
+        "P7:P8", "Q7:Q8", "R7:R8",
         "S7:X7",
         "Y7:Y8",
       ];
@@ -1125,7 +1102,7 @@ const handleDownloadExcelSatusehat = async () => {
 
       // 7. Pengaturan Lebar Kolom
       worksheet.columns = [
-        { width: 8 },  // A
+        { width: 8 }, // A
         { width: 16 }, // B (Kode RS)
         { width: 30 }, // C (Rumah Sakit)
         { width: 22 }, // D (Provinsi)
@@ -1139,15 +1116,17 @@ const handleDownloadExcelSatusehat = async () => {
 
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber >= headerStartRow && rowNumber <= lastDataRowIndex) {
-          row.eachCell({ includeEmpty: true }, (cell) => {
-            // Posisi teks/angka persis di tengah sel
+          row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
             cell.alignment = {
               vertical: "middle",
-              horizontal: "center",
+              horizontal:
+                rowNumber === 7 || rowNumber === 8
+                  ? "center"
+                  : [2, 3, 4, 5, 6].includes(columnNumber)
+                    ? "left"
+                    : "right",
               wrapText: true,
             };
-
-            // Border seluruh sel tabel
             cell.border = {
               top: { style: "thin" },
               left: { style: "thin" },
@@ -1162,11 +1141,25 @@ const handleDownloadExcelSatusehat = async () => {
       worksheet.getRow(7).font = { bold: true };
       worksheet.getRow(8).font = { bold: true };
 
+      // 9. Judul: Font Calibri ukuran 16
+      const titleCell = worksheet.getCell("A1");
+      titleCell.font = { name: "Calibri", size: 16, bold: true };
+      titleCell.alignment = { vertical: "middle", horizontal: "left" };
+      worksheet.getRow(1).height = 24;
+
+      // 9b. Periode Data, Bulan, Tahun: Font Calibri ukuran 12
+      ["A3", "A4", "A5"].forEach((addr) => {
+        const cell = worksheet.getCell(addr);
+        cell.font = { name: "Calibri", size: 12, bold: true };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+
       // 10. Generate file dan unduh menggunakan file-saver (saveAs)
       const buffer = await workbook.xlsx.writeBuffer();
-      const fileName = `${namafileSatusehat || `rl32_satusehat_${tahunData}_${bulan}`}.xlsx`;
+      const fileName = `${
+        namafileSatusehat || `rl32_satusehat_${tahunData}_${bulan}`
+      }.xlsx`;
       saveAs(new Blob([buffer]), fileName);
-
     } catch (error) {
       console.error("Gagal mendownload Excel Satusehat:", error);
     } finally {

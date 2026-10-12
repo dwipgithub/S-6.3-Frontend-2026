@@ -41,6 +41,8 @@ const exportRowsToExcel = async ({
     columnWidths = [],
     mergeRanges = [],
     borderlessRows = [],
+    formatLikeRL32 = false,
+    leftAlignedColumns = [],
   }) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(sheetName);
@@ -85,6 +87,36 @@ const exportRowsToExcel = async ({
       horizontal: "center",
       wrapText: true,
     };
+  }
+
+  if (formatLikeRL32) {
+    worksheet.getCell("A1").font = { name: "Calibri", size: 16, bold: true };
+    worksheet.getCell("A1").alignment = {
+      vertical: "middle",
+      horizontal: "left",
+    };
+    worksheet.getRow(1).height = 24;
+
+    ["A3", "A4", "A5"].forEach((address) => {
+      const cell = worksheet.getCell(address);
+      cell.font = { name: "Calibri", size: 12, bold: true };
+      cell.alignment = { vertical: "middle", horizontal: "left" };
+    });
+
+    for (let rowNumber = headerRowStart; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+      worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+        cell.alignment = {
+          vertical: "middle",
+          horizontal:
+            rowNumber === headerRowStart
+              ? "center"
+              : leftAlignedColumns.includes(columnNumber)
+                ? "left"
+                : "right",
+          wrapText: true,
+        };
+      });
+    }
   }
 
   // 6. Generate dan simpan file Excel
@@ -1025,7 +1057,7 @@ const handleShow = () => {
       </Modal>
       <div className="row">
         <div className="col-md-12">
-          <div style={{ marginBottom: "10px" }}>
+          <div style={{ marginTop: "15px", marginBottom: "10px" }}>
             {user.jenisUserId === 4 ? (
               <>
                 <Link
@@ -1681,24 +1713,17 @@ const handleDownloadExcel = async () => {
   setIsDownloading(true);
 
   try {
+    const rsId = getSelectedRsId();
     const { kodeRS, namaRS, provinsi, kabupatenKota } =
       getInfoRumahSakitExport({
         rumahSakit,
-        rsId: getSelectedRsId(),
+        rsId,
         namaUser: user?.satKerNama,
         filterLabels: filterLabel,
       });
     const namaBulan = formatNamaBulan(bulan);
-    const titleAndMetadata = [
-      ["SIRS ONLINE RL 3.4 - SATUSEHAT"],
-      [],
-      ["Periode Data"],
-      [`Bulan : ${namaBulan}`],
-      [`Tahun : ${tahun}`],
-      [],
-    ];
-
-    const header = [
+    const tahunData = tahun || "-";
+    const headers = [
       "No.",
       "Kode RS",
       "Rumah Sakit",
@@ -1709,9 +1734,9 @@ const handleDownloadExcel = async () => {
       "Total",
     ];
 
-    const body = dataRL.map((item, idx) => [
+    const rows = (Array.isArray(dataRL) ? dataRL : []).map((item, idx) => [
       idx + 1,
-      kodeRS,
+      kodeRS && kodeRS !== "-" ? kodeRS : rsId ?? "-",
       namaRS,
       provinsi,
       kabupatenKota,
@@ -1720,39 +1745,25 @@ const handleDownloadExcel = async () => {
       item.total_visitors ?? 0,
     ]);
 
-    const fullBody = [
-      ...titleAndMetadata,
-      header,
-      ...body,
+    const titleAndMetadata = [
+      ["RL 3.4 KUNJUNGAN - SATUSEHAT"],
+      [],
+      ["Periode Data"],
+      [`Bulan : ${namaBulan}`],
+      [`Tahun : ${tahunData}`],
+      [],
     ];
 
     await exportRowsToExcel({
-      fileName: `RL_3_4_SatuSehat_${tahun}-${bulan}`,
+      fileName: `RL_3_4_SatuSehat_${tahunData}_${bulan}`,
       sheetName: "RL 3.4 SatuSehat",
-      rows: fullBody,
-
-      // Header tabel berada pada baris ke-7
+      rows: [...titleAndMetadata, headers, ...rows],
       headerRowStart: titleAndMetadata.length + 1,
-      // Merge title dan metadata dari kolom A sampai D
-      mergeRanges: [
-        "A1:H1", // Judul utama di baris 1
-        "A3:H3", // "Periode Data" di baris 3
-        "A4:H4", // Bulan di baris 4
-        "A5:H5", // Tahun di baris 5
-      ],
-      
       borderlessRows: [1, 2, 3, 4, 5, 6],
-
-      columnWidths: [
-        8,
-        16,
-        18,
-        22,
-        24,
-        18,
-        18,
-        18,
-      ],
+      mergeRanges: ["A1:H1", "A3:H3", "A4:H4", "A5:H5"],
+      formatLikeRL32: true,
+      leftAlignedColumns: [2, 3, 4, 5],
+      columnWidths: [8, 16, 30, 22, 24, 18, 18, 18],
     });
   } catch (error) {
     console.error(

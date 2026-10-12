@@ -872,7 +872,7 @@ const RL34 = () => {
       </Modal>
       <div className="row">
         <div className="col-md-12">
-          <div style={{ marginBottom: "10px" }}>
+          <div style={{ marginTop: "10px", marginBottom: "10px" }}>
             {user.jenisUserId === 4 ? (
               <Link
                 to={`/rl34/tambah/`}
