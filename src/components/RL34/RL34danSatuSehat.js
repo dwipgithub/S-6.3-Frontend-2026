@@ -23,6 +23,7 @@ import Table from "react-bootstrap/Table";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
+import CryptoJS from "crypto-js";
 import { getStatusSatset } from "../../api/status_satset.js";
 import { getJenisPengunjungName, getSafeDataRL } from "./rl34Helpers";
 import { formatNamaBulan } from "../../utils/formatNamaBulan";
@@ -1497,6 +1498,22 @@ function TabTwo() {
         const decoded = jwt_decode(response.data.accessToken);
         setExpire(decoded.exp);
       }
+      if (
+        ["post", "put", "patch", "delete"].includes(
+          config.method?.toLowerCase()
+        )
+      ) {
+        const timestamp = Date.now().toString();
+        const bodyString = JSON.stringify(config.data || {});
+        const signature = CryptoJS.HmacSHA256(
+          timestamp + bodyString,
+          process.env.REACT_APP_HMAC_SECRET
+        ).toString();
+
+        config.headers = config.headers || {};
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+      }
       return config;
     },
     (error) => Promise.reject(error)
@@ -1714,6 +1731,9 @@ const handleDownloadExcel = async () => {
 
   try {
     const rsId = getSelectedRsId();
+    if (!rsId || !tahun || !bulan) {
+      throw new Error("Rumah sakit dan periode wajib dipilih.");
+    }
     const { kodeRS, namaRS, provinsi, kabupatenKota } =
       getInfoRumahSakitExport({
         rumahSakit,
@@ -1721,55 +1741,40 @@ const handleDownloadExcel = async () => {
         namaUser: user?.satKerNama,
         filterLabels: filterLabel,
       });
-    const namaBulan = formatNamaBulan(bulan);
-    const tahunData = tahun || "-";
-    const headers = [
-      "No.",
-      "Kode RS",
-      "Rumah Sakit",
-      "Provinsi",
-      "Kabupaten/Kota",
-      "Pengunjung Baru",
-      "Pengunjung Lama",
-      "Total",
-    ];
-
-    const rows = (Array.isArray(dataRL) ? dataRL : []).map((item, idx) => [
-      idx + 1,
-      kodeRS && kodeRS !== "-" ? kodeRS : rsId ?? "-",
-      namaRS,
-      provinsi,
-      kabupatenKota,
-      item.new_visitors ?? 0,
-      item.returning_visitors ?? 0,
-      item.total_visitors ?? 0,
-    ]);
-
-    const titleAndMetadata = [
-      ["RL 3.4 KUNJUNGAN - SATUSEHAT"],
-      [],
-      ["Periode Data"],
-      [`Bulan : ${namaBulan}`],
-      [`Tahun : ${tahunData}`],
-      [],
-    ];
-
-    await exportRowsToExcel({
-      fileName: `RL_3_4_SatuSehat_${tahunData}_${bulan}`,
-      sheetName: "RL 3.4 SatuSehat",
-      rows: [...titleAndMetadata, headers, ...rows],
-      headerRowStart: titleAndMetadata.length + 1,
-      borderlessRows: [1, 2, 3, 4, 5, 6],
-      mergeRanges: ["A1:H1", "A3:H3", "A4:H4", "A5:H5"],
-      formatLikeRL32: true,
-      leftAlignedColumns: [2, 3, 4, 5],
-      columnWidths: [8, 16, 30, 22, 24, 18, 18, 18],
-    });
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+    const response = await axiosJWT.post(
+      "/apisirs6v2/rltigatitikempat/satusehat/excel",
+      {
+        rsId: String(rsId),
+        periode,
+        kodeRS: kodeRS && kodeRS !== "-" ? kodeRS : rsId,
+        namaRS,
+        provinsi,
+        kabupatenKota,
+      },
+      {
+        responseType: "blob",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      }
+    );
+    saveAs(
+      new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `RL_3_4_SatuSehat_${tahun}_${Number(bulan)}.xlsx`
+    );
   } catch (error) {
     console.error(
       "Gagal mendownload Excel RL 3.4 Satusehat:",
       error
     );
+    toast.error("Gagal mendownload Excel RL 3.4 Satusehat.", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
   } finally {
     setIsDownloading(false);
   }

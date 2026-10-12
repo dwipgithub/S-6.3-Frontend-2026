@@ -25,7 +25,6 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
-import { formatNamaBulan } from "../../utils/formatNamaBulan";
 import { getInfoRumahSakitExport } from "../../utils/getInfoRumahSakitExport";
 
 if (!toast.POSITION) {
@@ -1052,6 +1051,12 @@ const handleDownloadExcelSatusehat = async () => {
   try {
     // 2. Format Nama RS & Metadata
     const rsId = getSelectedRsId();
+    if (!rsId || !tahun || !bulan) {
+      toast.error("Rumah sakit dan periode wajib dipilih.", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      return;
+    }
     const { kodeRS: kodeRSHelper, namaRS, provinsi, kabupatenKota } =
       getInfoRumahSakitExport({
         rumahSakit,
@@ -1062,92 +1067,37 @@ const handleDownloadExcelSatusehat = async () => {
       });
     const kodeRS =
       kodeRSHelper && kodeRSHelper !== "-" ? kodeRSHelper : rsId ?? "-";
-    const namaBulan = formatNamaBulan(bulan);
-    const tahunData = tahun || "-";
-
-    const headers = [
-      "No",
-      "Kode RS",
-      "Rumah Sakit",
-      "Provinsi",
-      "Kabupaten/Kota",
-      "Kategori",
-      "Jenis Pelayanan",
-      "Total Pasien Rujukan",
-      "Total Pasien Non Rujukan",
-      "Tindak Lanjut Dirawat",
-      "Tindak Lanjut Dirujuk",
-      "Tindak Lanjut Pulang",
-      "Mati di IGD (L)",
-      "Mati di IGD (P)",
-      "DOA (L)",
-      "DOA (P)",
-      "Luka-luka (L)",
-      "Luka-luka (P)",
-      "False Emergency",
-    ];
-
-    const safeDataList = Array.isArray(dataRLSatusehat) ? dataRLSatusehat : [];
-
-    const rows = safeDataList.map((value, index) => [
-      index + 1,
-      kodeRS,
-      namaRS,
-      provinsi,
-      kabupatenKota,
-      value.kategori || "-",
-      value.jenis_pelayanan || "-",
-      Number(value.total_pasien_rujukan || 0),
-      Number(value.total_pasien_non_rujukan || 0),
-      Number(value.tindak_lanjut_dirawat || 0),
-      Number(value.tindak_lanjut_dirujuk || 0),
-      Number(value.tindak_lanjut_pulang || 0),
-      Number(value.mati_di_igd_laki_laki || 0),
-      Number(value.mati_di_igd_perempuan || 0),
-      Number(value.doa_laki_laki || 0),
-      Number(value.doa_perempuan || 0),
-      Number(value.luka_luka_laki_laki || 0),
-      Number(value.luka_luka_perempuan || 0),
-      Number(value.false_emergency || 0),
-    ]);
-
-    const titleAndMetadata = [
-      ["RL 3.3 RAWAT DARURAT - SATUSEHAT"],
-      [],
-      ["Periode Data"],
-      [`Bulan : ${namaBulan}`],
-      [`Tahun : ${tahunData}`],
-      [],
-    ];
-    const lastColumn = "S";
-
-    await exportRowsToExcel({
-      fileName: `rl33_satusehat_${tahunData}_${bulan}`,
-      sheetName: "RL 3.3 SatuSehat",
-      rows: [...titleAndMetadata, headers, ...rows],
-      headerRowStart: titleAndMetadata.length + 1,
-      borderlessRows: [1, 2, 3, 4, 5, 6],
-      mergeRanges: [
-        `A1:${lastColumn}1`,
-        `A3:${lastColumn}3`,
-        `A4:${lastColumn}4`,
-        `A5:${lastColumn}5`,
-      ],
-      formatLikeRL32: true,
-      leftAlignedColumns: [2, 3, 4, 5, 6, 7],
-      columnWidths: [
-        6,
-        16,
-        30,
-        22,
-        24,
-        18,
-        30,
-        ...Array(12).fill(18),
-      ],
-    });
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+    const response = await axiosJWT.post(
+      "/apisirs6v2/rltigatitiktiga/satusehat/excel",
+      {
+        rsId: String(rsId),
+        periode,
+        kodeRS,
+        namaRS,
+        provinsi,
+        kabupatenKota,
+      },
+      {
+        responseType: "blob",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      }
+    );
+    saveAs(
+      new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `rl33_satusehat_${tahun}_${bulan}.xlsx`
+    );
   } catch (error) {
     console.error("Gagal mendownload Excel Satusehat:", error);
+    toast.error("Gagal mendownload Excel Satusehat RL 3.3.", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
   } finally {
     setIsDownloading(false);
   }

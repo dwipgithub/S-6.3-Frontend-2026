@@ -20,13 +20,10 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "react-bootstrap/Modal";
 import { Spinner } from "react-bootstrap";
-import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { downloadExcel, DownloadTableExcel } from "react-export-table-to-excel";
 import { useCSRFTokenContext } from "../Context/CSRFTokenContext";
 import CryptoJS from "crypto-js";
-import { formatNamaBulan } from "../../utils/formatNamaBulan";
-import { getNamaRumahSakit } from "../../utils/getNamaRumahSakit";
 import { getInfoRumahSakitExport } from "../../utils/getInfoRumahSakitExport";
 
 const RL37 = () => {
@@ -71,97 +68,10 @@ const RL37 = () => {
   const [submittedBulanSatusehat, setSubmittedBulanSatusehat] = useState(null);
   const [submittedTahunSatusehat, setSubmittedTahunSatusehat] = useState(null);
   const [submittedRumahSakitSatusehat, setSubmittedRumahSakitSatusehat] = useState(null);
-  const { CSRFToken } = useCSRFTokenContext;
+  const { CSRFToken } = useCSRFTokenContext();
   const showAksi = user?.jenisUserId === 4;
   const syncCooldownMinutes = 5;
   const syncCooldownMs = syncCooldownMinutes * 60 * 1000;
-
-      const exportRowsToExcel = async ({
-        fileName,
-        sheetName,
-        rows,
-        headerRowStart = 1,
-        headerRowEnd = headerRowStart,
-        columnWidths = [],
-        mergeRanges = [],
-        borderlessRows = [],
-        formatLikeRL32 = false,
-        leftAlignedColumns = [],
-      }) => {
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet(sheetName);
-    
-        rows.forEach((row) => worksheet.addRow(row));
-        columnWidths.forEach((width, index) => {
-          worksheet.getColumn(index + 1).width = width;
-        });
-        mergeRanges.forEach((range) => worksheet.mergeCells(range));
-    
-        worksheet.eachRow({ includeEmpty: true }, (row) => {
-          row.eachCell({ includeEmpty: true }, (cell) => {
-            cell.border = {
-              top: { style: "thin", color: { argb: "FF000000" } },
-              left: { style: "thin", color: { argb: "FF000000" } },
-              bottom: { style: "thin", color: { argb: "FF000000" } },
-              right: { style: "thin", color: { argb: "FF000000" } },
-            };
-            cell.alignment = { vertical: "middle", wrapText: true };
-          });
-        });
-    
-        borderlessRows.forEach((rowNumber) => {
-          worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
-            cell.border = {};
-          });
-        });
-    
-        for (let rowNumber = headerRowStart; rowNumber <= headerRowEnd; rowNumber += 1) {
-          worksheet.getRow(rowNumber).font = { bold: true };
-          worksheet.getRow(rowNumber).alignment = {
-            vertical: "middle",
-            horizontal: "center",
-            wrapText: true,
-          };
-        }
-
-        if (formatLikeRL32) {
-          worksheet.getCell("A1").font = { name: "Calibri", size: 16, bold: true };
-          worksheet.getCell("A1").alignment = {
-            vertical: "middle",
-            horizontal: "left",
-          };
-          worksheet.getRow(1).height = 24;
-
-          ["A3", "A4", "A5"].forEach((address) => {
-            const cell = worksheet.getCell(address);
-            cell.font = { name: "Calibri", size: 12, bold: true };
-            cell.alignment = { vertical: "middle", horizontal: "left" };
-          });
-
-          for (let rowNumber = headerRowStart; rowNumber <= worksheet.rowCount; rowNumber += 1) {
-            worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell, columnNumber) => {
-              cell.alignment = {
-                vertical: "middle",
-                horizontal:
-                  rowNumber === headerRowStart
-                    ? "center"
-                    : leftAlignedColumns.includes(columnNumber)
-                      ? "left"
-                      : "right",
-                wrapText: true,
-              };
-            });
-          }
-        }
-    
-        const buffer = await workbook.xlsx.writeBuffer();
-        saveAs(
-          new Blob([buffer], {
-            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          }),
-          `${fileName}.xlsx`
-        );
-      };
 
   useEffect(() => {
     refreshToken();
@@ -867,7 +777,6 @@ const RL37 = () => {
   };
 
 const handleDownloadExcelSatusehat = async () => {
-  // 1. Validasi filter
   if (!hasFilteredSatusehat) {
     toast("Terapkan filter terlebih dahulu", {
       type: "error",
@@ -880,6 +789,10 @@ const handleDownloadExcelSatusehat = async () => {
 
   try {
     const rsId = getSelectedRsId();
+    if (!rsId || !tahun || !bulan) {
+      throw new Error("Rumah sakit dan periode wajib dipilih.");
+    }
+
     const { kodeRS: kodeRSHelper, namaRS, provinsi, kabupatenKota } =
       getInfoRumahSakitExport({
         rumahSakit,
@@ -890,95 +803,37 @@ const handleDownloadExcelSatusehat = async () => {
       });
     const kodeRS =
       kodeRSHelper && kodeRSHelper !== "-" ? kodeRSHelper : rsId ?? "-";
-    const namaBulan = formatNamaBulan(bulan);
-    const tahunData = tahun || "-";
-
-    const headers = [
-      "No",
-      "Kode RS",
-      "Rumah Sakit",
-      "Provinsi",
-      "Kabupaten/Kota",
-      "Jenis Kegiatan",
-      "Rujukan Medis RS",
-      "Rujukan Medis Bidan",
-      "Rujukan Medis Puskesmas",
-      "Rujukan Medis Faskes Lainnya",
-      "Rujukan Medis Hidup",
-      "Rujukan Medis Mati",
-      "Rujukan Medis Total",
-      "Rujukan Non Medis Hidup",
-      "Rujukan Non Medis Mati",
-      "Rujukan Non Medis Total",
-      "Non Rujukan Hidup",
-      "Non Rujukan Mati",
-      "Non Rujukan Total",
-      "Dirujuk",
-    ];
-
-    const safeDataList = Array.isArray(dataRLSatusehat) ? dataRLSatusehat : [];
-
-    const rows = safeDataList.map((value, index) => [
-      index + 1,
-      kodeRS,
-      getNamaRumahSakit(
+    const periode = `${tahun}-${String(bulan).padStart(2, "0")}`;
+    const response = await axiosJWT.post(
+      "/apisirs6v2/rltigatitiktujuh/satusehat/excel",
+      {
+        rsId: String(rsId),
+        periode,
+        kodeRS,
         namaRS,
-        value?.nama_rumah_sakit,
-        value?.nama_rs,
-        value?.namaRs,
-        typeof value?.rumah_sakit === "string"
-          ? value.rumah_sakit
-          : value?.rumah_sakit?.nama
-      ),
-      provinsi,
-      kabupatenKota,
-      value?.nama_kegiatan || "-",
-      Number(value?.rujukan_medis_rumah_sakit || 0),
-      Number(value?.rujukan_medis_bidan || 0),
-      Number(value?.rujukan_medis_puskesmas || 0),
-      Number(value?.rujukan_medis_faskes_lainnya || 0),
-      Number(value?.rujukan_medis_jumlah_hidup || 0),
-      Number(value?.rujukan_medis_jumlah_mati || 0),
-      Number(value?.rujukan_medis_total || 0),
-      Number(value?.rujukan_non_medis_jumlah_hidup || 0),
-      Number(value?.rujukan_non_medis_jumlah_mati || 0),
-      Number(value?.rujukan_non_medis_total || 0),
-      Number(value?.non_rujukan_jumlah_hidup || 0),
-      Number(value?.non_rujukan_jumlah_mati || 0),
-      Number(value?.non_rujukan_total || 0),
-      Number(value?.dirujuk || 0),
-    ]);
-
-    const titleAndMetadata = [
-      ["RL 3.7 NEONATAL, BAYI, BALITA- SATUSEHAT"],
-      [],
-      ["Periode Data"],
-      [`Bulan : ${namaBulan}`],
-      [`Tahun : ${tahunData}`],
-      [],
-    ];
-
-    await exportRowsToExcel({
-      fileName: `rl37_satusehat_${tahunData}_${bulan}`,
-      sheetName: "RL 3.7 SatuSehat",
-      rows: [...titleAndMetadata, headers, ...rows],
-      headerRowStart: titleAndMetadata.length + 1,
-      borderlessRows: [1, 2, 3, 4, 5, 6],
-      mergeRanges: ["A1:T1", "A3:T3", "A4:T4", "A5:T5"],
-      formatLikeRL32: true,
-      leftAlignedColumns: [2, 3, 4, 5, 6],
-      columnWidths: [
-        6,
-        16,
-        30,
-        22,
-        24,
-        35,
-        ...Array(14).fill(18),
-      ],
-    });
+        provinsi,
+        kabupatenKota,
+      },
+      {
+        responseType: "blob",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "XSRF-TOKEN": CSRFToken,
+        },
+      }
+    );
+    saveAs(
+      new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `rl37_satusehat_${tahun}_${Number(bulan)}.xlsx`
+    );
   } catch (error) {
     console.error("Gagal mendownload Excel Satusehat RL 3.7:", error);
+    toast.error("Gagal mendownload Excel Satusehat RL 3.7.", {
+      position: toast.POSITION.TOP_RIGHT,
+    });
   } finally {
     setIsDownloading(false);
   }
