@@ -20,7 +20,6 @@ import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 import { DownloadTableExcel } from "react-export-table-to-excel";
 import { getStatusSatset } from "../../api/status_satset.js";
-import { getDataSatusehat } from "../../api/rlLimasatuSatusehat.js";
 import { FaSlidersH, FaDownload, FaSync } from "react-icons/fa";
 import Spinner from "react-bootstrap/Spinner";
 import CryptoJS from "crypto-js";
