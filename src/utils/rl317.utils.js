@@ -1,6 +1,12 @@
 import * as XLSX from "xlsx-js-style";
 import { MONTHS } from "../constants/date";
 
+// ======================================================
+// PERHITUNGAN TOTAL
+// Dipertahankan untuk kompatibilitas fungsi lain.
+// Tidak digunakan untuk menambahkan baris TOTAL Excel.
+// ======================================================
+
 export const calculateTotals = (data = []) => {
   return data.reduce(
     (acc, item) => {
@@ -16,10 +22,18 @@ export const calculateTotals = (data = []) => {
   );
 };
 
+// ======================================================
+// FORMAT TANGGAL
+// ======================================================
+
 export const formatDate = (dateStr) => {
   if (!dateStr) return "-";
 
   const date = new Date(dateStr);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
 
   const day = date.getDate();
 
@@ -27,7 +41,6 @@ export const formatDate = (dateStr) => {
     MONTHS.find((m) => m.value === String(date.getMonth() + 1))?.label ?? "-";
 
   const year = date.getFullYear();
-
   const hour = String(date.getHours()).padStart(2, "0");
   const minute = String(date.getMinutes()).padStart(2, "0");
   const second = String(date.getSeconds()).padStart(2, "0");
@@ -35,118 +48,199 @@ export const formatDate = (dateStr) => {
   return `${day} ${month} ${year}, ${hour}.${minute}.${second} WIB`;
 };
 
-export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
-  let totalItem = 0;
-  let totalItemRS = 0;
+// ======================================================
+// FORMAT TAHUN LAPORAN
+// ======================================================
 
-  // ==========================================
-  // DATA EXCEL
-  // ==========================================
+const getTahunLaporan = (tahun) => {
+  if (!tahun) return "-";
+
+  const value = String(tahun).trim();
+
+  if (/^\d{4}$/.test(value)) {
+    return value;
+  }
+
+  if (/^\d{4}-\d{2}$/.test(value)) {
+    return value.split("-")[0];
+  }
+
+  return value;
+};
+
+// ======================================================
+// HELPER FIELD
+// ======================================================
+
+const getValue = (...values) =>
+  values.find(
+    (value) =>
+      value !== undefined && value !== null && String(value).trim() !== "",
+  ) ?? "-";
+
+const getNamaReferensi = (value) => {
+  if (value && typeof value === "object") {
+    return getValue(value.nama, value.name, value.label);
+  }
+
+  return getValue(value);
+};
+
+// ======================================================
+// EXPORT RL 3.17 EXCEL SATUSEHAT
+// LAPORAN TAHUNAN
+// ======================================================
+
+export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
+  const tahunLaporan = getTahunLaporan(tahun);
+
+  // ======================================================
+  // HEADER EXCEL
+  // ======================================================
 
   const excelData = [
-    ["SIRS ONLINE RL 3.17 Farmasi Pengadaan Obat - SATUSEHAT"],
+    ["RL 3.17 Farmasi Pengadaan Obat - SATUSEHAT"],
     [],
     ["Periode Data"],
-    [`Tahun : ${tahun}`],
+    [`Tahun : ${tahunLaporan}`],
     [],
     [
-      "No",
+      "No.",
+      "Kode RS",
       "Rumah Sakit",
+      "Provinsi",
+      "Kabupaten/Kota",
       "Golongan Obat",
       "Jumlah Item Obat",
       "Jumlah Item Obat yang Tersedia di Rumah Sakit",
     ],
   ];
 
-  // ==========================================
-  // DATA
-  // ==========================================
+  // ======================================================
+  // DATA RUMAH SAKIT
+  // ======================================================
 
   data.forEach((item, index) => {
+    // Kode RS
+    const kodeRS = getValue(
+      item.kodeRs,
+      item.kode_rs,
+      item.kodeRS,
+      item.kd_rs,
+      item.kode_rumah_sakit,
+      item.rumah_sakit?.kode_rs,
+      item.organization?.kode_rs,
+    );
+
+    // Nama rumah sakit
+    const namaRumahSakit = getValue(
+      item.namaRs,
+      item.organization_name,
+      item.nama_rumah_sakit,
+      item.nama_rs,
+      item.rs_name,
+      item.rumah_sakit?.nama,
+      item.rumah_sakit?.nama_rs,
+      typeof item.rumah_sakit === "string" ? item.rumah_sakit : undefined,
+    );
+
+    // Provinsi
+    const provinsi = getNamaReferensi(
+      getValue(
+        item.provinsiNama,
+        item.provinsi_nama,
+        item.nama_provinsi,
+        item.provinsi_name,
+        item.provinsi?.nama,
+        item.provinsi?.name,
+        typeof item.provinsi === "string" ? item.provinsi : undefined,
+      ),
+    );
+
+    // Kabupaten/Kota
+    const kabupatenKota = getNamaReferensi(
+      getValue(
+        item.kabKotaNama,
+        item.kab_kota_nama,
+        item.kabupatenKotaNama,
+        item.kabupaten_kota_nama,
+        item.nama_kabupaten_kota,
+        item.nama_kabupaten,
+        item.nama_kota,
+        item.kabupaten_kota_name,
+        item.kabupaten_kota?.nama,
+        item.kabupaten_kota?.name,
+        item.kabupaten?.nama,
+        item.kabupaten?.name,
+        item.kota?.nama,
+        item.kota?.name,
+        typeof item.kabupaten_kota === "string"
+          ? item.kabupaten_kota
+          : undefined,
+        typeof item.kabupaten === "string" ? item.kabupaten : undefined,
+        typeof item.kota === "string" ? item.kota : undefined,
+      ),
+    );
+
+    // Golongan obat
+    const namaGolonganObat = getValue(
+      item.nama_golongan_obat,
+      item.golongan_obat?.nama,
+      item.golongan_obat?.label,
+      item.rl_tiga_titik_tujuh_belas_golongan_obat?.nama,
+    );
+
     const jumlahItem = Number(item.jumlah_item_obat) || 0;
-
     const jumlahItemRS = Number(item.jumlah_item_obat_rs) || 0;
-
-    totalItem += jumlahItem;
-    totalItemRS += jumlahItemRS;
-
-    const namaRumahSakit =
-      item.organization_name ??
-      item.nama_rumah_sakit ??
-      item.rumah_sakit ??
-      item.nama_rs ??
-      item.rs_name ??
-      "-";
-
-    const namaGolonganObat =
-      item.nama_golongan_obat ??
-      item.rl_tiga_titik_tujuh_belas_golongan_obat?.nama ??
-      "-";
 
     excelData.push([
       index + 1,
+      kodeRS,
       namaRumahSakit,
+      provinsi,
+      kabupatenKota,
       namaGolonganObat,
       jumlahItem,
       jumlahItemRS,
     ]);
   });
 
-  // ==========================================
-  // TOTAL
-  // ==========================================
-
-  const totalRow = excelData.length;
-
-  excelData.push(["TOTAL", "", "", totalItem, totalItemRS]);
-
-  // ==========================================
+  // ======================================================
   // WORKSHEET
-  // ==========================================
+  // ======================================================
 
   const worksheet = XLSX.utils.aoa_to_sheet(excelData);
 
-  // ==========================================
+  // ======================================================
   // MERGE JUDUL
-  // A1:E1
-  // ==========================================
+  // A1:H1
+  // ======================================================
 
   worksheet["!merges"] = [
-    // ==========================================
-    // JUDUL
-    // A1:E1
-    // ==========================================
     {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: 4 },
-    },
-
-    // ==========================================
-    // FOOTER TOTAL
-    // No. + Rumah Sakit + Golongan Obat
-    // A:C
-    // ==========================================
-    {
-      s: { r: totalRow, c: 0 },
-      e: { r: totalRow, c: 2 },
+      e: { r: 0, c: 7 },
     },
   ];
 
-  // ==========================================
+  // ======================================================
   // LEBAR KOLOM
-  // ==========================================
+  // ======================================================
 
   worksheet["!cols"] = [
-    { wch: 8 }, // No
-    { wch: 30 }, // Rumah Sakit
+    { wch: 8 }, // No.
+    { wch: 16 }, // Kode RS
+    { wch: 32 }, // Rumah Sakit
+    { wch: 22 }, // Provinsi
+    { wch: 25 }, // Kabupaten/Kota
     { wch: 40 }, // Golongan Obat
     { wch: 20 }, // Jumlah Item Obat
-    { wch: 45 }, // Jumlah Item Obat RS
+    { wch: 45 }, // Jumlah Item Obat yang Tersedia di RS
   ];
 
-  // ==========================================
+  // ======================================================
   // BORDER
-  // ==========================================
+  // ======================================================
 
   const thinBorder = {
     top: {
@@ -167,48 +261,56 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
     },
   };
 
-  // ==========================================
-  // HEADER TABEL
-  // ROW 6
-  // ==========================================
+  // ======================================================
+  // STYLE HEADER TABEL
+  // Baris Excel 6 (index 5)
+  // Semua header rata tengah
+  // ======================================================
 
-  for (let col = 0; col <= 4; col++) {
+  const headerRow = 5;
+
+  for (let col = 0; col <= 7; col++) {
     const cellAddress = XLSX.utils.encode_cell({
-      r: 5,
+      r: headerRow,
       c: col,
     });
 
-    if (worksheet[cellAddress]) {
-      worksheet[cellAddress].s = {
-        font: {
-          name: "Calibri",
-          sz: 12,
-          bold: true,
-        },
-        alignment: {
-          horizontal: "center",
-          vertical: "center",
-          wrapText: true,
-        },
-        border: thinBorder,
-      };
-    }
+    if (!worksheet[cellAddress]) continue;
+
+    worksheet[cellAddress].s = {
+      font: {
+        name: "Calibri",
+        sz: 12,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+        wrapText: true,
+      },
+      border: thinBorder,
+    };
   }
 
-  // ==========================================
-  // DATA TABEL
-  // ==========================================
+  // ======================================================
+  // STYLE DATA TABEL
+  // Tidak ada baris TOTAL
+  //
+  // No.             : rata tengah
+  // Kolom teks      : rata kiri
+  // Dua kolom angka : rata kanan
+  // ======================================================
 
-  for (let row = 6; row < totalRow; row++) {
-    for (let col = 0; col <= 4; col++) {
+  const dataStartRow = headerRow + 1;
+
+  for (let row = dataStartRow; row < excelData.length; row++) {
+    for (let col = 0; col <= 7; col++) {
       const cellAddress = XLSX.utils.encode_cell({
         r: row,
         c: col,
       });
 
-      if (!worksheet[cellAddress]) {
-        continue;
-      }
+      if (!worksheet[cellAddress]) continue;
 
       worksheet[cellAddress].s = {
         font: {
@@ -216,9 +318,7 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
           sz: 12,
         },
         alignment: {
-          // No dan angka berada di tengah
-          // Rumah Sakit dan Golongan Obat kiri
-          horizontal: col === 0 || col >= 3 ? "center" : "left",
+          horizontal: col === 0 ? "center" : col >= 6 ? "right" : "left",
           vertical: "center",
           wrapText: true,
         },
@@ -227,36 +327,9 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
     }
   }
 
-  // ==========================================
-  // TOTAL
-  // ==========================================
-
-  for (let col = 0; col <= 4; col++) {
-    const cellAddress = XLSX.utils.encode_cell({
-      r: totalRow,
-      c: col,
-    });
-
-    if (worksheet[cellAddress]) {
-      worksheet[cellAddress].s = {
-        font: {
-          name: "Calibri",
-          sz: 12,
-          bold: true,
-        },
-        alignment: {
-          horizontal: "center",
-          vertical: "center",
-          wrapText: true,
-        },
-        border: thinBorder,
-      };
-    }
-  }
-
-  // ==========================================
-  // JUDUL
-  // ==========================================
+  // ======================================================
+  // STYLE JUDUL
+  // ======================================================
 
   worksheet["A1"].s = {
     font: {
@@ -270,58 +343,50 @@ export const exportRL317ExcelSatuSehat = (data = [], tahun) => {
     },
   };
 
-  // ==========================================
-  // PERIODE DATA
-  // ==========================================
+  // ======================================================
+  // STYLE PERIODE DATA
+  // ======================================================
 
-  worksheet["A3"].s = {
-    font: {
-      name: "Calibri",
-      sz: 12,
-      bold: true,
-    },
-    alignment: {
-      horizontal: "left",
-      vertical: "center",
-    },
-  };
+  ["A3", "A4"].forEach((cellAddress) => {
+    if (!worksheet[cellAddress]) return;
 
-  worksheet["A4"].s = {
-    font: {
-      name: "Calibri",
-      sz: 12,
-      bold: true,
-    },
-    alignment: {
-      horizontal: "left",
-      vertical: "center",
-    },
-  };
+    worksheet[cellAddress].s = {
+      font: {
+        name: "Calibri",
+        sz: 12,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "left",
+        vertical: "center",
+      },
+    };
+  });
 
-  // ==========================================
+  // ======================================================
   // TINGGI BARIS
-  // ==========================================
+  // ======================================================
 
   worksheet["!rows"] = [
-    { hpt: 25 }, // Row 1
+    { hpt: 25 }, // Row 1 - Judul
     { hpt: 10 }, // Row 2
-    { hpt: 20 }, // Row 3
-    { hpt: 20 }, // Row 4
-    { hpt: 15 }, // Row 5
-    { hpt: 45 }, // Row 6
+    { hpt: 20 }, // Row 3 - Periode Data
+    { hpt: 20 }, // Row 4 - Tahun
+    { hpt: 10 }, // Row 5
+    { hpt: 45 }, // Row 6 - Header
   ];
 
-  // ==========================================
+  // ======================================================
   // WORKBOOK
-  // ==========================================
+  // ======================================================
 
   const workbook = XLSX.utils.book_new();
 
   XLSX.utils.book_append_sheet(workbook, worksheet, "Farmasi Pengadaan Obat");
 
-  // ==========================================
-  // EXPORT
-  // ==========================================
+  // ======================================================
+  // EXPORT EXCEL
+  // ======================================================
 
-  XLSX.writeFile(workbook, `RL317-Farmasi Pengadaan Obat-${tahun}.xlsx`);
+  XLSX.writeFile(workbook, `RL317-Farmasi Pengadaan Obat-${tahunLaporan}.xlsx`);
 };
