@@ -1218,7 +1218,7 @@ function TabTwo() {
       let childIndex = 0;
 
       const namaBulanSelected = daftarBulan.find((b) => b.value === bulan)?.key || bulan;
-      const namaRS = rumahSakit?.nama || "-";
+      // const namaRS = rumahSakit?.nama || "-";
 
       let rowsHTML = "";
 
@@ -1227,12 +1227,18 @@ function TabTwo() {
         const { isTotal, text, isParent } = parseLabel(rawLabel);
 
         let noUrut = "";
-        let rsValue = namaRS;
+        let kodeValue = v.kode_faskes;
+        let rsValue = v.nama_rs;
+        let provValue = v.provinsi;
+        let kabkotValue = v.kabupaten_kota;
         let isBoldRow = false;
 
         if (isTotal) {
           noUrut = "99";
+          kodeValue = "";
           rsValue = "";
+          provValue = "";
+          kabkotValue = "";
           isBoldRow = true;
         } else if (isParent) {
           parentIndex += 1;
@@ -1248,10 +1254,13 @@ function TabTwo() {
 
         rowsHTML += `
           <tr style="${fontStyle}">
-            <td style="border: 1px solid #000; text-align: center;">${noUrut}</td>
-            <td style="border: 1px solid #000; text-align: left;">${rsValue}</td>
-            <td style="border: 1px solid #000; text-align: left;">${text}</td>
-            <td style="border: 1px solid #000; text-align: right;">${v.jumlah || 0}</td>
+            <td style="border: 0.5pt solid #000; text-align: center;">${noUrut}</td>
+            <td style="border: 0.5pt solid #000; text-align: left;">${kodeValue}</td>
+            <td style="border: 0.5pt solid #000; text-align: left;">${rsValue}</td>
+            <td style="border: 0.5pt solid #000; text-align: left;">${provValue}</td>
+            <td style="border: 0.5pt solid #000; text-align: left;">${kabkotValue}</td>
+            <td style="border: 0.5pt solid #000; text-align: left;">${text}</td>
+            <td style="border: 0.5pt solid #000; text-align: right;">${v.jumlah || 0}</td>
           </tr>
         `;
       });
@@ -1277,18 +1286,21 @@ function TabTwo() {
         </head>
         <body>
           <table>
-            <tr><td colspan="4" style="font-weight: bold;">SIRS ONLINE RL 3.9 - SATUSEHAT</td></tr>
+            <tr><td colspan="4" style="font-weight: bold;">RL 3.9 Radiologi - SATUSEHAT</td></tr>
             <tr></tr>
             <tr><td colspan="4" style="font-weight: bold;">Periode Data</td></tr>
             <tr><td colspan="4">Bulan : ${namaBulanSelected}</td></tr>
             <tr><td colspan="4">Tahun: ${tahun}</td></tr>
             <tr></tr>
             <thead>
-              <tr style="font-weight: bold; background-color: #f2f2f2;">
-                <td style="border: 1px solid #000; text-align: center; width: 60px;">No</td>
-                <td style="border: 1px solid #000; text-align: left; width: 220px;">Rumah Sakit</td>
-                <td style="border: 1px solid #000; text-align: left; width: 350px;">Jenis Kegiatan</td>
-                <td style="border: 1px solid #000; text-align: right; width: 100px;">Jumlah</td>
+              <tr style="font-weight: bold;">
+                <td style="border: 0.5pt solid #000; text-align: center;">No</td>
+                <td style="border: 0.5pt solid #000; text-align: left;">Kode RS</td>
+                <td style="border: 0.5pt solid #000; text-align: left;">Nama RS</td>
+                <td style="border: 0.5pt solid #000; text-align: left;">Provinsi</td>
+                <td style="border: 0.5pt solid #000; text-align: left;">Kab/Kota</td>
+                <td style="border: 0.5pt solid #000; text-align: left;">Jenis Kegiatan</td>
+                <td style="border: 0.5pt solid #000; text-align: right;">Jumlah</td>
               </tr>
             </thead>
             <tbody>
@@ -1303,7 +1315,7 @@ function TabTwo() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `RL3.9_SATUSEHAT_${rumahSakit?.id || ""}_${tahun}-${bulan}.xls`;
+      a.download = `RL_3.9_SATUSEHAT_${tahun}-${bulan}.xls`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
