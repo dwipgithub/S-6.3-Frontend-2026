@@ -2,13 +2,17 @@ import * as XLSX from "xlsx-js-style";
 import { MONTHS } from "../constants/date";
 
 // ======================================================
-// FORMAT DATE
+// FORMAT TANGGAL
 // ======================================================
 
 export const formatDate = (dateStr) => {
   if (!dateStr) return "-";
 
   const date = new Date(dateStr);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
 
   const day = date.getDate();
 
@@ -25,7 +29,107 @@ export const formatDate = (dateStr) => {
 };
 
 // ======================================================
-// CALCULATE TOTALS
+// NORMALISASI PERIODE MENJADI YYYY-MM
+// ======================================================
+
+const formatPeriode = (periode) => {
+  if (!periode) return "-";
+
+  const value = String(periode).trim();
+
+  if (/^\d{4}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  if (value.includes("-")) {
+    const [namaBulan, tahun] = value.split("-");
+
+    const bulan = MONTHS.find(
+      (m) => m.label.toLowerCase() === namaBulan.trim().toLowerCase(),
+    );
+
+    if (bulan && tahun) {
+      return `${tahun}-${String(bulan.value).padStart(2, "0")}`;
+    }
+  }
+
+  return value;
+};
+
+// ======================================================
+// MENDAPATKAN TAHUN DAN BULAN
+// ======================================================
+
+const getPeriodeInfo = (periode) => {
+  const periodeFormatted = formatPeriode(periode);
+
+  let tahun = "-";
+  let bulan = "-";
+
+  if (/^\d{4}-\d{2}$/.test(periodeFormatted)) {
+    const [tahunValue, bulanValue] = periodeFormatted.split("-");
+
+    tahun = tahunValue;
+
+    bulan =
+      MONTHS.find((m) => String(m.value).padStart(2, "0") === bulanValue)
+        ?.label ?? "-";
+
+    return {
+      periodeFormatted,
+      tahun,
+      bulan,
+    };
+  }
+
+  if (String(periode ?? "").includes("-")) {
+    const [namaBulan, tahunValue] = String(periode).split("-");
+
+    tahun = tahunValue;
+
+    bulan =
+      MONTHS.find(
+        (m) => m.label.toLowerCase() === namaBulan.trim().toLowerCase(),
+      )?.label ?? "-";
+
+    return {
+      periodeFormatted,
+      tahun,
+      bulan,
+    };
+  }
+
+  if (/^\d{4}$/.test(String(periode ?? ""))) {
+    tahun = String(periode);
+  }
+
+  return {
+    periodeFormatted,
+    tahun,
+    bulan,
+  };
+};
+
+// ======================================================
+// HELPER FIELD
+// ======================================================
+
+const getValue = (...values) =>
+  values.find(
+    (value) =>
+      value !== undefined && value !== null && String(value).trim() !== "",
+  ) ?? "-";
+
+const getNamaReferensi = (value) => {
+  if (value && typeof value === "object") {
+    return getValue(value.nama, value.name, value.label);
+  }
+
+  return getValue(value);
+};
+
+// ======================================================
+// PERHITUNGAN TOTAL
 // ======================================================
 
 export const calculateTotals = (data = []) => {
@@ -50,117 +154,30 @@ export const calculateTotals = (data = []) => {
 };
 
 // ======================================================
-// NORMALISASI PERIODE MENJADI YYYY-MM
-// ======================================================
-
-const formatPeriode = (periode) => {
-  if (!periode) return "-";
-
-  // Jika sudah YYYY-MM
-  if (/^\d{4}-\d{2}$/.test(periode)) {
-    return periode;
-  }
-
-  // Jika format "Juni-2026"
-  if (periode.includes("-")) {
-    const [namaBulan, tahun] = periode.split("-");
-
-    const bulan = MONTHS.find(
-      (m) => m.label.toLowerCase() === namaBulan.toLowerCase(),
-    );
-
-    if (bulan) {
-      return `${tahun}-${String(bulan.value).padStart(2, "0")}`;
-    }
-  }
-
-  return periode;
-};
-
-// ======================================================
-// MENDAPATKAN TAHUN DAN BULAN
-// ======================================================
-
-const getPeriodeInfo = (periode) => {
-  const periodeFormatted = formatPeriode(periode);
-
-  let tahun = "-";
-  let bulan = "-";
-
-  // Format YYYY-MM
-  if (/^\d{4}-\d{2}$/.test(periodeFormatted)) {
-    const [tahunValue, bulanValue] = periodeFormatted.split("-");
-
-    tahun = tahunValue;
-
-    bulan =
-      MONTHS.find((m) => String(m.value).padStart(2, "0") === bulanValue)
-        ?.label ?? "-";
-
-    return {
-      periodeFormatted,
-      tahun,
-      bulan,
-    };
-  }
-
-  // Format Juni-2026
-  if (periode?.includes("-")) {
-    const [namaBulan, tahunValue] = periode.split("-");
-
-    tahun = tahunValue;
-
-    bulan =
-      MONTHS.find((m) => m.label.toLowerCase() === namaBulan.toLowerCase())
-        ?.label ?? "-";
-
-    return {
-      periodeFormatted,
-      tahun,
-      bulan,
-    };
-  }
-
-  return {
-    periodeFormatted,
-    tahun,
-    bulan,
-  };
-};
-
-// ======================================================
-// EXPORT RL 3.12
+// EXPORT RL 3.12 EXCEL SATUSEHAT
+// LAPORAN BULANAN
 // ======================================================
 
 export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   const { periodeFormatted, tahun, bulan } = getPeriodeInfo(periode);
 
   // ======================================================
-  // TOTAL
-  // ======================================================
-
-  const total = {
-    khusus: 0,
-    besar: 0,
-    sedang: 0,
-    kecil: 0,
-    total: 0,
-  };
-
-  // ======================================================
-  // DATA EXCEL
+  // HEADER EXCEL
   // ======================================================
 
   const excelData = [
-    ["SIRS ONLINE RL 3.12 Pembedahan - SATUSEHAT"],
+    ["RL 3.12 Pembedahan - SATUSEHAT"],
     [],
     ["Periode Data"],
-    [`Tahun : ${tahun}`],
     [`Bulan : ${bulan}`],
+    [`Tahun : ${tahun}`],
     [],
     [
       "No.",
+      "Kode RS",
       "Rumah Sakit",
+      "Provinsi",
+      "Kabupaten/Kota",
       "Jenis Spesialisasi",
       "Khusus",
       "Besar",
@@ -175,39 +192,81 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   // ======================================================
 
   data.forEach((item, index) => {
-    total.khusus += Number(item.khusus) || 0;
-    total.besar += Number(item.besar) || 0;
-    total.sedang += Number(item.sedang) || 0;
-    total.kecil += Number(item.kecil) || 0;
-    total.total += Number(item.total) || 0;
+    // Kode RS
+    const kodeRS = getValue(
+      item.kodeRs,
+      item.kode_rs,
+      item.kodeRS,
+      item.kd_rs,
+      item.kode_rumah_sakit,
+      item.rumah_sakit?.kode_rs,
+      item.organization?.kode_rs,
+    );
 
-    // ------------------------------------------
-    // RUMAH SAKIT
-    // ------------------------------------------
+    // Nama rumah sakit
+    const namaRumahSakit = getValue(
+      item.namaRs,
+      item.organization_name,
+      item.nama_rumah_sakit,
+      item.nama_rs,
+      item.rs_name,
+      item.rumah_sakit?.nama,
+      item.rumah_sakit?.nama_rs,
+      typeof item.rumah_sakit === "string" ? item.rumah_sakit : undefined,
+    );
 
-    const namaRumahSakit =
-      item.organization_name ??
-      item.nama_rumah_sakit ??
-      item.rumah_sakit ??
-      item.nama_rs ??
-      item.rs_name ??
-      "-";
+    // Provinsi
+    const provinsi = getNamaReferensi(
+      getValue(
+        item.provinsiNama,
+        item.provinsi_nama,
+        item.nama_provinsi,
+        item.provinsi_name,
+        item.provinsi?.nama,
+        item.provinsi?.name,
+        typeof item.provinsi === "string" ? item.provinsi : undefined,
+      ),
+    );
 
-    // ------------------------------------------
-    // JENIS SPESIALISASI
-    // ------------------------------------------
+    // Kabupaten/Kota
+    const kabupatenKota = getNamaReferensi(
+      getValue(
+        item.kabKotaNama,
+        item.kab_kota_nama,
+        item.kabupatenKotaNama,
+        item.kabupaten_kota_nama,
+        item.nama_kabupaten_kota,
+        item.nama_kabupaten,
+        item.nama_kota,
+        item.kabupaten_kota_name,
+        item.kabupaten_kota?.nama,
+        item.kabupaten_kota?.name,
+        item.kabupaten?.nama,
+        item.kabupaten?.name,
+        item.kota?.nama,
+        item.kota?.name,
+        typeof item.kabupaten_kota === "string"
+          ? item.kabupaten_kota
+          : undefined,
+        typeof item.kabupaten === "string" ? item.kabupaten : undefined,
+        typeof item.kota === "string" ? item.kota : undefined,
+      ),
+    );
 
-    const jenisSpesialisasi =
-      item.jenis_spesialisasi?.nama_spesialisasi ??
-      item.jenis_spesialisasi?.nama ??
-      item.nama_spesialisasi ??
-      "-";
+    // Jenis spesialisasi
+    const jenisSpesialisasi = getValue(
+      item.jenis_spesialisasi?.nama_spesialisasi,
+      item.jenis_spesialisasi?.nama,
+      item.nama_spesialisasi,
+    );
 
     excelData.push([
       index + 1,
+      kodeRS,
       namaRumahSakit,
+      provinsi,
+      kabupatenKota,
       jenisSpesialisasi,
-
       Number(item.khusus) || 0,
       Number(item.besar) || 0,
       Number(item.sedang) || 0,
@@ -217,51 +276,20 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   });
 
   // ======================================================
-  // TOTAL
-  // ======================================================
-
-  const totalRow = excelData.length;
-
-  excelData.push([
-    "TOTAL",
-    "",
-    "",
-    total.khusus,
-    total.besar,
-    total.sedang,
-    total.kecil,
-    total.total,
-  ]);
-
-  // ======================================================
   // WORKSHEET
   // ======================================================
 
   const worksheet = XLSX.utils.aoa_to_sheet(excelData);
 
   // ======================================================
-  // MERGE
+  // MERGE JUDUL
+  // A1:K1
   // ======================================================
 
   worksheet["!merges"] = [
-    // ------------------------------------------
-    // JUDUL
-    // A1:H1
-    // ------------------------------------------
-
     {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: 7 },
-    },
-
-    // ------------------------------------------
-    // TOTAL
-    // A:C
-    // ------------------------------------------
-
-    {
-      s: { r: totalRow, c: 0 },
-      e: { r: totalRow, c: 2 },
+      e: { r: 0, c: 10 },
     },
   ];
 
@@ -271,7 +299,10 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
 
   worksheet["!cols"] = [
     { wch: 7 }, // No.
-    { wch: 30 }, // Rumah Sakit
+    { wch: 16 }, // Kode RS
+    { wch: 35 }, // Rumah Sakit
+    { wch: 22 }, // Provinsi
+    { wch: 25 }, // Kabupaten/Kota
     { wch: 32 }, // Jenis Spesialisasi
     { wch: 15 }, // Khusus
     { wch: 15 }, // Besar
@@ -305,11 +336,13 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
 
   // ======================================================
   // STYLE HEADER
+  // Baris Excel 7 (index 6)
+  // Semua header rata tengah
   // ======================================================
 
   const headerRow = 6;
 
-  for (let col = 0; col <= 7; col++) {
+  for (let col = 0; col <= 10; col++) {
     const cellAddress = XLSX.utils.encode_cell({
       r: headerRow,
       c: col,
@@ -334,12 +367,15 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
 
   // ======================================================
   // STYLE DATA
+  // No.             : rata tengah
+  // Kolom teks      : rata kiri
+  // Khusus s.d. Total: rata kanan
   // ======================================================
 
-  const dataStartRow = 7;
+  const dataStartRow = headerRow + 1;
 
-  for (let row = dataStartRow; row < totalRow; row++) {
-    for (let col = 0; col <= 7; col++) {
+  for (let row = dataStartRow; row < excelData.length; row++) {
+    for (let col = 0; col <= 10; col++) {
       const cellAddress = XLSX.utils.encode_cell({
         r: row,
         c: col,
@@ -353,10 +389,7 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
           sz: 12,
         },
         alignment: {
-          // No + angka = center
-          // Rumah Sakit + Jenis Spesialisasi = left
-          horizontal: col === 0 || col >= 3 ? "center" : "left",
-
+          horizontal: col === 0 ? "center" : col >= 6 ? "right" : "left",
           vertical: "center",
           wrapText: true,
         },
@@ -366,34 +399,7 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   }
 
   // ======================================================
-  // STYLE TOTAL
-  // ======================================================
-
-  for (let col = 0; col <= 7; col++) {
-    const cellAddress = XLSX.utils.encode_cell({
-      r: totalRow,
-      c: col,
-    });
-
-    if (!worksheet[cellAddress]) continue;
-
-    worksheet[cellAddress].s = {
-      font: {
-        name: "Calibri",
-        sz: 12,
-        bold: true,
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
-      border: thinBorder,
-    };
-  }
-
-  // ======================================================
-  // JUDUL
+  // STYLE JUDUL
   // ======================================================
 
   worksheet["A1"].s = {
@@ -409,44 +415,24 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   };
 
   // ======================================================
-  // PERIODE
+  // STYLE PERIODE
   // ======================================================
 
-  worksheet["A3"].s = {
-    font: {
-      name: "Calibri",
-      sz: 12,
-      bold: true,
-    },
-    alignment: {
-      horizontal: "left",
-      vertical: "center",
-    },
-  };
+  ["A3", "A4", "A5"].forEach((cellAddress) => {
+    if (!worksheet[cellAddress]) return;
 
-  worksheet["A4"].s = {
-    font: {
-      name: "Calibri",
-      sz: 12,
-      bold: true,
-    },
-    alignment: {
-      horizontal: "left",
-      vertical: "center",
-    },
-  };
-
-  worksheet["A5"].s = {
-    font: {
-      name: "Calibri",
-      sz: 12,
-      bold: true,
-    },
-    alignment: {
-      horizontal: "left",
-      vertical: "center",
-    },
-  };
+    worksheet[cellAddress].s = {
+      font: {
+        name: "Calibri",
+        sz: 12,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "left",
+        vertical: "center",
+      },
+    };
+  });
 
   // ======================================================
   // TINGGI BARIS
@@ -455,11 +441,11 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   worksheet["!rows"] = [
     { hpt: 25 }, // Row 1 - Judul
     { hpt: 10 }, // Row 2
-    { hpt: 20 }, // Row 3 - Periode
-    { hpt: 20 }, // Row 4 - Tahun
-    { hpt: 20 }, // Row 5 - Bulan
+    { hpt: 20 }, // Row 3 - Periode Data
+    { hpt: 20 }, // Row 4 - Bulan
+    { hpt: 20 }, // Row 5 - Tahun
     { hpt: 10 }, // Row 6
-    { hpt: 30 }, // Row 7 - Header
+    { hpt: 35 }, // Row 7 - Header
   ];
 
   // ======================================================
@@ -471,7 +457,7 @@ export const exportRL312ExcelSatuSehat = (data = [], periode) => {
   XLSX.utils.book_append_sheet(workbook, worksheet, "RL312");
 
   // ======================================================
-  // EXPORT
+  // EXPORT EXCEL
   // ======================================================
 
   XLSX.writeFile(workbook, `RL312-Pembedahan-${periodeFormatted}.xlsx`);
