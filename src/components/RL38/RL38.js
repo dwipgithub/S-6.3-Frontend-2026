@@ -1322,10 +1322,11 @@ function TabTwo() {
 
       const groups = res.data.data?.group_pemeriksaan || [];
       const namaBulanSelected = daftarBulan.find((b) => b.value === bulan)?.key || bulan;
-      const namaRumahSakit = user?.satKerNama || user?.rsNama || rumahSakit?.nama || "-";
+      const namaRS = res.data.data?.nama_rs || "-";
+      const kodeRS = res.data.data?.kode_faskes || "-";
+      const provRS = res.data.data?.provinsi || "-";
+      const kabkotRS = res.data.data?.kabupaten_kota || "-";
 
-      let grandTotalLK = 0;
-      let grandTotalPR = 0;
       let sumAvgLK = 0;
       let sumAvgPR = 0;
       let totalItems = 0;
@@ -1338,25 +1339,19 @@ function TabTwo() {
         const groupNo = groupMatch ? groupMatch[1] : "";
         const groupName = groupMatch ? groupMatch[2] : group.nama_group;
 
-        const groupTotalLK = group.pemeriksaan?.reduce(
-          (acc, item) => acc + parseInt(item.jumlah_pemeriksaan?.laki_laki || 0),
-          0
-        ) || 0;
-        const groupTotalPR = group.pemeriksaan?.reduce(
-          (acc, item) => acc + parseInt(item.jumlah_pemeriksaan?.perempuan || 0),
-          0
-        ) || 0;
-
         // Baris Header Group Utama
         tableRowsHtml += `
           <tr style="font-weight: bold;">
-            <td style="border: 1px solid black; text-align: center;">${groupNo}</td>
-            <td style="border: 1px solid black;">${namaRumahSakit}</td>
-            <td style="border: 1px solid black;">${groupName}</td>
-            <td style="border: 1px solid black; text-align: right;">${groupTotalLK}</td>
-            <td style="border: 1px solid black; text-align: right;">${groupTotalPR}</td>
-            <td style="border: 1px solid black;"></td>
-            <td style="border: 1px solid black;"></td>
+            <td style="border: 0.5pt solid #000; text-align: center;">${groupNo}</td>
+            <td style="border: 0.5pt solid #000;">${kodeRS}</td>
+            <td style="border: 0.5pt solid #000;">${namaRS}</td>
+            <td style="border: 0.5pt solid #000;">${provRS}</td>
+            <td style="border: 0.5pt solid #000;">${kabkotRS}</td>
+            <td style="border: 0.5pt solid #000;">${groupName}</td>
+            <td style="border: 0.5pt solid #000; text-align: right;"></td>
+            <td style="border: 0.5pt solid #000; text-align: right;"></td>
+            <td style="border: 0.5pt solid #000;"></td>
+            <td style="border: 0.5pt solid #000;"></td>
           </tr>
         `;
 
@@ -1370,18 +1365,23 @@ function TabTwo() {
 
             const lk = parseInt(item.jumlah_pemeriksaan?.laki_laki || 0);
             const pr = parseInt(item.jumlah_pemeriksaan?.perempuan || 0);
+            const rt_lk = parseFloat(item.nilai_rata_rata?.laki_laki) || 0;
+            const rt_pr = parseFloat(item.nilai_rata_rata?.perempuan) || 0;
 
             if (isSubHeader) {
               // Baris Sub-Group
               tableRowsHtml += `
                 <tr style="font-weight: bold;">
-                  <td style="border: 1px solid black; text-align: center;">${noCode || item.pemeriksaan_id}</td>
-                  <td style="border: 1px solid black;">${namaRumahSakit}</td>
-                  <td style="border: 1px solid black;">${cleanName}</td>
-                  <td style="border: 1px solid black; text-align: right;">${lk}</td>
-                  <td style="border: 1px solid black; text-align: right;">${pr}</td>
-                  <td style="border: 1px solid black;"></td>
-                  <td style="border: 1px solid black;"></td>
+                  <td style="border: 0.5pt solid #000; text-align: center;">${noCode || item.pemeriksaan_id}</td>
+                  <td style="border: 0.5pt solid #000;">${kodeRS}</td>
+                  <td style="border: 0.5pt solid #000;">${namaRS}</td>
+                  <td style="border: 0.5pt solid #000;">${provRS}</td>
+                  <td style="border: 0.5pt solid #000;">${kabkotRS}</td>
+                  <td style="border: 0.5pt solid #000;">${cleanName}</td>
+                  <td style="border: 0.5pt solid #000; text-align: right;">${lk}</td>
+                  <td style="border: 0.5pt solid #000; text-align: right;">${pr}</td>
+                  <td style="border: 0.5pt solid #000; text-align: right;">${rt_lk}</td>
+                  <td style="border: 0.5pt solid #000; text-align: right;">${rt_pr}</td>
                 </tr>
               `;
             } else {
@@ -1389,43 +1389,28 @@ function TabTwo() {
               const avgLk = parseFloat(item.nilai_rata_rata?.laki_laki || 0);
               const avgPr = parseFloat(item.nilai_rata_rata?.perempuan || 0);
 
-              grandTotalLK += lk;
-              grandTotalPR += pr;
               sumAvgLK += avgLk;
               sumAvgPR += avgPr;
               totalItems++;
 
               tableRowsHtml += `
                 <tr>
-                  <td style="border: 1px solid black; text-align: center;">${noCode || item.pemeriksaan_id}</td>
-                  <td style="border: 1px solid black;">${namaRumahSakit}</td>
-                  <td style="border: 1px solid black; padding-left: 15px;">${cleanName}</td>
-                  <td style="border: 1px solid black; text-align: right;">${lk}</td>
-                  <td style="border: 1px solid black; text-align: right;">${pr}</td>
-                  <td style="border: 1px solid black; text-align: right;">${avgLk.toFixed(3)}</td>
-                  <td style="border: 1px solid black; text-align: right;">${avgPr.toFixed(3)}</td>
+                  <td style="border: 0.5pt solid #000; text-align: center;">${noCode || item.pemeriksaan_id}</td>
+                  <td style="border: 0.5pt solid #000;">${kodeRS}</td>
+                  <td style="border: 0.5pt solid #000;">${namaRS}</td>
+                  <td style="border: 0.5pt solid #000;">${provRS}</td>
+                  <td style="border: 0.5pt solid #000;">${kabkotRS}</td>
+                  <td style="border: 0.5pt solid #000; padding-left: 15px;">${cleanName}</td>
+                  <td style="border: 0.5pt solid #000;; text-align: right;">${lk}</td>
+                  <td style="border: 0.5pt solid #000; text-align: right;">${pr}</td>
+                  <td style="border: 0.5pt solid #000; text-align: right;">${avgLk}</td>
+                  <td style="border: 0.5pt solid #000; text-align: right;">${avgPr}</td>
                 </tr>
               `;
             }
           });
         }
       });
-
-      // Baris TOTAL
-      const overallAvgLK = totalItems > 0 ? (sumAvgLK / totalItems).toFixed(3) : "0.000";
-      const overallAvgPR = totalItems > 0 ? (sumAvgPR / totalItems).toFixed(3) : "0.000";
-
-      tableRowsHtml += `
-        <tr style="font-weight: bold;">
-          <td style="border: 1px solid black;"></td>
-          <td style="border: 1px solid black;"></td>
-          <td style="border: 1px solid black;">TOTAL</td>
-          <td style="border: 1px solid black; text-align: right;">${grandTotalLK}</td>
-          <td style="border: 1px solid black; text-align: right;">${grandTotalPR}</td>
-          <td style="border: 1px solid black; text-align: right;">${overallAvgLK}</td>
-          <td style="border: 1px solid black; text-align: right;">${overallAvgPR}</td>
-        </tr>
-      `;
 
       // 2. Format Elemen HTML Lengkap dengan Inline Style
       const excelTemplate = `
@@ -1436,7 +1421,7 @@ function TabTwo() {
             <x:ExcelWorkbook>
               <x:ExcelWorksheets>
                 <x:ExcelWorksheet>
-                  <x:Name>RL 3.8 SATUSEHAT</x:Name>
+                  <x:Name>RL 3.8 Laboratorium - SATUSEHAT</x:Name>
                   <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
                 </x:ExcelWorksheet>
               </x:ExcelWorksheets>
@@ -1452,26 +1437,29 @@ function TabTwo() {
         </head>
         <body>
           <table>
-            <tr><td colspan="3" class="bold" style="font-size: 14pt;">SIRS ONLINE RL 3.8 - SATUSEHAT</td></tr>
+            <tr><td colspan="4" class="bold" style="font-size: 14pt;">RL 3.8 Laboratorium - SATUSEHAT</td></tr>
             <tr><td></td></tr>
-            <tr><td colspan="3" class="bold">Periode Data</td></tr>
-            <tr><td colspan="3" class="bold">Bulan : ${namaBulanSelected}</td></tr>
-            <tr><td colspan="3" class="bold">Tahun: ${tahun}</td></tr>
+            <tr><td colspan="4" class="bold">Periode Data</td></tr>
+            <tr><td colspan="4" class="bold">Bulan : ${namaBulanSelected}</td></tr>
+            <tr><td colspan="4" class="bold">Tahun: ${tahun}</td></tr>
             <tr><td></td></tr>
             <!-- Header Tabel -->
             <thead>
               <tr style="font-weight: bold;">
-                <th style="border: 1px solid black;" rowspan="2">No</th>
-                <th style="border: 1px solid black;" rowspan="2">Rumah Sakit</th>
-                <th style="border: 1px solid black;" rowspan="2">Jenis Pemeriksaan</th>
-                <th style="border: 1px solid black;" colspan="2">Jumlah Pemeriksaan</th>
-                <th style="border: 1px solid black;" colspan="2">Rata-Rata Pemeriksaan</th>
+                <th style="border: 0.5pt solid #000;" rowspan="2">No</th>
+                <th style="border: 0.5pt solid #000;" rowspan="2">Kode RS</th>
+                <th style="border: 0.5pt solid #000;" rowspan="2">Nama RS</th>
+                <th style="border: 0.5pt solid #000;" rowspan="2">Provinsi</th>
+                <th style="border: 0.5pt solid #000;" rowspan="2">Kab/Kota</th>
+                <th style="border: 0.5pt solid #000;" rowspan="2">Jenis Pemeriksaan</th>
+                <th style="border: 0.5pt solid #000;" colspan="2">Jumlah Pemeriksaan</th>
+                <th style="border: 0.5pt solid #000;" colspan="2">Rata-Rata Pemeriksaan</th>
               </tr>
               <tr style="font-weight: bold;">
-                <th style="border: 1px solid black;">Laki-Laki</th>
-                <th style="border: 1px solid black;">Perempuan</th>
-                <th style="border: 1px solid black;">Laki-Laki</th>
-                <th style="border: 1px solid black;">Perempuan</th>
+                <th style="border: 0.5pt solid #000;">Laki-Laki</th>
+                <th style="border: 0.5pt solid #000;">Perempuan</th>
+                <th style="border: 0.5pt solid #000;">Laki-Laki</th>
+                <th style="border: 0.5pt solid #000;">Perempuan</th>
               </tr>
             </thead>
             <tbody>
@@ -1487,7 +1475,7 @@ function TabTwo() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `SIRS_ONLINE_RL_3.8_SATUSEHAT_${tahun}_${bulan}.xls`;
+      link.download = `RL_3.8_SATUSEHAT_${tahun}_${bulan}.xls`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1932,8 +1920,8 @@ function TabTwo() {
                                   <td className={style["sticky-column"]} style={{ textAlign: "left" }}>
                                     {groupName}
                                   </td>
-                                  <td style={{ textAlign: "center" }}>{groupTotalLK}</td>
-                                  <td style={{ textAlign: "center" }}>{groupTotalPR}</td>
+                                  <td style={{ textAlign: "center" }}></td>
+                                  <td style={{ textAlign: "center" }}></td>
                                   <td style={{ textAlign: "center" }}></td>
                                   <td style={{ textAlign: "center" }}></td>
                                 </tr>
@@ -1960,21 +1948,17 @@ function TabTwo() {
                                         <td className={style["sticky-column"]} style={{ textAlign: "left" }}>
                                           {isSubHeader ? cleanName : `\u2003${cleanName}`}
                                         </td>
-                                        <td style={{ textAlign: "center" }}>
+                                        <td style={{ textAlign: "right" }}>
                                           {parseInt(item.jumlah_pemeriksaan?.laki_laki || 0)}
                                         </td>
-                                        <td style={{ textAlign: "center" }}>
+                                        <td style={{ textAlign: "right" }}>
                                           {parseInt(item.jumlah_pemeriksaan?.perempuan || 0)}
                                         </td>
-                                        <td style={{ textAlign: "center" }}>
-                                          {isSubHeader
-                                            ? ""
-                                            : parseFloat(item.nilai_rata_rata?.laki_laki || 0).toFixed(3)}
+                                        <td style={{ textAlign: "right" }}>
+                                          {parseFloat(item.nilai_rata_rata?.laki_laki || 0)}
                                         </td>
-                                        <td style={{ textAlign: "center" }}>
-                                          {isSubHeader
-                                            ? ""
-                                            : parseFloat(item.nilai_rata_rata?.perempuan || 0).toFixed(3)}
+                                        <td style={{ textAlign: "right" }}>  
+                                          {parseFloat(item.nilai_rata_rata?.perempuan || 0)}
                                         </td>
                                       </tr>
                                     );
@@ -1982,49 +1966,6 @@ function TabTwo() {
                               </React.Fragment>
                             );
                           })}
-
-                          {/* TOTAL */}
-                          {(() => {
-                            let grandTotalLK = 0;
-                            let grandTotalPR = 0;
-                            let sumAvgLK = 0;
-                            let sumAvgPR = 0;
-                            let totalItems = 0;
-
-                            dataRL.forEach((group) => {
-                              group.pemeriksaan?.forEach((item) => {
-                                const textRaw = item.pemeriksaan?.trim() || "";
-                                const match = textRaw.match(/^(\d+(\.\d+)*)\s+(.*)$/);
-                                const noCode = match ? match[1] : "";
-                                const isSubHeader = !/^\d+\.\d+/.test(noCode || textRaw);
-
-                                // Hanya menjumlahkan detail kegiatan (bukan sub group) agar tidak terhitung dua kali
-                                if (!isSubHeader) {
-                                  grandTotalLK += parseInt(item.jumlah_pemeriksaan?.laki_laki || 0);
-                                  grandTotalPR += parseInt(item.jumlah_pemeriksaan?.perempuan || 0);
-                                  sumAvgLK += parseFloat(item.nilai_rata_rata?.laki_laki || 0);
-                                  sumAvgPR += parseFloat(item.nilai_rata_rata?.perempuan || 0);
-                                  totalItems++;
-                                }
-                              });
-                            });
-
-                            const overallAvgLK = totalItems > 0 ? (sumAvgLK / totalItems).toFixed(3) : "0.000";
-                            const overallAvgPR = totalItems > 0 ? (sumAvgPR / totalItems).toFixed(3) : "0.000";
-
-                            return (
-                              <tr style={{ backgroundColor: "#C4DFAA", fontWeight: "bold" }}>
-                                <td></td>
-                                <td className={style["sticky-column"]} style={{ textAlign: "center" }}>
-                                  TOTAL
-                                </td>
-                                <td style={{ textAlign: "center" }}>{grandTotalLK}</td>
-                                <td style={{ textAlign: "center" }}>{grandTotalPR}</td>
-                                <td style={{ textAlign: "center" }}>{overallAvgLK}</td>
-                                <td style={{ textAlign: "center" }}>{overallAvgPR}</td>
-                              </tr>
-                            );
-                          })()}
                         </>
                       )}
                     </tbody>
