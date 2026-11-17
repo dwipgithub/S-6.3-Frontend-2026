@@ -2248,10 +2248,25 @@ function TabTwo() {
     currentRsId,
     currentTahun,
     currentBulan,
+    previousAttemptId,
   ) => {
     clearInterval(pollingRef.current); // bersihkan polling lama
+    let attempts = 0;
+    const MAX_ATTEMPTS = 45;
+
+    const stop = () => {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+      setLoadingTable(false);
+      setIsManualSyncing(false);
+    };
 
     pollingRef.current = setInterval(async () => {
+      if (++attempts > MAX_ATTEMPTS) {
+        stop();
+        toast.error("Sinkronisasi terlalu lama, coba lagi nanti");
+        return;
+      }
       try {
         const res = await axiosJWT.get(
           "/apisirs6v2/rlempattitiksatusatusehat",
@@ -2267,36 +2282,55 @@ function TabTwo() {
         );
 
         const newSync = res.data.sync ?? {};
-        setDataRL(res.data.data ?? []);
+        // Masih berjalan
+        if (newSync.isUpdating || newSync.status === "syncing") return;
+
+        // Belum ada percobaan sync baru yang tercatat, lanjut polling
+        if (newSync.lastAttemptId === previousAttemptId) return;
+        stop();
         setSync(newSync);
+        if (newSync.status === "failed") {
+          toast.error(
+            newSync.lastError
+              ? `Gagal sync: ${newSync.lastError}`
+              : "Gagal sync data dari SatuSehat",
+          );
+          return;
+        }
+        setDataRL(res.data.data ?? []);
         setTotalPages(res.data.pagination?.totalPages || 0);
         setPage(res.data.pagination?.page || 1);
+        toast.success("Data berhasil disinkronkan!");
+        // setDataRL(res.data.data ?? []);
+        // setSync(newSync);
+        // setTotalPages(res.data.pagination?.totalPages || 0);
+        // setPage(res.data.pagination?.page || 1);
 
-        if (!newSync.isUpdating) {
-          if (newSync.status === "success") {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-            await fetchData(
-              1,
-              false,
-              currentToken,
-              currentRsId,
-              currentTahun,
-              currentBulan,
-            );
-            setLoadingTable(false);
-            toast.success("Data berhasil disinkronkan!");
-          } else if (newSync.status === "failed") {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-            setLoadingTable(false);
-            toast.error("Gagal sync data dari SatuSehat");
-          } else if (newSync.status === "never") {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-            setLoadingTable(false);
-          }
-        }
+        // if (!newSync.isUpdating) {
+        //   if (newSync.status === "success") {
+        //     clearInterval(pollingRef.current);
+        //     pollingRef.current = null;
+        //     await fetchData(
+        //       1,
+        //       false,
+        //       currentToken,
+        //       currentRsId,
+        //       currentTahun,
+        //       currentBulan,
+        //     );
+        //     setLoadingTable(false);
+        //     toast.success("Data berhasil disinkronkan!");
+        //   } else if (newSync.status === "failed") {
+        //     clearInterval(pollingRef.current);
+        //     pollingRef.current = null;
+        //     setLoadingTable(false);
+        //     toast.error("Gagal sync data dari SatuSehat");
+        //   } else if (newSync.status === "never") {
+        //     clearInterval(pollingRef.current);
+        //     pollingRef.current = null;
+        //     setLoadingTable(false);
+        //   }
+        // }
       } catch (err) {
         console.error(err);
       }
@@ -2482,6 +2516,7 @@ function TabTwo() {
 
     setIsManualSyncing(true);
     setLoadingTable(true);
+    const previousAttemptId = sync.lastAttemptId ?? null;
 
     try {
       await axiosJWT.post(
@@ -2494,10 +2529,11 @@ function TabTwo() {
           },
         },
       );
-      startPolling(token, user.satKerId, tahun, bulan);
+      startPolling(token, user.satKerId, tahun, bulan, previousAttemptId);
     } catch (err) {
-      console.error(err);
       setLoadingTable(false);
+      setIsManualSyncing(false);
+      toast.error(err.response?.data?.message || "Gagal memulai sinkronisasi");
     }
   };
 
