@@ -3060,18 +3060,31 @@ function TabTwo() {
   // Tambahkan flag ref untuk mencegah race condition / interval ganda
   const isPollingActiveRef = useRef(false);
 
-  const startPolling = (currentToken) => {
-    // 1. Clear interval sebelumnya jika ada
-    if (pollingRef.current) {
+  const startPolling = (
+    currentToken,
+    currentRsId,
+    currentTahun,
+    currentBulan,
+    previousAttemptId,
+  ) => {
+    clearInterval(pollingRef.current); // bersihkan polling lama
+    let attempts = 0;
+    const MAX_ATTEMPTS = 45;
+    const stop = () => {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
-    }
+      setLoadingTable(false);
+      setIsManualSyncing(false);
+    };
 
     isPollingActiveRef.current = true;
 
     pollingRef.current = setInterval(async () => {
-      // Mencegah eksekusi jika polling sudah di-stop dari tempat lain
-      if (!isPollingActiveRef.current) return;
+      if (++attempts > MAX_ATTEMPTS) {
+        stop();
+        toast.error("Sinkronisasi terlalu lama, coba lagi nanti");
+        return;
+      }
 
       try {
         const res = await axiosJWT.get("/apisirs6v2/rllimatitiksatusatusehat", {
@@ -3085,32 +3098,56 @@ function TabTwo() {
         });
 
         const newSync = res.data.sync ?? {};
+        // Masih berjalan
+        if (newSync.isUpdating || newSync.status === "syncing") return;
+
+        // Belum ada percobaan sync baru yang tercatat, lanjut polling
+        if (newSync.lastAttemptId === previousAttemptId) return;
+        stop();
         setSync(newSync);
-
-        if (!newSync.isUpdating) {
-          // Stop polling SEBELUM melempar async process lain / toast
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-          isPollingActiveRef.current = false;
-
-          if (newSync.status === "success") {
-            await fetchData(1, false, currentToken);
-            setLoadingTable(false);
-
-            // Gunakan toastId unik agar TIDAK MENUMPUK/DUPLIKAT
-            toast.success("Data berhasil disinkronkan!", {
-              toastId: "sync-success-toast",
-            });
-          } else if (newSync.status === "failed") {
-            setLoadingTable(false);
-
-            toast.error("Gagal sync data dari SatuSehat", {
-              toastId: "sync-failed-toast",
-            });
-          } else if (newSync.status === "never") {
-            setLoadingTable(false);
-          }
+        if (newSync.status === "failed") {
+          toast.error(
+            newSync.lastError
+              ? `Gagal sync: ${newSync.lastError}`
+              : "Gagal sync data dari SatuSehat",
+          );
+          return;
         }
+
+        // Data mentah harus di-group per ICD seperti di fetchData,
+        // karena DataTable membutuhkan field `umur` per baris
+        const groupedData = groupByICD(res.data.data ?? []);
+        setDataRL(transformDataWithMasterUmur(groupedData, masterUmur));
+        setTotalPages(
+          res.data.pagination?.pages || res.data.pagination?.totalPages || 1,
+        );
+        setPage(res.data.pagination?.page || 1);
+        toast.success("Data berhasil disinkronkan!");
+
+        // if (!newSync.isUpdating) {
+        //   // Stop polling SEBELUM melempar async process lain / toast
+        //   clearInterval(pollingRef.current);
+        //   pollingRef.current = null;
+        //   isPollingActiveRef.current = false;
+
+        //   if (newSync.status === "success") {
+        //     await fetchData(1, false, currentToken);
+        //     setLoadingTable(false);
+
+        //     // Gunakan toastId unik agar TIDAK MENUMPUK/DUPLIKAT
+        //     toast.success("Data berhasil disinkronkan!", {
+        //       toastId: "sync-success-toast",
+        //     });
+        //   } else if (newSync.status === "failed") {
+        //     setLoadingTable(false);
+
+        //     toast.error("Gagal sync data dari SatuSehat", {
+        //       toastId: "sync-failed-toast",
+        //     });
+        //   } else if (newSync.status === "never") {
+        //     setLoadingTable(false);
+        //   }
+        // }
       } catch (err) {
         console.error(err);
         // Opsional: Clear jika error network beruntun
@@ -3298,6 +3335,7 @@ function TabTwo() {
 
     setIsManualSyncing(true);
     setLoadingTable(true);
+    const previousAttemptId = sync.lastAttemptId ?? null;
 
     try {
       await axiosJWT.post(
@@ -3310,12 +3348,11 @@ function TabTwo() {
           },
         },
       );
-      startPolling(token);
+      startPolling(token, rumahSakit.id, tahun, bulan, previousAttemptId);
     } catch (err) {
-      console.error(err);
-      toast.error("Gagal memulai sync");
       setLoadingTable(false);
       setIsManualSyncing(false);
+      toast.error(err.response?.data?.message || "Gagal memulai sinkronisasi");
     }
   };
 
@@ -3585,7 +3622,7 @@ function TabTwo() {
                     <td style={{ textAlign: "center" }}>{item.icd_10}</td>
                     <td>{item.diagnosis}</td>
                     {masterUmur.map((umur) => {
-                      const umurData = item.umur.find(
+                      const umurData = (item.umur ?? []).find(
                         (u) => u.age_group === umur.name,
                       );
                       return (
